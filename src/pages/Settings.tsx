@@ -107,7 +107,7 @@ export default function Settings() {
         </div>
 
         <Tabs defaultValue="profile">
-          <TabsList>
+          <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="profile" className="gap-2"><User className="h-4 w-4" /> Profile</TabsTrigger>
             {isAdmin && <TabsTrigger value="organization" className="gap-2"><Building2 className="h-4 w-4" /> Organization</TabsTrigger>}
             {isAdmin && <TabsTrigger value="team" className="gap-2"><Users className="h-4 w-4" /> Team</TabsTrigger>}
@@ -148,7 +148,7 @@ export default function Settings() {
                   <CardDescription>Manage your company information</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Organization Name</Label>
                       <Input value={orgName} onChange={(e) => setOrgName(e.target.value)} />
@@ -158,7 +158,7 @@ export default function Settings() {
                       <Input value={orgIndustry} onChange={(e) => setOrgIndustry(e.target.value)} placeholder="e.g. Technology" />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Website</Label>
                       <Input value={orgWebsite} onChange={(e) => setOrgWebsite(e.target.value)} placeholder="https://" />
@@ -191,7 +191,7 @@ export default function Settings() {
                   {members.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-8">No team members found</p>
                   ) : (
-                    <Table>
+                    <div className="overflow-x-auto"><Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Name</TableHead>
@@ -212,7 +212,7 @@ export default function Settings() {
                           </TableRow>
                         ))}
                       </TableBody>
-                    </Table>
+                    </Table></div>
                   )}
                 </CardContent>
               </Card>

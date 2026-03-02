@@ -90,12 +90,12 @@ export default function Clients() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold text-foreground">Clients</h1>
             <p className="text-sm text-muted-foreground">Manage your organization's clients</p>
           </div>
-          <Button className="gap-2" onClick={openCreate}>
+          <Button className="gap-2 w-full sm:w-auto" onClick={openCreate}>
             <PlusCircle className="h-4 w-4" /> Add Client
           </Button>
         </div>
@@ -122,7 +122,7 @@ export default function Clients() {
                 )}
               </div>
             ) : (
-              <Table>
+              <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
@@ -152,7 +152,7 @@ export default function Clients() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table></div>
             )}
           </CardContent>
         </Card>
@@ -167,7 +167,7 @@ export default function Clients() {
                 <Label>Name *</Label>
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Client name" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Email</Label>
                   <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="email@example.com" />

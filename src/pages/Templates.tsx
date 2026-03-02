@@ -151,12 +151,12 @@ export default function Templates() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold text-foreground">Templates</h1>
             <p className="text-sm text-muted-foreground">Manage and choose templates for proposals</p>
           </div>
-          <Button onClick={openCreate} className="gap-2">
+          <Button onClick={openCreate} className="gap-2 w-full sm:w-auto">
             <PlusCircle className="h-4 w-4" /> New Template
           </Button>
         </div>

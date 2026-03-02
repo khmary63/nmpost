@@ -160,7 +160,7 @@ export default function ClientDetail() {
                 </Button>
               </div>
             ) : (
-              <Table>
+              <div className="overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Title</TableHead>
@@ -181,7 +181,7 @@ export default function ClientDetail() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table></div>
             )}
           </CardContent>
         </Card>

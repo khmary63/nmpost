@@ -321,10 +321,11 @@ export default function ProposalBuilder() {
                   onDragEnd={handleDragEnd}
                   className={`space-y-2 rounded-lg border border-border p-4 transition-opacity ${dragIdx === idx ? "opacity-50" : ""}`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="cursor-grab text-muted-foreground hover:text-foreground">
-                      <GripVertical className="h-4 w-4" />
-                    </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-2 flex-1">
+                      <div className="cursor-grab text-muted-foreground hover:text-foreground">
+                        <GripVertical className="h-4 w-4" />
+                      </div>
                     <Input
                       value={sec.title}
                       onChange={(e) => {
@@ -333,7 +334,8 @@ export default function ProposalBuilder() {
                       placeholder="Section title"
                       className="font-medium border-0 p-0 h-auto text-base focus-visible:ring-0 flex-1"
                     />
-                    <div className="flex items-center gap-1">
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -374,24 +376,30 @@ export default function ProposalBuilder() {
             </CardHeader>
             <CardContent className="space-y-4">
               {lineItems.map((item, idx) => (
-                <div key={idx} className="grid grid-cols-12 gap-2 items-end">
-                  <div className="col-span-5 space-y-1">
-                    {idx === 0 && <Label className="text-xs">Description</Label>}
+                <div key={idx} className="rounded-lg border border-border p-3 space-y-2 sm:border-0 sm:p-0 sm:space-y-0 sm:grid sm:grid-cols-12 sm:gap-2 sm:items-end">
+                  <div className="sm:col-span-5 space-y-1">
+                    <Label className="text-xs sm:hidden">Description</Label>
+                    {idx === 0 && <Label className="text-xs hidden sm:block">Description</Label>}
                     <Input value={item.description} onChange={(e) => updateLineItem(idx, "description", e.target.value)} placeholder="Item description" />
                   </div>
-                  <div className="col-span-2 space-y-1">
-                    {idx === 0 && <Label className="text-xs">Qty</Label>}
-                    <Input type="number" min={1} value={item.quantity} onChange={(e) => updateLineItem(idx, "quantity", Number(e.target.value))} />
+                  <div className="grid grid-cols-3 gap-2 sm:contents">
+                    <div className="sm:col-span-2 space-y-1">
+                      <Label className="text-xs sm:hidden">Qty</Label>
+                      {idx === 0 && <Label className="text-xs hidden sm:block">Qty</Label>}
+                      <Input type="number" min={1} value={item.quantity} onChange={(e) => updateLineItem(idx, "quantity", Number(e.target.value))} />
+                    </div>
+                    <div className="sm:col-span-2 space-y-1">
+                      <Label className="text-xs sm:hidden">Rate ($)</Label>
+                      {idx === 0 && <Label className="text-xs hidden sm:block">Rate ($)</Label>}
+                      <Input type="number" min={0} value={item.rate} onChange={(e) => updateLineItem(idx, "rate", Number(e.target.value))} />
+                    </div>
+                    <div className="sm:col-span-2 space-y-1">
+                      <Label className="text-xs sm:hidden">Disc %</Label>
+                      {idx === 0 && <Label className="text-xs hidden sm:block">Disc %</Label>}
+                      <Input type="number" min={0} max={100} value={item.discount} onChange={(e) => updateLineItem(idx, "discount", Number(e.target.value))} />
+                    </div>
                   </div>
-                  <div className="col-span-2 space-y-1">
-                    {idx === 0 && <Label className="text-xs">Rate ($)</Label>}
-                    <Input type="number" min={0} value={item.rate} onChange={(e) => updateLineItem(idx, "rate", Number(e.target.value))} />
-                  </div>
-                  <div className="col-span-2 space-y-1">
-                    {idx === 0 && <Label className="text-xs">Disc %</Label>}
-                    <Input type="number" min={0} max={100} value={item.discount} onChange={(e) => updateLineItem(idx, "discount", Number(e.target.value))} />
-                  </div>
-                  <div className="col-span-1">
+                  <div className="sm:col-span-1 flex justify-end">
                     <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => removeLineItem(idx)} disabled={lineItems.length === 1}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -417,7 +425,7 @@ export default function ProposalBuilder() {
           <Card>
             <CardHeader><CardTitle>Review & Save</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div><span className="text-muted-foreground">Title:</span> <span className="font-medium">{title}</span></div>
                 <div><span className="text-muted-foreground">Client:</span> <span className="font-medium">{clients.find(c => c.id === selectedClient)?.name ?? "None"}</span></div>
                 <div><span className="text-muted-foreground">Template:</span> <span className="font-medium">{templates.find(t => t.id === selectedTemplate)?.name ?? "Blank"}</span></div>
