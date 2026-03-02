@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useState, useCallback } from "react";
+import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, ArrowRight, PlusCircle, Trash2, Save } from "lucide-react";
+import { ArrowLeft, ArrowRight, PlusCircle, Trash2, Save, GripVertical, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type Client = { id: string; name: string };
-type Template = { id: string; name: string; sections: any; default_pricing_items: any };
+type Template = { id: string; name: string; sections: any; default_pricing_items: any; category?: string };
 type LineItem = { description: string; quantity: number; rate: number; discount: number };
 
 const STEPS = ["Template", "Client", "Content", "Pricing", "Review"];
@@ -21,9 +21,12 @@ const STEPS = ["Template", "Client", "Content", "Pricing", "Review"];
 export default function ProposalBuilder() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { id: editId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const [step, setStep] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(!!editId);
+  const isEditing = !!editId;
 
   // Data
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -38,24 +41,57 @@ export default function ProposalBuilder() {
   const [taxRate, setTaxRate] = useState(0);
   const [notes, setNotes] = useState("");
 
+  // Drag state
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+
+  // AI state
+  const [aiLoading, setAiLoading] = useState<number | null>(null);
+
   useEffect(() => {
-    Promise.all([
-      supabase.from("templates").select("id, name, sections, default_pricing_items").order("name"),
-      supabase.from("clients").select("id, name").order("name"),
-    ]).then(([tRes, cRes]) => {
+    const load = async () => {
+      const [tRes, cRes] = await Promise.all([
+        supabase.from("templates").select("id, name, sections, default_pricing_items, category").order("name"),
+        supabase.from("clients").select("id, name").order("name"),
+      ]);
       setTemplates((tRes.data ?? []) as Template[]);
       setClients((cRes.data ?? []) as Client[]);
 
-      const tmplId = searchParams.get("template");
-      if (tmplId) {
-        setSelectedTemplate(tmplId);
-        const tmpl = (tRes.data ?? []).find((t: any) => t.id === tmplId);
-        if (tmpl) {
-          applyTemplate(tmpl as Template);
-          setStep(1);
+      if (editId) {
+        // Load existing proposal
+        const [pRes, liRes] = await Promise.all([
+          supabase.from("proposals").select("*").eq("id", editId).single(),
+          supabase.from("line_items").select("*").eq("proposal_id", editId).order("sort_order"),
+        ]);
+        if (pRes.data) {
+          const p = pRes.data as any;
+          setTitle(p.title);
+          setSelectedClient(p.client_id || "");
+          setSelectedTemplate(p.template_id || "");
+          setTaxRate(Number(p.tax_rate) || 0);
+          setNotes(p.notes || "");
+          const secs = Array.isArray(p.content?.sections) ? p.content.sections : [];
+          setSections(secs);
+          setStep(1); // Skip template step when editing
+        }
+        if (liRes.data && liRes.data.length > 0) {
+          setLineItems(liRes.data.map((li: any) => ({
+            description: li.description, quantity: Number(li.quantity), rate: Number(li.rate), discount: Number(li.discount) || 0,
+          })));
+        }
+        setLoadingEdit(false);
+      } else {
+        const tmplId = searchParams.get("template");
+        if (tmplId) {
+          setSelectedTemplate(tmplId);
+          const tmpl = (tRes.data ?? []).find((t: any) => t.id === tmplId);
+          if (tmpl) {
+            applyTemplate(tmpl as Template);
+            setStep(1);
+          }
         }
       }
-    });
+    };
+    load();
   }, []);
 
   const applyTemplate = (tmpl: Template) => {
@@ -85,30 +121,86 @@ export default function ProposalBuilder() {
     setLineItems(updated);
   };
 
+  // Drag-and-drop handlers
+  const handleDragStart = (idx: number) => setDragIdx(idx);
+  const handleDragOver = (e: React.DragEvent, idx: number) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) return;
+    const updated = [...sections];
+    const [moved] = updated.splice(dragIdx, 1);
+    updated.splice(idx, 0, moved);
+    setSections(updated);
+    setDragIdx(idx);
+  };
+  const handleDragEnd = () => setDragIdx(null);
+
+  // AI improve handler
+  const handleAiImprove = async (idx: number) => {
+    setAiLoading(idx);
+    try {
+      const sec = sections[idx];
+      const tmpl = templates.find(t => t.id === selectedTemplate);
+      const { data, error } = await supabase.functions.invoke("ai-content", {
+        body: {
+          sectionTitle: sec.title,
+          sectionContent: sec.content,
+          templateCategory: tmpl?.category || "general",
+          proposalTitle: title,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+      } else if (data?.content) {
+        const updated = [...sections];
+        updated[idx] = { ...updated[idx], content: data.content };
+        setSections(updated);
+        toast.success("Content improved with AI");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "AI error");
+    } finally {
+      setAiLoading(null);
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
-    const { data, error } = await supabase.from("proposals").insert({
-      user_id: user.id,
-      org_id: "00000000-0000-0000-0000-000000000001",
+
+    const proposalData = {
       title,
       client_id: selectedClient || null,
       template_id: selectedTemplate || null,
-      content: { sections },
-      pricing: { line_items: lineItems, tax_rate: taxRate },
+      content: { sections } as any,
+      pricing: { line_items: lineItems, tax_rate: taxRate } as any,
       subtotal,
       tax_rate: taxRate,
       total,
       notes: notes || null,
-      status: "draft",
-    } as any).select("id").single();
+    };
 
-    if (error) { toast.error(error.message); setSaving(false); return; }
+    let proposalId = editId;
 
-    // Insert line items
-    if (data?.id) {
+    if (isEditing) {
+      const { error } = await supabase.from("proposals").update(proposalData as any).eq("id", editId!);
+      if (error) { toast.error(error.message); setSaving(false); return; }
+      // Replace line items
+      await supabase.from("line_items").delete().eq("proposal_id", editId!);
+    } else {
+      const { data, error } = await supabase.from("proposals").insert({
+        ...proposalData,
+        user_id: user.id,
+        org_id: "00000000-0000-0000-0000-000000000001",
+        status: "draft",
+      } as any).select("id").single();
+      if (error) { toast.error(error.message); setSaving(false); return; }
+      proposalId = data?.id;
+    }
+
+    if (proposalId) {
       const items = lineItems.map((li, idx) => ({
-        proposal_id: data.id,
+        proposal_id: proposalId!,
         description: li.description,
         quantity: li.quantity,
         rate: li.rate,
@@ -119,20 +211,30 @@ export default function ProposalBuilder() {
       await supabase.from("line_items").insert(items);
     }
 
-    toast.success("Proposal saved as draft");
-    navigate(`/proposals/${data?.id}`);
+    toast.success(isEditing ? "Proposal updated" : "Proposal saved as draft");
+    navigate(`/proposals/${proposalId}`);
     setSaving(false);
   };
+
+  if (loadingEdit) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => <div key={i} className="h-32 rounded-xl bg-muted animate-pulse" />)}
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/proposals")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(isEditing ? `/proposals/${editId}` : "/proposals")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="font-display text-2xl font-bold text-foreground">New Proposal</h1>
+            <h1 className="font-display text-2xl font-bold text-foreground">{isEditing ? "Edit Proposal" : "New Proposal"}</h1>
             <p className="text-sm text-muted-foreground">Step {step + 1} of {STEPS.length}: {STEPS[step]}</p>
           </div>
         </div>
@@ -197,7 +299,7 @@ export default function ProposalBuilder() {
           </Card>
         )}
 
-        {/* Step 2: Content */}
+        {/* Step 2: Content with drag-and-drop + AI */}
         {step === 2 && (
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -211,19 +313,41 @@ export default function ProposalBuilder() {
                 <p className="text-sm text-muted-foreground text-center py-8">No sections. Add one or go back to pick a template.</p>
               )}
               {sections.map((sec, idx) => (
-                <div key={idx} className="space-y-2 rounded-lg border border-border p-4">
-                  <div className="flex items-center justify-between">
+                <div
+                  key={idx}
+                  draggable
+                  onDragStart={() => handleDragStart(idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDragEnd={handleDragEnd}
+                  className={`space-y-2 rounded-lg border border-border p-4 transition-opacity ${dragIdx === idx ? "opacity-50" : ""}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="cursor-grab text-muted-foreground hover:text-foreground">
+                      <GripVertical className="h-4 w-4" />
+                    </div>
                     <Input
                       value={sec.title}
                       onChange={(e) => {
                         const u = [...sections]; u[idx] = { ...u[idx], title: e.target.value }; setSections(u);
                       }}
                       placeholder="Section title"
-                      className="font-medium border-0 p-0 h-auto text-base focus-visible:ring-0"
+                      className="font-medium border-0 p-0 h-auto text-base focus-visible:ring-0 flex-1"
                     />
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setSections(sections.filter((_, i) => i !== idx))}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 text-xs text-primary"
+                        onClick={() => handleAiImprove(idx)}
+                        disabled={aiLoading !== null}
+                      >
+                        {aiLoading === idx ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                        Improve
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setSections(sections.filter((_, i) => i !== idx))}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                   <Textarea
                     value={sec.content}
@@ -318,7 +442,7 @@ export default function ProposalBuilder() {
             </Button>
           ) : (
             <Button onClick={handleSave} disabled={saving} className="gap-2">
-              <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Draft"}
+              <Save className="h-4 w-4" /> {saving ? "Saving..." : isEditing ? "Update Proposal" : "Save Draft"}
             </Button>
           )}
         </div>

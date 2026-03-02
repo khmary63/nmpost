@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Copy, ExternalLink } from "lucide-react";
+import { ArrowLeft, Copy, ExternalLink, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -100,6 +100,11 @@ export default function ProposalDetail() {
                 ))}
               </SelectContent>
             </Select>
+            {proposal.status === "draft" && (
+              <Button variant="outline" size="sm" onClick={() => navigate(`/proposals/${id}/edit`)}>
+                <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
+              </Button>
+            )}
             {proposal.share_id && proposal.status !== "draft" && (
               <>
                 <Button variant="outline" size="sm" onClick={copyShareLink}><Copy className="mr-1 h-3.5 w-3.5" /> Copy Link</Button>
