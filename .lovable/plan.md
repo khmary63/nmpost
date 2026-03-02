@@ -1,83 +1,117 @@
 
 
-## QuoteKit — Full MVP Implementation Plan
+## Re-engineering QuoteKit: Single-Organization Internal Tool
 
-### 1. Foundation & Auth
-- Set up Supabase with Lovable Cloud for backend
-- Email/password + Google OAuth authentication
-- User profiles table with company info (name, logo, branding colors, fonts)
-- Clean, minimal design system (light backgrounds, subtle shadows, professional typography)
-- Protected routes and auth guards
+### Current Problem
+The platform is currently framed as a multi-tenant SaaS for individual freelancers/agencies. Each user is siloed — they only see their own clients, proposals, and data. The language throughout ("freelancers and agencies", "Get started free", "Sign up") reads like a public product.
 
-### 2. Database Schema
-- **profiles**: company name, logo URL, brand colors, industry
-- **clients**: name, email, company, phone, notes (linked to user)
-- **templates**: name, category, sections JSON, default pricing items
-- **proposals**: title, client_id, template_id, status (draft/sent/viewed/accepted/rejected), content JSON, pricing JSON, version number
-- **proposal_versions**: snapshot of proposal at each save point
-- **proposal_events**: tracking events (opened, downloaded, viewed duration)
-- **line_items**: description, quantity, rate, discount, linked to proposal
+### Target Model
+One company deploys QuoteKit internally. Multiple team members (agents, departments) log in and create proposals on behalf of the organization. Shared clients, shared templates, org-wide reporting.
 
-### 3. Dashboard
-- Overview cards: total proposals, pending, accepted, revenue
-- Recent proposals list with status badges
-- Recent client activity feed
-- Quick-action buttons (New Proposal, Add Client)
-- Charts showing proposal conversion rates over time
+---
 
-### 4. Client Management
-- Client list with search and filters
-- Client detail page with contact info and proposal history
-- Create/edit client forms with validation
+### 1. Database Changes
 
-### 5. Template System
-- 5 pre-built templates: Web Design, Consulting, Development, Marketing, General Services
-- Each template has predefined sections (intro, scope, timeline, pricing, terms)
-- Template preview cards with category filtering
+**New table: `organizations`**
+- `id`, `name`, `logo_url`, `brand_primary_color`, `brand_secondary_color`, `brand_font`, `website`, `phone`, `address`, `industry`, `created_at`, `updated_at`
+- Move branding/company fields OUT of `profiles` and INTO this single org record
+- Seed with one default organization row
+
+**New table: `departments`**
+- `id`, `org_id` (FK → organizations), `name`, `created_at`
+
+**Update `profiles` table**
+- Add `org_id` (FK → organizations), `department_id` (FK → departments), `full_name`, `avatar_url`
+- Remove company-level fields (company_name, brand_*, industry, website, address) — those live on the org now
+- The `handle_new_user` trigger auto-assigns new users to the default org
+
+**Update `clients` table**
+- Change `user_id` → `org_id` (clients belong to the org, not individual users)
+- Add `created_by` (UUID, tracks who added the client)
+- RLS: all org members can view/manage clients
+
+**Update `proposals` table**
+- Keep `user_id` (the agent who created/owns the proposal)
+- Add `org_id` (FK → organizations)
+- Add `department_id` (FK → departments, optional)
+- RLS: users see their own proposals + org admins see all org proposals
+
+**Update `templates` table**
+- Add `org_id` for org-specific templates (in addition to defaults)
+- RLS: org members can view org templates + defaults
+
+**New table: `user_roles`** (per security guidelines)
+- `id`, `user_id`, `role` (enum: 'admin', 'manager', 'agent')
+- Admins: manage org settings, see all proposals, manage users
+- Managers: see department proposals, manage clients
+- Agents: create/manage their own proposals, view shared clients
+
+**Security definer function: `has_role()`** and **`get_user_org_id()`** for RLS policies
+
+### 2. Rewording & Branding
+
+**Landing page** → Becomes an internal welcome/login redirect page. No "Sign up free" marketing language. Instead: "Welcome to [OrgName] Proposal System — Sign in to continue."
+
+**Login page** → "Sign in to your account" (remove "QuoteKit" SaaS branding, show org logo if configured)
+
+**Signup page** → "Join your team" or potentially invite-only (admin creates accounts). Remove "Start creating stunning proposals today" generic copy.
+
+**Dashboard** → "Your Proposals" focus. Add org-wide stats for admins. Replace "freelancers and agencies" language with "your team", "your organization".
+
+**Nav items** → Add "Proposals" as explicit nav item. Rename as needed for internal tool feel.
+
+### 3. Build Out Missing Pages
+
+**Clients page** (`/clients`)
+- Searchable/filterable list of org-wide clients
+- Create/edit client modal or page
+- Client detail page showing all proposals sent to that client (across all agents)
+
+**Templates page** (`/templates`)
+- Gallery of default + org templates with category filtering
+- Template preview cards
 - "Start from blank" option
 
-### 6. Proposal Builder
-- Step-by-step creation flow: Select template → Add client → Edit content → Set pricing → Review
-- Drag-and-drop section reordering
-- Rich text editing for each section
-- Dynamic pricing calculator with line items, quantities, rates, discounts, tax
-- Real-time total recalculation
-- Auto-save with version history
-- Brand customization applied automatically (logo, colors)
+**Proposals list page** (`/proposals`)
+- All user's proposals with status filters, search, sorting
+- Admins see org-wide view
 
-### 7. AI Content Assistant (Lovable AI)
-- Edge function using Lovable AI gateway
-- Context-aware suggestions for service descriptions based on project type
-- "Improve writing" button for each text section
-- Pricing benchmark suggestions based on industry
+**Proposal builder** (`/proposals/new`, `/proposals/:id`)
+- Step flow: pick template → assign client → edit sections → set pricing → review
+- Dynamic line items with real-time total calculation
 
-### 8. Proposal Preview & Export
-- Full document preview matching the final output
-- PDF export via edge function
-- Shareable link generation (public proposal view page)
-- Email delivery with SendGrid/built-in email
+**Settings page** (`/settings`)
+- Organization settings (name, logo, branding) — admin only
+- Profile settings (name, email, avatar) — all users
+- Department management — admin only
+- Team members list — admin only
 
-### 9. Proposal Tracking
-- Unique tracking links for each sent proposal
-- Public proposal view page that logs open/download events
-- Real-time notifications on dashboard when clients interact
-- Proposal status management (mark as accepted/rejected)
+**Public proposal view** (`/p/:shareId`)
+- Read-only branded proposal page for clients
+- Logs view/download events
 
-### 10. Responsive Design
-- Desktop-optimized proposal builder
-- Tablet-friendly layout for all pages
-- Mobile-responsive dashboard and client management
+### 4. RLS Policy Overhaul
 
-### Pages
-- `/` — Landing/marketing page
-- `/login`, `/signup`, `/reset-password` — Auth pages
-- `/dashboard` — Main dashboard
-- `/clients` — Client list & management
-- `/clients/:id` — Client detail
-- `/templates` — Template gallery
-- `/proposals/new` — Proposal builder
-- `/proposals/:id` — Proposal editor
-- `/proposals/:id/preview` — Proposal preview
-- `/p/:shareId` — Public shareable proposal view (with tracking)
-- `/settings` — Company profile & branding settings
+All tables switch from per-user isolation to org-based access:
+- `get_user_org_id(uid)` security definer function returns the user's org
+- Clients: `org_id = get_user_org_id(auth.uid())`
+- Proposals: owner sees own; admins/managers see org-wide via `has_role()`
+- Templates: org members see org templates + defaults
+- Profiles: users see own; admins see all org members
+
+### 5. Implementation Order
+
+1. **Migration**: Create `organizations`, `departments`, `user_roles` tables; alter `profiles`, `clients`, `proposals`, `templates`; create security definer functions; update all RLS policies
+2. **Auth & context updates**: Update AuthContext to load org info and user role; update ProtectedRoute with role-based access
+3. **Reword all pages**: Landing, Login, Signup, Dashboard — internal org language
+4. **Build Clients pages**: list, detail, create/edit
+5. **Build Templates page**: gallery with filters
+6. **Build Proposals pages**: list, builder, preview
+7. **Build Settings page**: org settings, profile, team management
+
+### Technical Notes
+- The `organizations` table will be seeded with a single row. This is a single-org deployment.
+- User roles stored in separate `user_roles` table per security requirements (never on profiles).
+- `has_role()` and `get_user_org_id()` as `SECURITY DEFINER` functions to avoid RLS recursion.
+- All existing data will need migration — existing `user_id`-based records get the default `org_id`.
 
