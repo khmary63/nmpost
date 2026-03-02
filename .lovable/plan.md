@@ -1,83 +1,59 @@
 
 
-## Mobile Responsive Overhaul
+## Security Hardening Plan
 
-### Scope
+The security scan found 8 findings (2 errors, 4 warnings, 2 info). The existing RLS foundation is solid — all tables have RLS enabled, roles are in a separate table, and `has_role()`/`get_user_org_id()` security definer functions exist. Here's what needs hardening:
 
-All pages and the shared layout need responsive updates. The main issues are:
+### 1. Enable Leaked Password Protection
+Configure auth to reject passwords found in known breach databases.
 
-1. **DashboardLayout nav** -- nav items are inline and cramped on mobile; needs a hamburger menu with a Sheet/drawer
-2. **ProposalDetail header** -- action buttons overflow horizontally on mobile
-3. **ProposalBuilder pricing** -- 12-column grid breaks on small screens
-4. **ProposalBuilder review** -- 2-column grid needs to stack
-5. **Settings** -- org form uses `grid-cols-2` without responsive prefix
-6. **Clients dialog** -- form uses `grid-cols-2` without responsive prefix
-7. **Tables** -- tables on Proposals, Clients, ClientDetail overflow on mobile; need horizontal scroll wrapper or card-based mobile layout
-8. **Landing page** -- already mostly responsive, minor touch-target and button width tweaks
-9. **Dashboard** -- header buttons need stacking on mobile
+### 2. Add Password Protection for Shared Proposals (Error)
+Shared proposals currently expose pricing and content to anyone with the link. Add optional password protection:
+- **Migration**: Add `share_password_hash` column to `proposals` table
+- **Edge function**: `verify-share-password` — accepts share_id + password, returns a signed short-lived token
+- **Update RLS**: Keep existing public SELECT for non-password-protected proposals; password-protected ones require verification through the edge function
+- **Frontend**: Update `PublicProposal.tsx` to show a password gate when `share_password_hash` is set; update `ProposalDetail.tsx` to let users set a share password
 
-### Changes by File
+### 3. Add Share Link Expiration (Error)
+- **Migration**: Add `share_expires_at` column to `proposals`
+- **Update RLS**: Modify "Anyone can view shared proposals" policy to check `share_expires_at IS NULL OR share_expires_at > now()`
+- **Frontend**: Add expiration date picker in proposal sharing UI
 
-**`src/components/DashboardLayout.tsx`**
-- Add mobile hamburger menu using the Sheet component
-- Hide inline nav on mobile (`hidden md:flex`), show hamburger trigger on mobile (`md:hidden`)
-- Sheet contains full nav links + "New Proposal" button, all full-width with 44px min height
-- Keep desktop nav unchanged
+### 4. Restrict Client Contact Info by Role (Warning)
+- Create a view `clients_public` that excludes `email` and `phone` for non-admin/manager users
+- Or add role-based filtering in the application layer since all org members currently see all client fields
 
-**`src/pages/ProposalDetail.tsx`**
-- Wrap header in `flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`
-- Stack action buttons: `flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3`
-- Make buttons `w-full sm:w-auto`
+### 5. Anonymize IP in Proposal Events (Warning)
+- Truncate IP addresses before storing (remove last octet) in `PublicProposal.tsx`
+- Add a privacy notice to the public proposal page
 
-**`src/pages/ProposalBuilder.tsx`**
-- Pricing grid: change from `grid-cols-12` to stacked on mobile, `sm:grid-cols-12`
-- On mobile, each line item becomes a vertical card with labeled fields
-- Review grid: `grid-cols-1 sm:grid-cols-2`
-- Step indicators: add labels on larger screens, keep dots on mobile
-- Content section toolbar: wrap on mobile
+### 6. Align Proposal Version Access with Proposal Access (Info)
+- **Migration**: Update `proposal_versions` RLS to allow managers/admins to view versions of proposals they can access:
+```sql
+CREATE POLICY "Managers/admins can view org proposal versions"
+ON proposal_versions FOR SELECT
+USING (EXISTS (
+  SELECT 1 FROM proposals
+  WHERE proposals.id = proposal_versions.proposal_id
+  AND proposals.org_id = get_user_org_id(auth.uid())
+  AND (has_role(auth.uid(), 'admin') OR has_role(auth.uid(), 'manager'))
+));
+```
 
-**`src/pages/Dashboard.tsx`**
-- Header: `flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`
-- "New Proposal" button: `w-full sm:w-auto`
+### 7. Add Role Change Audit Logging (Info)
+- **Migration**: Create `audit_logs` table with RLS (admin SELECT only, insert via trigger)
+- **Migration**: Add trigger on `user_roles` for INSERT/UPDATE/DELETE that logs changes to `audit_logs`
 
-**`src/pages/Proposals.tsx`**
-- Header: stack on mobile
-- Table: wrap in `overflow-x-auto` div
-- "New Proposal" button: `w-full sm:w-auto`
+### 8. Input Validation & Frontend Security
+- Sanitize all user inputs before database writes (proposal content, client notes)
+- Add rate limiting awareness on auth pages (already handled by backend, but add UI feedback)
+- Ensure no sensitive data in localStorage beyond the session token
 
-**`src/pages/Clients.tsx`**
-- Same header stacking pattern
-- Table: `overflow-x-auto` wrapper
-- Dialog form: `grid-cols-1 sm:grid-cols-2`
-
-**`src/pages/ClientDetail.tsx`**
-- Table: `overflow-x-auto` wrapper
-
-**`src/pages/Settings.tsx`**
-- Org form grids: `grid-cols-1 sm:grid-cols-2`
-- TabsList: allow wrapping on mobile with `flex-wrap h-auto`
-- Team table: `overflow-x-auto`
-
-**`src/pages/Templates.tsx`**
-- Header: stack on mobile
-- Template dialog pricing items: stack vertically on mobile
-
-**`src/pages/Landing.tsx`**
-- Hero buttons: already `flex-col sm:flex-row` -- add `w-full sm:w-auto` to buttons
-- CTA buttons: same treatment
-- Nav padding: `px-4 sm:px-6`
-
-**Auth pages (Login, Signup, ForgotPassword, ResetPassword)**
-- Already centered cards with `max-w-md` -- mostly fine
-- Ensure padding `px-4` on the wrapper
-
-### Technical Details
-
-- Mobile hamburger uses existing `Sheet` component (already installed via shadcn)
-- Add `Menu` and `X` icons from lucide-react
-- All tables get `<div className="overflow-x-auto">` wrapper
-- All page headers follow pattern: `flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`
-- All primary action buttons: `w-full sm:w-auto`
-- Touch targets: buttons already meet 44px via `h-10`/`h-11` defaults; Sheet nav items use `h-12`
-- No new dependencies needed
+### Files to Change
+- **Migrations**: 3-4 migrations for schema changes (share_password_hash, share_expires_at, audit_logs table + trigger, updated RLS policies)
+- **New edge function**: `verify-share-password`
+- **`src/pages/PublicProposal.tsx`**: Password gate, IP anonymization, privacy notice
+- **`src/pages/ProposalDetail.tsx`**: Share password + expiration UI
+- **`src/pages/ProposalBuilder.tsx`**: Share expiration option
+- **Auth config**: Enable leaked password protection
 
