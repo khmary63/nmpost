@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          new_data: Json | null
+          old_data: Json | null
+          performed_by: string | null
+          record_id: string | null
+          table_name: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          performed_by?: string | null
+          record_id?: string | null
+          table_name: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          new_data?: Json | null
+          old_data?: Json | null
+          performed_by?: string | null
+          record_id?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           company: string | null
@@ -311,7 +344,9 @@ export type Database = {
           notes: string | null
           org_id: string | null
           pricing: Json
+          share_expires_at: string | null
           share_id: string | null
+          share_password_hash: string | null
           status: Database["public"]["Enums"]["proposal_status"]
           subtotal: number | null
           tax_rate: number | null
@@ -333,7 +368,9 @@ export type Database = {
           notes?: string | null
           org_id?: string | null
           pricing?: Json
+          share_expires_at?: string | null
           share_id?: string | null
+          share_password_hash?: string | null
           status?: Database["public"]["Enums"]["proposal_status"]
           subtotal?: number | null
           tax_rate?: number | null
@@ -355,7 +392,9 @@ export type Database = {
           notes?: string | null
           org_id?: string | null
           pricing?: Json
+          share_expires_at?: string | null
           share_id?: string | null
+          share_password_hash?: string | null
           status?: Database["public"]["Enums"]["proposal_status"]
           subtotal?: number | null
           tax_rate?: number | null
@@ -477,6 +516,11 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      hash_share_password: { Args: { _password: string }; Returns: string }
+      verify_share_password: {
+        Args: { _password: string; _share_id: string }
         Returns: boolean
       }
     }
