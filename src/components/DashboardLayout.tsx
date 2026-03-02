@@ -4,18 +4,19 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FileText, LayoutDashboard, Users, FolderOpen, PlusCircle, Settings, LogOut, User } from "lucide-react";
+import { FileText, LayoutDashboard, Users, FolderOpen, PlusCircle, Settings, LogOut, User, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/proposals", icon: ClipboardList, label: "Proposals" },
   { to: "/clients", icon: Users, label: "Clients" },
   { to: "/templates", icon: FolderOpen, label: "Templates" },
 ];
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, signOut, organization } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -25,7 +26,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top nav */}
       <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur-sm">
         <div className="flex h-14 items-center justify-between px-4 lg:px-6">
           <div className="flex items-center gap-6">
@@ -33,21 +33,28 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <FileText className="h-4 w-4 text-primary-foreground" />
               </div>
-              <span className="text-lg font-bold font-display text-foreground hidden sm:block">QuoteKit</span>
+              <span className="text-lg font-bold font-display text-foreground hidden sm:block">
+                {organization?.name ?? "QuoteKit"}
+              </span>
             </Link>
             <nav className="flex items-center gap-1">
-              {navItems.map((item) => (
-                <Link key={item.to} to={item.to}>
-                  <Button
-                    variant={pathname.startsWith(item.to) ? "secondary" : "ghost"}
-                    size="sm"
-                    className={cn("gap-2", pathname.startsWith(item.to) && "bg-accent text-accent-foreground")}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span className="hidden sm:inline">{item.label}</span>
-                  </Button>
-                </Link>
-              ))}
+              {navItems.map((item) => {
+                const isActive = item.to === "/dashboard"
+                  ? pathname === "/dashboard"
+                  : pathname.startsWith(item.to);
+                return (
+                  <Link key={item.to} to={item.to}>
+                    <Button
+                      variant={isActive ? "secondary" : "ghost"}
+                      size="sm"
+                      className={cn("gap-2", isActive && "bg-accent text-accent-foreground")}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span className="hidden sm:inline">{item.label}</span>
+                    </Button>
+                  </Link>
+                );
+              })}
             </nav>
           </div>
 
@@ -79,7 +86,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      {/* Content */}
       <main className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
         {children}
       </main>

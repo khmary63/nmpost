@@ -27,7 +27,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, accepted: 0, revenue: 0 });
   const [loading, setLoading] = useState(true);
@@ -35,13 +35,18 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user) return;
     const load = async () => {
-      const { data } = await supabase
+      // Agents see own, admins/managers see all org proposals
+      let query = supabase
         .from("proposals")
         .select("id, title, status, total, created_at, clients(name)")
-        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(10);
 
+      if (role === "agent") {
+        query = query.eq("user_id", user.id);
+      }
+
+      const { data } = await query;
       const rows = (data ?? []) as Proposal[];
       setProposals(rows);
 
@@ -53,7 +58,7 @@ export default function Dashboard() {
       setLoading(false);
     };
     load();
-  }, [user]);
+  }, [user, role]);
 
   const statCards = [
     { label: "Total Proposals", value: stats.total, icon: FileText, color: "text-primary" },
@@ -68,14 +73,15 @@ export default function Dashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-sm text-muted-foreground">Overview of your proposals and activity</p>
+            <p className="text-sm text-muted-foreground">
+              {role === "admin" ? "Organization-wide overview" : "Your proposals and activity"}
+            </p>
           </div>
           <Button asChild className="gap-2">
             <Link to="/proposals/new"><PlusCircle className="h-4 w-4" /> New Proposal</Link>
           </Button>
         </div>
 
-        {/* Stats */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {statCards.map((s) => (
             <Card key={s.label}>
@@ -92,7 +98,6 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Recent Proposals */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-4">
             <CardTitle className="font-display text-lg">Recent Proposals</CardTitle>
