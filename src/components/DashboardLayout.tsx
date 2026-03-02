@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FileText, LayoutDashboard, Users, FolderOpen, PlusCircle, Settings, LogOut, User, ClipboardList } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { FileText, LayoutDashboard, Users, FolderOpen, PlusCircle, Settings, LogOut, User, ClipboardList, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -18,6 +20,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { user, signOut, organization } = useAuth();
   const navigate = useNavigate();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleSignOut = async () => {
     await signOut();
@@ -28,7 +31,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur-sm">
         <div className="flex h-14 items-center justify-between px-4 lg:px-6">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 md:gap-6">
+            {/* Mobile hamburger */}
+            <Button variant="ghost" size="icon" className="md:hidden h-10 w-10" onClick={() => setMobileOpen(true)}>
+              <Menu className="h-5 w-5" />
+            </Button>
+
             <Link to="/dashboard" className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <FileText className="h-4 w-4 text-primary-foreground" />
@@ -37,7 +45,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 {organization?.name ?? "QuoteKit"}
               </span>
             </Link>
-            <nav className="flex items-center gap-1">
+
+            {/* Desktop nav */}
+            <nav className="hidden md:flex items-center gap-1">
               {navItems.map((item) => {
                 const isActive = item.to === "/dashboard"
                   ? pathname === "/dashboard"
@@ -50,7 +60,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                       className={cn("gap-2", isActive && "bg-accent text-accent-foreground")}
                     >
                       <item.icon className="h-4 w-4" />
-                      <span className="hidden sm:inline">{item.label}</span>
+                      <span>{item.label}</span>
                     </Button>
                   </Link>
                 );
@@ -59,9 +69,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <Button size="sm" className="gap-2" onClick={() => navigate("/proposals/new")}>
+            <Button size="sm" className="gap-2 hidden sm:inline-flex" onClick={() => navigate("/proposals/new")}>
               <PlusCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">New Proposal</span>
+              <span>New Proposal</span>
             </Button>
 
             <DropdownMenu>
@@ -85,6 +95,47 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
+
+      {/* Mobile Sheet nav */}
+      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+        <SheetContent side="left" className="w-72 p-0">
+          <SheetHeader className="border-b border-border p-4">
+            <SheetTitle className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+                <FileText className="h-4 w-4 text-primary-foreground" />
+              </div>
+              {organization?.name ?? "QuoteKit"}
+            </SheetTitle>
+          </SheetHeader>
+          <nav className="flex flex-col gap-1 p-4">
+            {navItems.map((item) => {
+              const isActive = item.to === "/dashboard"
+                ? pathname === "/dashboard"
+                : pathname.startsWith(item.to);
+              return (
+                <Link key={item.to} to={item.to} onClick={() => setMobileOpen(false)}>
+                  <Button
+                    variant={isActive ? "secondary" : "ghost"}
+                    className={cn("w-full justify-start gap-3 h-12", isActive && "bg-accent text-accent-foreground")}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    {item.label}
+                  </Button>
+                </Link>
+              );
+            })}
+            <div className="my-2 border-t border-border" />
+            <Button className="w-full justify-start gap-3 h-12" onClick={() => { setMobileOpen(false); navigate("/proposals/new"); }}>
+              <PlusCircle className="h-5 w-5" />
+              New Proposal
+            </Button>
+            <Button variant="ghost" className="w-full justify-start gap-3 h-12" onClick={() => { setMobileOpen(false); navigate("/settings"); }}>
+              <Settings className="h-5 w-5" />
+              Settings
+            </Button>
+          </nav>
+        </SheetContent>
+      </Sheet>
 
       <main className="mx-auto max-w-7xl px-4 py-6 lg:px-6">
         {children}

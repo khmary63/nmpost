@@ -95,7 +95,7 @@ export default function Landing() {
     <div className="flex min-h-screen flex-col bg-background">
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <FileText className="h-4 w-4 text-primary-foreground" />
@@ -118,7 +118,7 @@ export default function Landing() {
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-accent/50 to-background" />
-        <div className="relative mx-auto max-w-6xl px-6 pb-20 pt-20 sm:pt-28">
+        <div className="relative mx-auto max-w-6xl px-4 sm:px-6 pb-20 pt-20 sm:pt-28">
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-sm text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
@@ -137,7 +137,7 @@ export default function Landing() {
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Button
                 size="lg"
-                className="h-12 px-8 text-base"
+                className="h-12 px-8 text-base w-full sm:w-auto"
                 onClick={() => navigate("/signup")}
               >
                 Start for free
@@ -146,7 +146,7 @@ export default function Landing() {
               <Button
                 size="lg"
                 variant="outline"
-                className="h-12 px-8 text-base"
+                className="h-12 px-8 text-base w-full sm:w-auto"
                 onClick={() => navigate("/login")}
               >
                 Sign in
@@ -291,7 +291,7 @@ export default function Landing() {
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
             <Button
               size="lg"
-              className="h-12 px-8 text-base"
+              className="h-12 px-8 text-base w-full sm:w-auto"
               onClick={() => navigate("/signup")}
             >
               Get started — it's free
@@ -300,7 +300,7 @@ export default function Landing() {
             <Button
               size="lg"
               variant="outline"
-              className="h-12 px-8 text-base"
+              className="h-12 px-8 text-base w-full sm:w-auto"
               onClick={() => navigate("/login")}
             >
               Sign in

@@ -77,7 +77,7 @@ export default function ProposalDetail() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/proposals")}>
               <ArrowLeft className="h-4 w-4" />
@@ -89,7 +89,7 @@ export default function ProposalDetail() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
             <Select value={proposal.status} onValueChange={updateStatus}>
               <SelectTrigger className="w-32">
                 <SelectValue />
@@ -101,14 +101,14 @@ export default function ProposalDetail() {
               </SelectContent>
             </Select>
             {proposal.status === "draft" && (
-              <Button variant="outline" size="sm" onClick={() => navigate(`/proposals/${id}/edit`)}>
+              <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => navigate(`/proposals/${id}/edit`)}>
                 <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
               </Button>
             )}
             {proposal.share_id && proposal.status !== "draft" && (
               <>
-                <Button variant="outline" size="sm" onClick={copyShareLink}><Copy className="mr-1 h-3.5 w-3.5" /> Copy Link</Button>
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={copyShareLink}><Copy className="mr-1 h-3.5 w-3.5" /> Copy Link</Button>
+                <Button variant="outline" size="sm" className="w-full sm:w-auto" asChild>
                   <a href={`/p/${proposal.share_id}`} target="_blank" rel="noopener noreferrer">
                     <ExternalLink className="mr-1 h-3.5 w-3.5" /> Preview
                   </a>

@@ -89,14 +89,14 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="font-display text-2xl font-bold text-foreground">Dashboard</h1>
             <p className="text-sm text-muted-foreground">
               {role === "admin" ? "Organization-wide overview" : "Your proposals and activity"}
             </p>
           </div>
-          <Button asChild className="gap-2">
+          <Button asChild className="gap-2 w-full sm:w-auto">
             <Link to="/proposals/new"><PlusCircle className="h-4 w-4" /> New Proposal</Link>
           </Button>
         </div>
