@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { FileText, Users, DollarSign, Clock, PlusCircle, ArrowRight } from "lucide-react";
-import { format } from "date-fns";
+import { format, subMonths, startOfMonth } from "date-fns";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, AreaChart, Area, CartesianGrid } from "recharts";
 
 type Proposal = {
   id: string;
@@ -29,18 +31,17 @@ const statusColors: Record<string, string> = {
 export default function Dashboard() {
   const { user, role } = useAuth();
   const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [allProposals, setAllProposals] = useState<Proposal[]>([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, accepted: 0, revenue: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     const load = async () => {
-      // Agents see own, admins/managers see all org proposals
       let query = supabase
         .from("proposals")
         .select("id, title, status, total, created_at, clients(name)")
-        .order("created_at", { ascending: false })
-        .limit(10);
+        .order("created_at", { ascending: false });
 
       if (role === "agent") {
         query = query.eq("user_id", user.id);
@@ -48,7 +49,8 @@ export default function Dashboard() {
 
       const { data } = await query;
       const rows = (data ?? []) as Proposal[];
-      setProposals(rows);
+      setAllProposals(rows);
+      setProposals(rows.slice(0, 10));
 
       const total = rows.length;
       const pending = rows.filter((p) => p.status === "sent" || p.status === "viewed").length;
@@ -59,6 +61,23 @@ export default function Dashboard() {
     };
     load();
   }, [user, role]);
+
+  const chartData = useMemo(() => {
+    const months: { month: string; created: number; accepted: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = subMonths(new Date(), i);
+      const key = format(startOfMonth(d), "yyyy-MM");
+      const label = format(d, "MMM");
+      const inMonth = allProposals.filter(p => p.created_at.startsWith(key));
+      months.push({ month: label, created: inMonth.length, accepted: inMonth.filter(p => p.status === "accepted").length });
+    }
+    return months;
+  }, [allProposals]);
+
+  const chartConfig = {
+    created: { label: "Created", color: "hsl(var(--primary))" },
+    accepted: { label: "Accepted", color: "hsl(var(--success, 142 71% 45%))" },
+  };
 
   const statCards = [
     { label: "Total Proposals", value: stats.total, icon: FileText, color: "text-primary" },
@@ -96,6 +115,39 @@ export default function Dashboard() {
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        {/* Charts */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader><CardTitle className="font-display text-lg">Proposals (6 months)</CardTitle></CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[220px] w-full">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="month" className="text-xs fill-muted-foreground" />
+                  <YAxis allowDecimals={false} className="text-xs fill-muted-foreground" />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="created" fill="var(--color-created)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="accepted" fill="var(--color-accepted)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader><CardTitle className="font-display text-lg">Conversion Trend</CardTitle></CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[220px] w-full">
+                <AreaChart data={chartData.map(d => ({ ...d, rate: d.created > 0 ? Math.round((d.accepted / d.created) * 100) : 0 }))}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                  <XAxis dataKey="month" className="text-xs fill-muted-foreground" />
+                  <YAxis unit="%" className="text-xs fill-muted-foreground" />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Area type="monotone" dataKey="rate" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.1)" strokeWidth={2} name="Conversion %" />
+                </AreaChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
         </div>
 
         <Card>

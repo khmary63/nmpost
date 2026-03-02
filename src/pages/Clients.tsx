@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ type Client = {
 };
 
 export default function Clients() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,13 +134,13 @@ export default function Clients() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
+                    <TableRow key={c.id} className="cursor-pointer" onClick={() => navigate(`/clients/${c.id}`)}>
+                      <TableCell className="font-medium text-primary">{c.name}</TableCell>
                       <TableCell>{c.company ?? "—"}</TableCell>
                       <TableCell>{c.email ?? "—"}</TableCell>
                       <TableCell>{c.phone ?? "—"}</TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(c)}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
