@@ -1,45 +1,83 @@
 
 
-## Landing Page Enhancement Plan
+## Mobile Responsive Overhaul
 
-The current landing page is a minimal centered card with a logo icon, title, subtitle, and two buttons. It needs to become a proper marketing page that sells QuoteKit.
+### Scope
 
-### What will be built
+All pages and the shared layout need responsive updates. The main issues are:
 
-**Full marketing landing page** with these sections:
+1. **DashboardLayout nav** -- nav items are inline and cramped on mobile; needs a hamburger menu with a Sheet/drawer
+2. **ProposalDetail header** -- action buttons overflow horizontally on mobile
+3. **ProposalBuilder pricing** -- 12-column grid breaks on small screens
+4. **ProposalBuilder review** -- 2-column grid needs to stack
+5. **Settings** -- org form uses `grid-cols-2` without responsive prefix
+6. **Clients dialog** -- form uses `grid-cols-2` without responsive prefix
+7. **Tables** -- tables on Proposals, Clients, ClientDetail overflow on mobile; need horizontal scroll wrapper or card-based mobile layout
+8. **Landing page** -- already mostly responsive, minor touch-target and button width tweaks
+9. **Dashboard** -- header buttons need stacking on mobile
 
-1. **Hero section** — Large headline ("Win more deals with beautiful proposals"), subheadline explaining QuoteKit's value, two CTAs (Sign in / Join your team), and an AI-generated hero image showing a clean proposal dashboard mockup displayed in a browser frame with a subtle gradient background and floating UI elements.
+### Changes by File
 
-2. **Social proof bar** — "Trusted by 500+ teams" with placeholder logos (styled as muted text/shapes since we don't have real logos).
+**`src/components/DashboardLayout.tsx`**
+- Add mobile hamburger menu using the Sheet component
+- Hide inline nav on mobile (`hidden md:flex`), show hamburger trigger on mobile (`md:hidden`)
+- Sheet contains full nav links + "New Proposal" button, all full-width with 44px min height
+- Keep desktop nav unchanged
 
-3. **Features grid** — 3-column grid highlighting key capabilities:
-   - AI-powered content writing
-   - One-click proposal sharing
-   - Real-time client engagement tracking
-   - Beautiful branded templates
-   - Team collaboration
-   - Analytics and insights
-   Each with a Lucide icon, title, and short description.
+**`src/pages/ProposalDetail.tsx`**
+- Wrap header in `flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between`
+- Stack action buttons: `flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3`
+- Make buttons `w-full sm:w-auto`
 
-4. **How it works** — 3-step visual flow: Create → Send → Win. Numbered steps with descriptions.
+**`src/pages/ProposalBuilder.tsx`**
+- Pricing grid: change from `grid-cols-12` to stacked on mobile, `sm:grid-cols-12`
+- On mobile, each line item becomes a vertical card with labeled fields
+- Review grid: `grid-cols-1 sm:grid-cols-2`
+- Step indicators: add labels on larger screens, keep dots on mobile
+- Content section toolbar: wrap on mobile
 
-5. **CTA section** — Final call-to-action block with gradient background, headline, and buttons.
+**`src/pages/Dashboard.tsx`**
+- Header: `flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`
+- "New Proposal" button: `w-full sm:w-auto`
 
-6. **Footer** — QuoteKit branding and copyright.
+**`src/pages/Proposals.tsx`**
+- Header: stack on mobile
+- Table: wrap in `overflow-x-auto` div
+- "New Proposal" button: `w-full sm:w-auto`
 
-### AI-generated hero image
+**`src/pages/Clients.tsx`**
+- Same header stacking pattern
+- Table: `overflow-x-auto` wrapper
+- Dialog form: `grid-cols-1 sm:grid-cols-2`
 
-A backend function call will generate a hero illustration using the Lovable AI image generation model (`google/gemini-2.5-flash-image`). The image will depict a clean, modern proposal dashboard UI on a laptop/browser mockup — blue and white color scheme matching the brand. The generated image will be stored as a Lovable asset via `create_asset`.
+**`src/pages/ClientDetail.tsx`**
+- Table: `overflow-x-auto` wrapper
 
-### Technical approach
+**`src/pages/Settings.tsx`**
+- Org form grids: `grid-cols-1 sm:grid-cols-2`
+- TabsList: allow wrapping on mobile with `flex-wrap h-auto`
+- Team table: `overflow-x-auto`
 
-- **Single file change**: Rewrite `src/pages/Landing.tsx` from a simple centered card into a full scrollable marketing page.
-- **Create one edge function**: `supabase/functions/generate-hero-image/index.ts` to generate the hero image (or generate it at build time and store as asset).
-- **Styling**: All Tailwind — gradient backgrounds, responsive grid, smooth scroll animations using the existing `animate-fade-in` keyframe plus new CSS keyframes for staggered entrance.
-- **New CSS keyframes** in `src/index.css`: `fade-in-up` with staggered delays for the features grid.
-- **No new dependencies** — uses existing Lucide icons, Button, Card components.
+**`src/pages/Templates.tsx`**
+- Header: stack on mobile
+- Template dialog pricing items: stack vertically on mobile
 
-### Design direction
+**`src/pages/Landing.tsx`**
+- Hero buttons: already `flex-col sm:flex-row` -- add `w-full sm:w-auto` to buttons
+- CTA buttons: same treatment
+- Nav padding: `px-4 sm:px-6`
 
-Clean, minimal, professional (Linear/Notion-inspired per the design memory). Generous whitespace, muted accent backgrounds for alternating sections, the primary blue as the main accent color. Plus Jakarta Sans for all headings, DM Sans for body.
+**Auth pages (Login, Signup, ForgotPassword, ResetPassword)**
+- Already centered cards with `max-w-md` -- mostly fine
+- Ensure padding `px-4` on the wrapper
+
+### Technical Details
+
+- Mobile hamburger uses existing `Sheet` component (already installed via shadcn)
+- Add `Menu` and `X` icons from lucide-react
+- All tables get `<div className="overflow-x-auto">` wrapper
+- All page headers follow pattern: `flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between`
+- All primary action buttons: `w-full sm:w-auto`
+- Touch targets: buttons already meet 44px via `h-10`/`h-11` defaults; Sheet nav items use `h-12`
+- No new dependencies needed
 
