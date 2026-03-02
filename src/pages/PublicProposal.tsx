@@ -3,9 +3,12 @@ import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText } from "lucide-react";
+import { FileText, Lock, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 export default function PublicProposal() {
   const { shareId } = useParams<{ shareId: string }>();
@@ -13,11 +16,38 @@ export default function PublicProposal() {
   const [lineItems, setLineItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [org, setOrg] = useState<any>(null);
+  const [needsPassword, setNeedsPassword] = useState(false);
+  const [password, setPassword] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [expired, setExpired] = useState(false);
+
+  const loadProposal = async (proposalData?: any) => {
+    const p = proposalData;
+    if (!p) return;
+
+    setProposal(p);
+    const { data: li } = await supabase.from("line_items").select("*").eq("proposal_id", p.id).order("sort_order");
+    setLineItems(li ?? []);
+
+    // Log view event (no IP — privacy by design)
+    await supabase.from("proposal_events").insert({
+      proposal_id: p.id,
+      event_type: "viewed",
+      user_agent: navigator.userAgent,
+    } as any);
+
+    // Load org branding
+    if (p.org_id) {
+      const { data: o } = await supabase.from("organizations").select("name, logo_url, brand_primary_color").eq("id", p.org_id).single();
+      setOrg(o);
+    }
+  };
 
   useEffect(() => {
     if (!shareId) return;
     const load = async () => {
-      const { data: p } = await supabase
+      // First try to load — RLS will block password-protected proposals
+      const { data: p, error } = await supabase
         .from("proposals")
         .select("*, clients(name)")
         .eq("share_id", shareId)
@@ -25,32 +55,102 @@ export default function PublicProposal() {
         .single();
 
       if (p) {
-        setProposal(p);
-        const { data: li } = await supabase.from("line_items").select("*").eq("proposal_id", p.id).order("sort_order");
-        setLineItems(li ?? []);
-
-        // Log view event
-        await supabase.from("proposal_events").insert({
-          proposal_id: p.id,
-          event_type: "viewed",
-          user_agent: navigator.userAgent,
-        } as any);
-
-        // Load org branding
-        if (p.org_id) {
-          const { data: o } = await supabase.from("organizations").select("name, logo_url, brand_primary_color").eq("id", p.org_id).single();
-          setOrg(o);
+        // Check if expired client-side as well
+        if (p.share_expires_at && new Date(p.share_expires_at) < new Date()) {
+          setExpired(true);
+          setLoading(false);
+          return;
         }
+        await loadProposal(p);
+      } else {
+        // Could be password-protected or truly not found
+        // Check if it needs a password by calling the edge function with empty password
+        setNeedsPassword(true);
       }
       setLoading(false);
     };
     load();
   }, [shareId]);
 
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password.trim()) return;
+    setVerifying(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-share-password", {
+        body: { share_id: shareId, password },
+      });
+
+      if (error || data?.error) {
+        toast.error(data?.error || "Verification failed");
+        setVerifying(false);
+        return;
+      }
+
+      // Now load the proposal using the returned proposal_id
+      // The "Password-protected shared proposals via token" RLS policy allows SELECT
+      const { data: p } = await supabase
+        .from("proposals")
+        .select("*, clients(name)")
+        .eq("id", data.proposal_id)
+        .single();
+
+      if (p) {
+        setNeedsPassword(false);
+        await loadProposal(p);
+      } else {
+        toast.error("Could not load proposal");
+      }
+    } catch {
+      toast.error("Verification failed");
+    }
+    setVerifying(false);
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (expired) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="text-center">
+          <FileText className="mx-auto h-12 w-12 text-muted-foreground/50" />
+          <p className="mt-4 text-lg text-muted-foreground">This share link has expired</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (needsPassword && !proposal) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center">
+            <Lock className="mx-auto h-10 w-10 text-muted-foreground" />
+            <CardTitle className="mt-2">Password Required</CardTitle>
+            <p className="text-sm text-muted-foreground">This proposal is password-protected.</p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <Input
+                type="password"
+                placeholder="Enter password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoFocus
+              />
+              <Button type="submit" className="w-full" disabled={verifying}>
+                {verifying ? "Verifying…" : "View Proposal"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -133,6 +233,12 @@ export default function PublicProposal() {
             Valid until {format(new Date(proposal.valid_until), "MMMM d, yyyy")}
           </p>
         )}
+
+        {/* Privacy notice */}
+        <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground/60 pt-4">
+          <ShieldCheck className="h-3.5 w-3.5" />
+          <span>Your privacy is protected. No personally identifiable information is stored when viewing this proposal.</span>
+        </div>
       </main>
     </div>
   );

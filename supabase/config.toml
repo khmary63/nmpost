@@ -2,3 +2,6 @@ project_id = "hfebtrmvjzwkaunkylwu"
 
 [functions.ai-content]
 verify_jwt = false
+
+[functions.verify-share-password]
+verify_jwt = false

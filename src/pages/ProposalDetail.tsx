@@ -6,10 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Copy, ExternalLink, Pencil } from "lucide-react";
+import { ArrowLeft, Copy, ExternalLink, Pencil, Shield, CalendarIcon, Lock, X } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const statusColors: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -25,6 +31,12 @@ export default function ProposalDetail() {
   const [proposal, setProposal] = useState<any>(null);
   const [lineItems, setLineItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Share settings
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [sharePassword, setSharePassword] = useState("");
+  const [shareExpiresAt, setShareExpiresAt] = useState<Date | undefined>();
+  const [savingShare, setSavingShare] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -34,6 +46,9 @@ export default function ProposalDetail() {
     ]).then(([pRes, liRes]) => {
       setProposal(pRes.data);
       setLineItems(liRes.data ?? []);
+      if (pRes.data?.share_expires_at) {
+        setShareExpiresAt(new Date(pRes.data.share_expires_at));
+      }
       setLoading(false);
     });
   }, [id]);
@@ -49,6 +64,41 @@ export default function ProposalDetail() {
       navigator.clipboard.writeText(`${window.location.origin}/p/${proposal.share_id}`);
       toast.success("Share link copied");
     }
+  };
+
+  const saveShareSettings = async () => {
+    setSavingShare(true);
+    const updates: any = {
+      share_expires_at: shareExpiresAt?.toISOString() ?? null,
+    };
+
+    // If a new password is set, hash it server-side via RPC
+    if (sharePassword.trim()) {
+      const { data: hash } = await (supabase.rpc as any)("hash_share_password", {
+        _password: sharePassword,
+      });
+      updates.share_password_hash = hash;
+    }
+
+    await supabase.from("proposals").update(updates).eq("id", id!);
+    setProposal({ ...proposal, ...updates, share_expires_at: shareExpiresAt?.toISOString() ?? null });
+    toast.success("Share settings updated");
+    setSharePassword("");
+    setSavingShare(false);
+    setShareDialogOpen(false);
+  };
+
+  const removeSharePassword = async () => {
+    await supabase.from("proposals").update({ share_password_hash: null } as any).eq("id", id!);
+    setProposal({ ...proposal, share_password_hash: null });
+    toast.success("Share password removed");
+  };
+
+  const removeShareExpiration = async () => {
+    await supabase.from("proposals").update({ share_expires_at: null } as any).eq("id", id!);
+    setProposal({ ...proposal, share_expires_at: null });
+    setShareExpiresAt(undefined);
+    toast.success("Share expiration removed");
   };
 
   if (loading) {
@@ -113,10 +163,98 @@ export default function ProposalDetail() {
                     <ExternalLink className="mr-1 h-3.5 w-3.5" /> Preview
                   </a>
                 </Button>
+                <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto">
+                      <Shield className="mr-1 h-3.5 w-3.5" /> Share Settings
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Share Settings</DialogTitle>
+                      <DialogDescription>Configure password protection and expiration for this shared proposal link.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      {/* Password protection */}
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Lock className="h-4 w-4" /> Password Protection
+                        </Label>
+                        {proposal.share_password_hash ? (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">Password set</Badge>
+                            <Button variant="ghost" size="sm" onClick={removeSharePassword}>
+                              <X className="h-3.5 w-3.5 mr-1" /> Remove
+                            </Button>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No password set — anyone with the link can view.</p>
+                        )}
+                        <Input
+                          type="password"
+                          placeholder={proposal.share_password_hash ? "Set new password" : "Set a password (optional)"}
+                          value={sharePassword}
+                          onChange={(e) => setSharePassword(e.target.value)}
+                        />
+                      </div>
+
+                      {/* Expiration */}
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <CalendarIcon className="h-4 w-4" /> Link Expiration
+                        </Label>
+                        {proposal.share_expires_at && (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">Expires {format(new Date(proposal.share_expires_at), "MMM d, yyyy")}</Badge>
+                            <Button variant="ghost" size="sm" onClick={removeShareExpiration}>
+                              <X className="h-3.5 w-3.5 mr-1" /> Remove
+                            </Button>
+                          </div>
+                        )}
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !shareExpiresAt && "text-muted-foreground")}>
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {shareExpiresAt ? format(shareExpiresAt, "PPP") : "Set expiration date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={shareExpiresAt}
+                              onSelect={setShareExpiresAt}
+                              disabled={(date) => date < new Date()}
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setShareDialogOpen(false)}>Cancel</Button>
+                      <Button onClick={saveShareSettings} disabled={savingShare}>
+                        {savingShare ? "Saving…" : "Save Settings"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </>
             )}
           </div>
         </div>
+
+        {/* Share protection indicators */}
+        {proposal.status !== "draft" && (proposal.share_password_hash || proposal.share_expires_at) && (
+          <div className="flex flex-wrap gap-2">
+            {proposal.share_password_hash && (
+              <Badge variant="outline" className="gap-1"><Lock className="h-3 w-3" /> Password-protected</Badge>
+            )}
+            {proposal.share_expires_at && (
+              <Badge variant="outline" className="gap-1"><CalendarIcon className="h-3 w-3" /> Expires {format(new Date(proposal.share_expires_at), "MMM d, yyyy")}</Badge>
+            )}
+          </div>
+        )}
 
         {/* Content sections */}
         {sections.length > 0 && (
