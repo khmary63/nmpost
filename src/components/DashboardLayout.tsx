@@ -68,10 +68,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Button size="sm" className="gap-2 hidden sm:inline-flex" onClick={() => navigate("/proposals/new")}>
-              <PlusCircle className="h-4 w-4" />
-              <span>New Proposal</span>
-            </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
