@@ -46,8 +46,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
 
-          {/* Center: desktop nav */}
-          <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
+          {/* Right-aligned: desktop nav */}
+          <nav className="hidden md:flex items-center gap-1 flex-1 justify-end mr-3">
             {navItems.map((item) => {
               const isActive = item.to === "/dashboard"
                 ? pathname === "/dashboard"
