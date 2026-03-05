@@ -186,7 +186,8 @@ export default function ProposalBuilder() {
       const { error } = await supabase.from("proposals").update(proposalData as any).eq("id", editId!);
       if (error) { toast.error(error.message); setSaving(false); return; }
       // Replace line items
-      await supabase.from("line_items").delete().eq("proposal_id", editId!);
+      const { error: delError } = await supabase.from("line_items").delete().eq("proposal_id", editId!);
+      if (delError) { toast.error("Failed to clear old pricing: " + delError.message); setSaving(false); return; }
     } else {
       const { data, error } = await supabase.from("proposals").insert({
         ...proposalData,
@@ -199,16 +200,20 @@ export default function ProposalBuilder() {
     }
 
     if (proposalId) {
-      const items = lineItems.map((li, idx) => ({
-        proposal_id: proposalId!,
-        description: li.description,
-        quantity: li.quantity,
-        rate: li.rate,
-        discount: li.discount,
-        amount: li.quantity * li.rate * (1 - li.discount / 100),
-        sort_order: idx,
-      }));
-      await supabase.from("line_items").insert(items);
+      const validItems = lineItems.filter(li => li.description.trim());
+      if (validItems.length > 0) {
+        const items = validItems.map((li, idx) => ({
+          proposal_id: proposalId!,
+          description: li.description.trim(),
+          quantity: li.quantity,
+          rate: li.rate,
+          discount: li.discount,
+          amount: li.quantity * li.rate * (1 - li.discount / 100),
+          sort_order: idx,
+        }));
+        const { error: liError } = await supabase.from("line_items").insert(items);
+        if (liError) { toast.error("Failed to save pricing items: " + liError.message); setSaving(false); return; }
+      }
     }
 
     toast.success(isEditing ? "Proposal updated" : "Proposal saved as draft");
@@ -431,6 +436,54 @@ export default function ProposalBuilder() {
                 <div><span className="text-muted-foreground">Template:</span> <span className="font-medium">{templates.find(t => t.id === selectedTemplate)?.name ?? "Blank"}</span></div>
                 <div><span className="text-muted-foreground">Total:</span> <span className="font-bold">${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span></div>
               </div>
+
+              {/* Pricing breakdown */}
+              {lineItems.filter(li => li.description.trim()).length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold">Pricing Summary</Label>
+                  <div className="rounded-lg border border-border overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/50">
+                          <th className="text-left p-2 font-medium">Description</th>
+                          <th className="text-right p-2 font-medium">Qty</th>
+                          <th className="text-right p-2 font-medium">Rate</th>
+                          <th className="text-right p-2 font-medium">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lineItems.filter(li => li.description.trim()).map((li, idx) => (
+                          <tr key={idx} className="border-b border-border last:border-0">
+                            <td className="p-2">{li.description}</td>
+                            <td className="text-right p-2">{li.quantity}</td>
+                            <td className="text-right p-2">${Number(li.rate).toLocaleString()}</td>
+                            <td className="text-right p-2 font-medium">${(li.quantity * li.rate * (1 - li.discount / 100)).toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="text-right space-y-1">
+                    <div className="text-sm"><span className="text-muted-foreground mr-4">Subtotal</span>${subtotal.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                    {taxRate > 0 && <div className="text-sm"><span className="text-muted-foreground mr-4">Tax ({taxRate}%)</span>${tax.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>}
+                    <div className="text-lg font-bold">${total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Sections preview */}
+              {sections.filter(s => s.title.trim()).length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-base font-semibold">Content Sections</Label>
+                  {sections.filter(s => s.title.trim()).map((sec, idx) => (
+                    <div key={idx} className="rounded-lg border border-border p-3">
+                      <h4 className="font-medium text-sm">{sec.title}</h4>
+                      <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{sec.content}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Notes (optional)</Label>
                 <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal notes..." rows={3} />
