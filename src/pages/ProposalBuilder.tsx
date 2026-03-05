@@ -208,7 +208,6 @@ export default function ProposalBuilder() {
           quantity: li.quantity,
           rate: li.rate,
           discount: li.discount,
-          amount: li.quantity * li.rate * (1 - li.discount / 100),
           sort_order: idx,
         }));
         const { error: liError } = await supabase.from("line_items").insert(items);
