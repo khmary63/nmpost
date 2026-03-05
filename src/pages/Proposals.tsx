@@ -17,6 +17,7 @@ type Proposal = {
   status: string;
   total: number;
   created_at: string;
+  updated_at: string;
   clients: { name: string } | null;
 };
 
@@ -42,8 +43,8 @@ export default function Proposals() {
     const load = async () => {
       let query = supabase
         .from("proposals")
-        .select("id, title, status, total, created_at, clients(name)")
-        .order("created_at", { ascending: false });
+        .select("id, title, status, total, created_at, updated_at, clients(name)")
+        .order("updated_at", { ascending: false });
 
       if (role === "agent") {
         query = query.eq("user_id", user.id);
@@ -116,7 +117,8 @@ export default function Proposals() {
                     <TableHead>Client</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Total</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Last Modified</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -129,6 +131,7 @@ export default function Proposals() {
                       </TableCell>
                       <TableCell className="text-right">${Number(p.total || 0).toLocaleString()}</TableCell>
                       <TableCell className="text-muted-foreground">{format(new Date(p.created_at), "MMM d, yyyy")}</TableCell>
+                      <TableCell className="text-muted-foreground">{format(new Date(p.updated_at), "MMM d, yyyy")}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

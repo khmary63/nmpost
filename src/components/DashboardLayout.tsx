@@ -30,13 +30,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur-sm">
-        <div className="flex h-14 items-center justify-between px-4 lg:px-6">
-          <div className="flex items-center gap-4 md:gap-6">
-            {/* Mobile hamburger */}
+        <div className="flex h-14 items-center px-4 lg:px-6">
+          {/* Left: logo + mobile hamburger */}
+          <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" className="md:hidden h-10 w-10" onClick={() => setMobileOpen(true)}>
               <Menu className="h-5 w-5" />
             </Button>
-
             <Link to="/dashboard" className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <FileText className="h-4 w-4 text-primary-foreground" />
@@ -45,28 +44,28 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                 {organization?.name ?? "QuoteKit"}
               </span>
             </Link>
-
-            {/* Desktop nav */}
-            <nav className="hidden md:flex items-center gap-1">
-              {navItems.map((item) => {
-                const isActive = item.to === "/dashboard"
-                  ? pathname === "/dashboard"
-                  : pathname.startsWith(item.to);
-                return (
-                  <Link key={item.to} to={item.to}>
-                    <Button
-                      variant={isActive ? "secondary" : "ghost"}
-                      size="sm"
-                      className={cn("gap-2", isActive && "bg-accent text-accent-foreground")}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.label}</span>
-                    </Button>
-                  </Link>
-                );
-              })}
-            </nav>
           </div>
+
+          {/* Center: desktop nav */}
+          <nav className="hidden md:flex items-center gap-1 flex-1 justify-center">
+            {navItems.map((item) => {
+              const isActive = item.to === "/dashboard"
+                ? pathname === "/dashboard"
+                : pathname.startsWith(item.to);
+              return (
+                <Link key={item.to} to={item.to}>
+                  <Button
+                    variant={isActive ? "secondary" : "ghost"}
+                    size="sm"
+                    className={cn("gap-2", isActive && "bg-accent text-accent-foreground")}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </Button>
+                </Link>
+              );
+            })}
+          </nav>
 
           <div className="flex items-center gap-3">
             <Button size="sm" className="gap-2 hidden sm:inline-flex" onClick={() => navigate("/proposals/new")}>
