@@ -88,17 +88,13 @@ export default function PublicProposal() {
         return;
       }
 
-      // Now load the proposal using the returned proposal_id
-      // The "Password-protected shared proposals via token" RLS policy allows SELECT
-      const { data: p } = await supabase
-        .from("proposals")
-        .select("*, clients(name)")
-        .eq("id", data.proposal_id)
-        .single();
-
-      if (p) {
+      // Edge function returns full proposal data — no second Supabase query needed
+      // (RLS no longer allows direct access to password-protected proposals)
+      if (data.proposal) {
         setNeedsPassword(false);
-        await loadProposal(p);
+        setProposal(data.proposal);
+        setLineItems(data.lineItems ?? []);
+        setOrg(data.org ?? null);
       } else {
         toast.error("Could not load proposal");
       }

@@ -21,12 +21,13 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Use service role — this is the ONLY way to access password-protected proposals
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Fetch proposal by share_id using service role (bypasses RLS)
+    // Fetch proposal metadata first (minimal fields, service role bypasses RLS)
     const { data: proposal, error } = await supabase
       .from("proposals")
       .select("id, share_id, share_password_hash, share_expires_at, status")
@@ -56,7 +57,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify password using pgcrypto crypt function
+    // Verify password using pgcrypto via security definer function
     const { data: match } = await supabase.rpc("verify_share_password", {
       _share_id: share_id,
       _password: password,
@@ -69,16 +70,49 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Return a simple token (share_id + timestamp hash) valid for 1 hour
-    // In production you'd use JWT signing; here we use a simple HMAC approach
-    const token = btoa(JSON.stringify({
-      share_id,
+    // Password correct — fetch full proposal data + related records using service role
+    const [proposalFull, lineItemsResult, orgResult] = await Promise.all([
+      supabase
+        .from("proposals")
+        .select("*, clients(name)")
+        .eq("id", proposal.id)
+        .single(),
+      supabase
+        .from("line_items")
+        .select("*")
+        .eq("proposal_id", proposal.id)
+        .order("sort_order"),
+      supabase
+        .from("proposals")
+        .select("org_id")
+        .eq("id", proposal.id)
+        .single(),
+    ]);
+
+    // Fetch org branding separately
+    let org = null;
+    if (orgResult.data?.org_id) {
+      const { data: o } = await supabase
+        .from("organizations")
+        .select("name, logo_url, brand_primary_color")
+        .eq("id", orgResult.data.org_id)
+        .single();
+      org = o;
+    }
+
+    // Log view event (server-side, no client IP stored)
+    await supabase.from("proposal_events").insert({
       proposal_id: proposal.id,
-      exp: Date.now() + 3600000, // 1 hour
-    }));
+      event_type: "viewed",
+      user_agent: req.headers.get("user-agent") ?? null,
+    });
 
     return new Response(
-      JSON.stringify({ token, proposal_id: proposal.id }),
+      JSON.stringify({
+        proposal: proposalFull.data,
+        lineItems: lineItemsResult.data ?? [],
+        org,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
