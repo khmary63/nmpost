@@ -57,6 +57,22 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Rate limit check: block if too many recent failed attempts
+    const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const { count: recentFailures } = await supabase
+      .from("proposal_events")
+      .select("*", { count: "exact", head: true })
+      .eq("proposal_id", proposal.id)
+      .eq("event_type", "password_failed")
+      .gte("created_at", fifteenMinAgo);
+
+    if (recentFailures && recentFailures >= 10) {
+      return new Response(
+        JSON.stringify({ error: "Too many attempts. Please try again later." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "900" } }
+      );
+    }
+
     // Verify password using pgcrypto via security definer function
     const { data: match } = await supabase.rpc("verify_share_password", {
       _share_id: share_id,
@@ -64,6 +80,32 @@ Deno.serve(async (req) => {
     });
 
     if (!match) {
+      // Rate limit: delay failed responses by 1.5s to throttle brute-force attempts
+      await new Promise((r) => setTimeout(r, 1500));
+
+      // Track failed attempts per share_id
+      await supabase.from("proposal_events").insert({
+        proposal_id: proposal.id,
+        event_type: "password_failed",
+        user_agent: req.headers.get("user-agent") ?? null,
+      });
+
+      // Check recent failed attempts — lock out after 10 failures in 15 minutes
+      const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+      const { count } = await supabase
+        .from("proposal_events")
+        .select("*", { count: "exact", head: true })
+        .eq("proposal_id", proposal.id)
+        .eq("event_type", "password_failed")
+        .gte("created_at", fifteenMinAgo);
+
+      if (count && count >= 10) {
+        return new Response(
+          JSON.stringify({ error: "Too many attempts. Please try again later." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "900" } }
+        );
+      }
+
       return new Response(
         JSON.stringify({ error: "Incorrect password" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -71,10 +113,15 @@ Deno.serve(async (req) => {
     }
 
     // Password correct — fetch full proposal data + related records using service role
+    // IMPORTANT: Explicitly exclude share_password_hash from the response
     const [proposalFull, lineItemsResult, orgResult] = await Promise.all([
       supabase
         .from("proposals")
-        .select("*, clients(name)")
+        .select(
+          "id, title, status, content, pricing, subtotal, total, tax_rate, discount_total, " +
+          "valid_until, notes, share_id, share_expires_at, created_at, updated_at, " +
+          "org_id, department_id, user_id, version_number, client_id, template_id, clients(name)"
+        )
         .eq("id", proposal.id)
         .single(),
       supabase
