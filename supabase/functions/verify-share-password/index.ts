@@ -57,6 +57,22 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Rate limit check: block if too many recent failed attempts
+    const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const { count: recentFailures } = await supabase
+      .from("proposal_events")
+      .select("*", { count: "exact", head: true })
+      .eq("proposal_id", proposal.id)
+      .eq("event_type", "password_failed")
+      .gte("created_at", fifteenMinAgo);
+
+    if (recentFailures && recentFailures >= 10) {
+      return new Response(
+        JSON.stringify({ error: "Too many attempts. Please try again later." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "900" } }
+      );
+    }
+
     // Verify password using pgcrypto via security definer function
     const { data: match } = await supabase.rpc("verify_share_password", {
       _share_id: share_id,
