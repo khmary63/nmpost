@@ -71,10 +71,15 @@ Deno.serve(async (req) => {
     }
 
     // Password correct — fetch full proposal data + related records using service role
+    // IMPORTANT: Explicitly exclude share_password_hash from the response
     const [proposalFull, lineItemsResult, orgResult] = await Promise.all([
       supabase
         .from("proposals")
-        .select("*, clients(name)")
+        .select(
+          "id, title, status, content, pricing, subtotal, total, tax_rate, discount_total, " +
+          "valid_until, notes, share_id, share_expires_at, created_at, updated_at, " +
+          "org_id, department_id, user_id, version_number, client_id, template_id, clients(name)"
+        )
         .eq("id", proposal.id)
         .single(),
       supabase
