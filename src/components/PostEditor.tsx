@@ -198,17 +198,73 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
 
         if (channels.includes("vk-personal")) {
           try {
-            const { data: vkResult, error: vkError } = await supabase.functions.invoke("publish-vk-personal", {
-              body: { postId: savedPost.id },
-            });
+            // Get VK token from channel_settings
+            const { data: vkChannel } = await supabase
+              .from("channel_settings")
+              .select("channel_chat_id")
+              .eq("user_id", user!.id)
+              .eq("channel", "vk_personal")
+              .eq("is_active", true)
+              .single();
 
-            if (vkError) {
-              publishErrors.push(`ВК личная: ${vkError.message || "Ошибка публикации"}`);
-            } else if (vkResult?.error) {
-              publishErrors.push(`ВК личная: ${vkResult.error}`);
+            if (!vkChannel?.channel_chat_id) {
+              publishErrors.push("ВК личная: Токен не найден. Обновите его в настройках каналов.");
             } else {
-              publishSuccesses.push("ВК личная ✓");
-              toast.success("Пост опубликован на личную стену ВК!");
+              // Extract clean access_token (strip &expires_in=...&user_id=... if present)
+              const rawToken = vkChannel.channel_chat_id;
+              const cleanToken = rawToken.split("&")[0];
+
+              let message = "";
+              if (savedPost.title) message += `${savedPost.title}\n\n`;
+              message += savedPost.content;
+
+              // Use JSONP to call VK API from client (avoids CORS and IP-binding issues)
+              const vkPostResult = await new Promise<any>((resolve, reject) => {
+                const callbackName = `vkCallback_${Date.now()}`;
+                const params = new URLSearchParams({
+                  message,
+                  access_token: cleanToken,
+                  v: "5.199",
+                  callback: callbackName,
+                });
+                
+                (window as any)[callbackName] = (data: any) => {
+                  delete (window as any)[callbackName];
+                  document.body.removeChild(script);
+                  resolve(data);
+                };
+
+                const script = document.createElement("script");
+                script.src = `https://api.vk.com/method/wall.post?${params.toString()}`;
+                script.onerror = () => {
+                  delete (window as any)[callbackName];
+                  document.body.removeChild(script);
+                  reject(new Error("Не удалось подключиться к VK API"));
+                };
+                document.body.appendChild(script);
+                
+                // Timeout after 15 seconds
+                setTimeout(() => {
+                  if ((window as any)[callbackName]) {
+                    delete (window as any)[callbackName];
+                    try { document.body.removeChild(script); } catch {}
+                    reject(new Error("Таймаут запроса к VK API"));
+                  }
+                }, 15000);
+              });
+
+              if (vkPostResult.error) {
+                const err = vkPostResult.error;
+                publishErrors.push(`ВК личная: ${err.error_msg || "Ошибка"} (code ${err.error_code})`);
+              } else {
+                const vkPostId = vkPostResult.response?.post_id;
+                await supabase.from("posts").update({
+                  status: "published" as any,
+                  published_at: new Date().toISOString(),
+                }).eq("id", savedPost.id);
+                publishSuccesses.push("ВК личная ✓");
+                toast.success("Пост опубликован на личную стену ВК!");
+              }
             }
           } catch (e: any) {
             publishErrors.push(`ВК личная: ${e.message || "Неизвестная ошибка"}`);
