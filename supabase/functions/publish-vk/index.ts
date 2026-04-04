@@ -121,38 +121,6 @@ serve(async (req) => {
       });
     }
 
-    const verifyParams = new URLSearchParams({
-      posts: `${ownerId}_${postIdFromVk}`,
-      access_token: VK_TOKEN,
-      v: "5.199",
-    });
-
-    const verifyResponse = await fetch(`https://api.vk.com/method/wall.getById?${verifyParams.toString()}`, {
-      method: "POST",
-    });
-    const verifyData = await verifyResponse.json();
-
-    if (verifyData.error) {
-      console.error("VK verification error:", verifyData.error);
-      const errorText = `${verifyData.error.error_msg || "Unknown"}${verifyData.error.error_code ? ` (code ${verifyData.error.error_code})` : ""}`;
-      return new Response(JSON.stringify({ error: `VK вернул post_id, но не дал подтвердить запись на стене: ${errorText}` }), {
-        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const verifiedPost = Array.isArray(verifyData.response)
-      ? verifyData.response[0]
-      : verifyData.response?.items?.[0];
-
-    if (!verifiedPost || Number(verifiedPost.id ?? verifiedPost.post_id) !== postIdFromVk) {
-      console.error("VK verification returned unexpected payload:", verifyData);
-      return new Response(JSON.stringify({
-        error: "VK вернул post_id, но запись не подтвердилась на стене. Проверьте, что токен выдан именно для этого сообщества и у него есть права на wall.",
-      }), {
-        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const postUrl = `https://vk.com/wall${ownerId}_${postIdFromVk}`;
 
     await supabase.from("posts").update({
