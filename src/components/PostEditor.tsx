@@ -106,7 +106,7 @@ export function PostEditor() {
 
     setIsSaving(true);
     try {
-      const { error } = await supabase.from("posts").insert({
+      const { data: insertedPost, error } = await supabase.from("posts").insert({
         user_id: user!.id,
         title,
         content,
@@ -115,8 +115,21 @@ export function PostEditor() {
         channels,
         scheduled_at: scheduledAt,
         published_at: status === "published" ? new Date().toISOString() : null,
-      });
+      }).select().single();
       if (error) throw error;
+
+      // Publish to Telegram if selected and status is published
+      if (status === "published" && channels.includes("telegram") && insertedPost) {
+        const { data: tgResult, error: tgError } = await supabase.functions.invoke("publish-telegram", {
+          body: { postId: insertedPost.id },
+        });
+        if (tgError || tgResult?.error) {
+          toast.warning(tgResult?.error || "Пост сохранён, но не отправлен в Telegram");
+        } else {
+          toast.success("Пост опубликован в Telegram!");
+        }
+      }
+
       const msg = status === "published" ? "Пост опубликован!" : status === "scheduled" ? "Пост запланирован!" : "Черновик сохранён";
       toast.success(msg);
       setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
