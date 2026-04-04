@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Дашборд" },
+  { to: "/profile", icon: User, label: "Кабинет" },
 ];
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
