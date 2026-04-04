@@ -205,18 +205,18 @@ export function ChannelSettings() {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">
-                  2. Скопируйте <code className="bg-muted px-1 rounded">code</code> из URL после редиректа и вставьте сюда:
+                  2. Скопируйте <code className="bg-muted px-1 rounded">access_token</code> из URL после редиректа и вставьте сюда:
                 </Label>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Вставьте code из URL"
-                    value={vkCode}
-                    onChange={(e) => setVkCode(e.target.value)}
+                    placeholder="Вставьте access_token из URL"
+                    value={vkToken}
+                    onChange={(e) => setVkToken(e.target.value)}
                     className="font-mono text-sm"
                   />
-                  <Button onClick={exchangeVkCode} disabled={isExchanging || !vkCode.trim()} size="sm">
+                  <Button onClick={saveVkToken} disabled={isExchanging || !vkToken.trim()} size="sm">
                     {isExchanging ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                    Обновить
+                    Сохранить
                   </Button>
                 </div>
               </div>
