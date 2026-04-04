@@ -51,6 +51,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledDate, setScheduledDate] = useState<Date>();
   const [scheduledTime, setScheduledTime] = useState("12:00");
+  const [publishResult, setPublishResult] = useState<{ errors: string[]; successes: string[] } | null>(null);
 
   // Load editing post into form
   useEffect(() => {
@@ -166,7 +167,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
 
       if (isImmediatePublish && savedPost) {
         const publishErrors: string[] = [];
-        let publishSuccessCount = 0;
+        const publishSuccesses: string[] = [];
 
         if (channels.includes("telegram")) {
           const { data: tgResult, error: tgError } = await supabase.functions.invoke("publish-telegram", {
@@ -174,9 +175,9 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           });
 
           if (tgError || tgResult?.error) {
-            publishErrors.push(tgResult?.error || tgError?.message || "Не удалось отправить пост в Telegram");
+            publishErrors.push(`Telegram: ${tgResult?.error || tgError?.message || "Неизвестная ошибка"}`);
           } else {
-            publishSuccessCount += 1;
+            publishSuccesses.push("Telegram ✓");
             toast.success("Пост опубликован в Telegram!");
           }
         }
@@ -187,28 +188,27 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           });
 
           if (vkError || vkResult?.error) {
-            publishErrors.push(vkResult?.error || vkError?.message || "Не удалось отправить пост во ВКонтакте");
+            publishErrors.push(`ВКонтакте: ${vkResult?.error || vkError?.message || "Неизвестная ошибка"}`);
           } else {
-            publishSuccessCount += 1;
-            toast.success(
-              vkResult?.post_url
-                ? `Пост опубликован во ВКонтакте: ${vkResult.post_url}`
-                : "Пост опубликован во ВКонтакте!"
-            );
+            publishSuccesses.push(vkResult?.post_url ? `ВКонтакте ✓ ${vkResult.post_url}` : "ВКонтакте ✓");
+            toast.success("Пост опубликован во ВКонтакте!");
           }
         }
 
-        if (publishSuccessCount === 0) {
+        setPublishResult({ errors: publishErrors, successes: publishSuccesses });
+
+        if (publishSuccesses.length === 0) {
           toast.error(publishErrors[0] || "Пост сохранён как черновик, но не опубликован");
           return;
         }
 
         if (publishErrors.length > 0) {
-          toast.warning(`Опубликовано не во всех каналах: ${publishErrors.join("; ")}`);
+          toast.warning(`Опубликовано не во всех каналах`);
         }
 
         toast.success("Пост опубликован!");
       } else {
+        setPublishResult(null);
         const msg = status === "scheduled" ? "Пост запланирован!" : "Черновик сохранён";
         toast.success(msg);
       }
@@ -442,6 +442,42 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
             Сохранить черновик
           </Button>
         </div>
+
+        {/* Publish result panel */}
+        {publishResult && (publishResult.errors.length > 0 || publishResult.successes.length > 0) && (
+          <Card className="border-dashed">
+            <CardContent className="p-3 space-y-2">
+              {publishResult.successes.length > 0 && (
+                <div className="space-y-1">
+                  {publishResult.successes.map((s, i) => (
+                    <p key={i} className="text-sm text-green-600 flex items-start gap-1.5">
+                      <span className="shrink-0 mt-0.5">✅</span>
+                      <span className="break-all">{s}</span>
+                    </p>
+                  ))}
+                </div>
+              )}
+              {publishResult.errors.length > 0 && (
+                <div className="space-y-1">
+                  {publishResult.errors.map((e, i) => (
+                    <p key={i} className="text-sm text-destructive flex items-start gap-1.5">
+                      <span className="shrink-0 mt-0.5">❌</span>
+                      <span className="break-all">{e}</span>
+                    </p>
+                  ))}
+                </div>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground"
+                onClick={() => setPublishResult(null)}
+              >
+                Скрыть
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
