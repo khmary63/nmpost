@@ -189,10 +189,23 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           });
 
           if (vkError || vkResult?.error) {
-            publishErrors.push(`ВКонтакте: ${vkResult?.error || vkError?.message || "Неизвестная ошибка"}`);
+            publishErrors.push(`ВК группа: ${vkResult?.error || vkError?.message || "Неизвестная ошибка"}`);
           } else {
-            publishSuccesses.push(vkResult?.post_url ? `ВКонтакте ✓ ${vkResult.post_url}` : "ВКонтакте ✓");
-            toast.success("Пост опубликован во ВКонтакте!");
+            publishSuccesses.push(vkResult?.post_url ? `ВК группа ✓ ${vkResult.post_url}` : "ВК группа ✓");
+            toast.success("Пост опубликован в группу ВК!");
+          }
+        }
+
+        if (channels.includes("vk-personal")) {
+          const { data: vkpResult, error: vkpError } = await supabase.functions.invoke("publish-vk-personal", {
+            body: { postId: savedPost.id },
+          });
+
+          if (vkpError || vkpResult?.error) {
+            publishErrors.push(`ВК личная: ${vkpResult?.error || vkpError?.message || "Неизвестная ошибка"}`);
+          } else {
+            publishSuccesses.push(vkpResult?.post_url ? `ВК личная ✓ ${vkpResult.post_url}` : "ВК личная ✓");
+            toast.success("Пост опубликован на личную стену ВК!");
           }
         }
 
