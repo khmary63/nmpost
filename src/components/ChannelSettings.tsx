@@ -20,7 +20,7 @@ interface ChannelConfig {
 }
 
 const VK_CLIENT_ID = "54525496";
-const VK_AUTH_URL = `https://oauth.vk.com/authorize?client_id=${VK_CLIENT_ID}&display=page&scope=8192&response_type=code&v=5.199&redirect_uri=https://oauth.vk.com/blank.html`;
+const VK_AUTH_URL = `https://oauth.vk.com/authorize?client_id=${VK_CLIENT_ID}&display=page&scope=8192&response_type=token&v=5.199&redirect_uri=https://oauth.vk.com/blank.html`;
 
 const DEFAULT_CHANNELS: ChannelConfig[] = [
   {
@@ -62,7 +62,7 @@ export function ChannelSettings() {
   const [channels, setChannels] = useState<ChannelConfig[]>(DEFAULT_CHANNELS);
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [vkCode, setVkCode] = useState("");
+  const [vkToken, setVkToken] = useState("");
   const [isExchanging, setIsExchanging] = useState(false);
   const [vkTokenActive, setVkTokenActive] = useState(false);
 
@@ -97,33 +97,35 @@ export function ChannelSettings() {
     setChannels((prev) => prev.map((ch) => ch.channel === channel ? { ...ch, [field]: value } : ch));
   };
 
-  const exchangeVkCode = useCallback(async () => {
-    if (!vkCode.trim()) {
-      toast.error("Вставьте code из URL");
+  const saveVkToken = useCallback(async () => {
+    if (!vkToken.trim() || !user) {
+      toast.error("Вставьте access_token из URL");
       return;
     }
     setIsExchanging(true);
     try {
-      const { data, error } = await supabase.functions.invoke("exchange-vk-token", {
-        body: { code: vkCode.trim() },
-      });
+      // Save token directly to channel_settings
+      const { error } = await supabase
+        .from("channel_settings")
+        .upsert({
+          user_id: user.id,
+          channel: "vk_personal",
+          channel_chat_id: vkToken.trim(),
+          is_active: true,
+        }, { onConflict: "user_id,channel" });
+
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
 
       setVkTokenActive(true);
-      setVkCode("");
+      setVkToken("");
       updateChannel("vk_personal", "is_active", true);
-      
-      const expiresHours = data.expires_in ? Math.round(data.expires_in / 3600) : null;
-      toast.success(
-        `VK токен обновлён!${expiresHours ? ` Действует ${expiresHours}ч.` : ""}`
-      );
+      toast.success("VK токен сохранён!");
     } catch (e: any) {
-      toast.error(e.message || "Ошибка обмена кода на токен");
+      toast.error(e.message || "Ошибка сохранения токена");
     } finally {
       setIsExchanging(false);
     }
-  }, [vkCode]);
+  }, [vkToken, user]);
 
   const save = async () => {
     if (!user) return;
@@ -203,18 +205,18 @@ export function ChannelSettings() {
               </div>
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">
-                  2. Скопируйте <code className="bg-muted px-1 rounded">code</code> из URL после редиректа и вставьте сюда:
+                  2. Скопируйте <code className="bg-muted px-1 rounded">access_token</code> из URL после редиректа и вставьте сюда:
                 </Label>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Вставьте code из URL"
-                    value={vkCode}
-                    onChange={(e) => setVkCode(e.target.value)}
+                    placeholder="Вставьте access_token из URL"
+                    value={vkToken}
+                    onChange={(e) => setVkToken(e.target.value)}
                     className="font-mono text-sm"
                   />
-                  <Button onClick={exchangeVkCode} disabled={isExchanging || !vkCode.trim()} size="sm">
+                  <Button onClick={saveVkToken} disabled={isExchanging || !vkToken.trim()} size="sm">
                     {isExchanging ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                    Обновить
+                    Сохранить
                   </Button>
                 </div>
               </div>
