@@ -47,6 +47,36 @@ export type Database = {
         }
         Relationships: []
       }
+      channel_settings: {
+        Row: {
+          channel: string
+          channel_chat_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          channel_chat_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          channel_chat_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           company: string | null
