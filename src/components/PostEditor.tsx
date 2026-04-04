@@ -194,10 +194,21 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       <div className="lg:col-span-2 space-y-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Type className="h-5 w-5 text-primary" />
-              Редактор поста
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Type className="h-5 w-5 text-primary" />
+                {postId ? "Редактирование поста" : "Редактор поста"}
+              </CardTitle>
+              {postId && (
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
+                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00");
+                  onDone?.();
+                }}>
+                  Отменить
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
