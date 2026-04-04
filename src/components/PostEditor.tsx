@@ -78,15 +78,32 @@ export function PostEditor() {
     }
   };
 
-  const savePost = async (status: "draft" | "published") => {
+  const savePost = async (status: "draft" | "published" | "scheduled") => {
     if (!content.trim()) {
       toast.error("Напишите или сгенерируйте текст поста");
       return;
     }
-    if (status === "published" && channels.length === 0) {
+    if ((status === "published" || status === "scheduled") && channels.length === 0) {
       toast.error("Выберите хотя бы один канал для публикации");
       return;
     }
+    if (status === "scheduled" && !scheduledDate) {
+      toast.error("Выберите дату публикации");
+      return;
+    }
+
+    let scheduledAt: string | null = null;
+    if (status === "scheduled" && scheduledDate) {
+      const [hours, minutes] = scheduledTime.split(":").map(Number);
+      const dt = new Date(scheduledDate);
+      dt.setHours(hours, minutes, 0, 0);
+      if (dt <= new Date()) {
+        toast.error("Дата публикации должна быть в будущем");
+        return;
+      }
+      scheduledAt = dt.toISOString();
+    }
+
     setIsSaving(true);
     try {
       const { error } = await supabase.from("posts").insert({
@@ -96,14 +113,14 @@ export function PostEditor() {
         style: style as any,
         status: status as any,
         channels,
+        scheduled_at: scheduledAt,
         published_at: status === "published" ? new Date().toISOString() : null,
       });
       if (error) throw error;
-      toast.success(status === "published" ? "Пост опубликован!" : "Черновик сохранён");
-      setTitle("");
-      setContent("");
-      setAiPrompt("");
-      setChannels([]);
+      const msg = status === "published" ? "Пост опубликован!" : status === "scheduled" ? "Пост запланирован!" : "Черновик сохранён";
+      toast.success(msg);
+      setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
+      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00");
     } catch (e: any) {
       toast.error(e.message || "Ошибка сохранения");
     } finally {
