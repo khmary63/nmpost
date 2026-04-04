@@ -255,7 +255,11 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
 
               if (vkPostResult.error) {
                 const err = vkPostResult.error;
-                publishErrors.push(`ВК личная: ${err.error_msg || "Ошибка"} (code ${err.error_code})`);
+                if (err.error_code === 15) {
+                  publishErrors.push("ВК личная: VK запрещает wall.post для приложений не типа Standalone. Переключите тип VK приложения на Standalone или используйте публикацию в сообщество.");
+                } else {
+                  publishErrors.push(`ВК личная: ${err.error_msg || "Ошибка"} (code ${err.error_code})`);
+                }
               } else {
                 const vkPostId = vkPostResult.response?.post_id;
                 await supabase.from("posts").update({
