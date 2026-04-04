@@ -80,8 +80,16 @@ serve(async (req) => {
     if (post.title) message += `${post.title}\n\n`;
     message += post.content;
 
+    const normalizedGroupId = channelSetting.channel_chat_id.replace(/[^\d-]/g, "").trim();
+    const numericGroupId = Number.parseInt(normalizedGroupId, 10);
+    if (!Number.isFinite(numericGroupId) || numericGroupId === 0) {
+      return new Response(JSON.stringify({ error: "Некорректный ID группы ВК. Укажите только числовой ID сообщества." }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // owner_id for community is negative
-    const ownerId = -Math.abs(Number(channelSetting.channel_chat_id));
+    const ownerId = -Math.abs(numericGroupId);
 
     // Call VK API wall.post
     const params = new URLSearchParams({
@@ -99,15 +107,48 @@ serve(async (req) => {
     const vkData = await vkResponse.json();
     if (vkData.error) {
       console.error("VK API error:", vkData.error);
-      return new Response(JSON.stringify({ error: `Ошибка VK: ${vkData.error.error_msg || "Unknown"}` }), {
+      const errorText = `${vkData.error.error_msg || "Unknown"}${vkData.error.error_code ? ` (code ${vkData.error.error_code})` : ""}`;
+      return new Response(JSON.stringify({ error: `Ошибка VK: ${errorText}` }), {
         status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const postIdFromVk = vkData.response?.post_id;
-    if (!postIdFromVk || Number.isNaN(Number(postIdFromVk))) {
+    const postIdFromVk = Number(vkData.response?.post_id);
+    if (!Number.isFinite(postIdFromVk) || postIdFromVk <= 0) {
       console.error("VK API unexpected response:", vkData);
       return new Response(JSON.stringify({ error: "VK не подтвердил публикацию поста" }), {
+        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const verifyParams = new URLSearchParams({
+      posts: `${ownerId}_${postIdFromVk}`,
+      access_token: VK_TOKEN,
+      v: "5.199",
+    });
+
+    const verifyResponse = await fetch(`https://api.vk.com/method/wall.getById?${verifyParams.toString()}`, {
+      method: "POST",
+    });
+    const verifyData = await verifyResponse.json();
+
+    if (verifyData.error) {
+      console.error("VK verification error:", verifyData.error);
+      const errorText = `${verifyData.error.error_msg || "Unknown"}${verifyData.error.error_code ? ` (code ${verifyData.error.error_code})` : ""}`;
+      return new Response(JSON.stringify({ error: `VK вернул post_id, но не дал подтвердить запись на стене: ${errorText}` }), {
+        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const verifiedPost = Array.isArray(verifyData.response)
+      ? verifyData.response[0]
+      : verifyData.response?.items?.[0];
+
+    if (!verifiedPost || Number(verifiedPost.id ?? verifiedPost.post_id) !== postIdFromVk) {
+      console.error("VK verification returned unexpected payload:", verifyData);
+      return new Response(JSON.stringify({
+        error: "VK вернул post_id, но запись не подтвердилась на стене. Проверьте, что токен выдан именно для этого сообщества и у него есть права на wall.",
+      }), {
         status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -119,7 +160,7 @@ serve(async (req) => {
       published_at: new Date().toISOString(),
     }).eq("id", postId);
 
-    console.log("VK post published:", { postId, vk_post_id: postIdFromVk, postUrl });
+    console.log("VK post published:", { postId, vk_post_id: postIdFromVk, postUrl, ownerId });
 
     return new Response(JSON.stringify({ ok: true, post_id: postIdFromVk, post_url: postUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
