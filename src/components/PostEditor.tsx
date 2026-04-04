@@ -1,17 +1,21 @@
 import { useState } from "react";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  Sparkles, Send, Save, Calendar, Type, Palette,
-  MessageSquare, Loader2, Wand2, FileText,
+  Sparkles, Send, Save, CalendarIcon, Type, Palette,
+  MessageSquare, Loader2, Wand2, FileText, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
