@@ -33,8 +33,8 @@ const DEFAULT_CHANNELS: ChannelConfig[] = [
     channel_chat_id: "",
     is_active: false,
     label: "ВКонтакте",
-    placeholder: "ID группы",
-    hint: "Интеграция с VK будет доступна в ближайшем обновлении",
+    placeholder: "123456789",
+    hint: "Укажите числовой ID вашей группы ВК (без минуса). Бот опубликует пост от имени сообщества.",
   },
   {
     channel: "ok",
