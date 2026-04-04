@@ -30,7 +30,6 @@ const POST_STYLES = [
 const CHANNELS = [
   { id: "telegram", label: "Telegram", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
   { id: "vk", label: "ВК группа", color: "bg-sky-500/10 text-sky-600 border-sky-200" },
-  { id: "vk-personal", label: "ВК личная", color: "bg-sky-500/10 text-sky-700 border-sky-300" },
   { id: "ok", label: "Макс", color: "bg-orange-500/10 text-orange-600 border-orange-200" },
 ] as const;
 
