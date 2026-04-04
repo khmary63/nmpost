@@ -133,22 +133,41 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
 
     setIsSaving(true);
     try {
-      const { data: insertedPost, error } = await supabase.from("posts").insert({
-        user_id: user!.id,
-        title,
-        content,
-        style: style as any,
-        status: status as any,
-        channels,
-        scheduled_at: scheduledAt,
-        published_at: status === "published" ? new Date().toISOString() : null,
-      }).select().single();
-      if (error) throw error;
+      let savedPost: any;
+
+      if (postId) {
+        // Update existing post
+        const { data, error } = await supabase.from("posts").update({
+          title,
+          content,
+          style: style as any,
+          status: status as any,
+          channels,
+          scheduled_at: scheduledAt,
+          published_at: status === "published" ? new Date().toISOString() : null,
+        }).eq("id", postId).select().single();
+        if (error) throw error;
+        savedPost = data;
+      } else {
+        // Insert new post
+        const { data, error } = await supabase.from("posts").insert({
+          user_id: user!.id,
+          title,
+          content,
+          style: style as any,
+          status: status as any,
+          channels,
+          scheduled_at: scheduledAt,
+          published_at: status === "published" ? new Date().toISOString() : null,
+        }).select().single();
+        if (error) throw error;
+        savedPost = data;
+      }
 
       // Publish to Telegram if selected and status is published
-      if (status === "published" && channels.includes("telegram") && insertedPost) {
+      if (status === "published" && channels.includes("telegram") && savedPost) {
         const { data: tgResult, error: tgError } = await supabase.functions.invoke("publish-telegram", {
-          body: { postId: insertedPost.id },
+          body: { postId: savedPost.id },
         });
         if (tgError || tgResult?.error) {
           toast.warning(tgResult?.error || "Пост сохранён, но не отправлен в Telegram");
@@ -159,8 +178,9 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
 
       const msg = status === "published" ? "Пост опубликован!" : status === "scheduled" ? "Пост запланирован!" : "Черновик сохранён";
       toast.success(msg);
-      setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
+      setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
       setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00");
+      onDone?.();
     } catch (e: any) {
       toast.error(e.message || "Ошибка сохранения");
     } finally {
