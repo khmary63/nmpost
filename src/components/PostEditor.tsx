@@ -51,6 +51,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledDate, setScheduledDate] = useState<Date>();
   const [scheduledTime, setScheduledTime] = useState("12:00");
+  const [publishResult, setPublishResult] = useState<{ errors: string[]; successes: string[] } | null>(null);
 
   // Load editing post into form
   useEffect(() => {
