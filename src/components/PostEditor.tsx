@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,7 @@ import {
   MessageSquare, Loader2, Wand2, FileText, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { EditingPost } from "@/pages/Dashboard";
 
 const POST_STYLES = [
   { id: "minimal", label: "Минимал", description: "Чистый, лаконичный", icon: "◻️" },
@@ -32,8 +33,14 @@ const CHANNELS = [
   { id: "ok", label: "Макс", color: "bg-orange-500/10 text-orange-600 border-orange-200" },
 ] as const;
 
-export function PostEditor() {
+interface PostEditorProps {
+  editingPost?: EditingPost | null;
+  onDone?: () => void;
+}
+
+export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const { user } = useAuth();
+  const [postId, setPostId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [style, setStyle] = useState<string>("minimal");
@@ -45,6 +52,26 @@ export function PostEditor() {
   const [scheduledDate, setScheduledDate] = useState<Date>();
   const [scheduledTime, setScheduledTime] = useState("12:00");
 
+  // Load editing post into form
+  useEffect(() => {
+    if (editingPost) {
+      setPostId(editingPost.id);
+      setTitle(editingPost.title);
+      setContent(editingPost.content);
+      setStyle(editingPost.style);
+      setChannels(editingPost.channels);
+      if (editingPost.scheduled_at) {
+        setIsScheduled(true);
+        const d = new Date(editingPost.scheduled_at);
+        setScheduledDate(d);
+        setScheduledTime(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
+      } else {
+        setIsScheduled(false);
+        setScheduledDate(undefined);
+        setScheduledTime("12:00");
+      }
+    }
+  }, [editingPost]);
   const toggleChannel = (ch: string) => {
     setChannels((prev) => prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch]);
   };
@@ -106,22 +133,41 @@ export function PostEditor() {
 
     setIsSaving(true);
     try {
-      const { data: insertedPost, error } = await supabase.from("posts").insert({
-        user_id: user!.id,
-        title,
-        content,
-        style: style as any,
-        status: status as any,
-        channels,
-        scheduled_at: scheduledAt,
-        published_at: status === "published" ? new Date().toISOString() : null,
-      }).select().single();
-      if (error) throw error;
+      let savedPost: any;
+
+      if (postId) {
+        // Update existing post
+        const { data, error } = await supabase.from("posts").update({
+          title,
+          content,
+          style: style as any,
+          status: status as any,
+          channels,
+          scheduled_at: scheduledAt,
+          published_at: status === "published" ? new Date().toISOString() : null,
+        }).eq("id", postId).select().single();
+        if (error) throw error;
+        savedPost = data;
+      } else {
+        // Insert new post
+        const { data, error } = await supabase.from("posts").insert({
+          user_id: user!.id,
+          title,
+          content,
+          style: style as any,
+          status: status as any,
+          channels,
+          scheduled_at: scheduledAt,
+          published_at: status === "published" ? new Date().toISOString() : null,
+        }).select().single();
+        if (error) throw error;
+        savedPost = data;
+      }
 
       // Publish to Telegram if selected and status is published
-      if (status === "published" && channels.includes("telegram") && insertedPost) {
+      if (status === "published" && channels.includes("telegram") && savedPost) {
         const { data: tgResult, error: tgError } = await supabase.functions.invoke("publish-telegram", {
-          body: { postId: insertedPost.id },
+          body: { postId: savedPost.id },
         });
         if (tgError || tgResult?.error) {
           toast.warning(tgResult?.error || "Пост сохранён, но не отправлен в Telegram");
@@ -132,8 +178,9 @@ export function PostEditor() {
 
       const msg = status === "published" ? "Пост опубликован!" : status === "scheduled" ? "Пост запланирован!" : "Черновик сохранён";
       toast.success(msg);
-      setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
+      setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
       setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00");
+      onDone?.();
     } catch (e: any) {
       toast.error(e.message || "Ошибка сохранения");
     } finally {
@@ -147,10 +194,21 @@ export function PostEditor() {
       <div className="lg:col-span-2 space-y-4">
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Type className="h-5 w-5 text-primary" />
-              Редактор поста
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Type className="h-5 w-5 text-primary" />
+                {postId ? "Редактирование поста" : "Редактор поста"}
+              </CardTitle>
+              {postId && (
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
+                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00");
+                  onDone?.();
+                }}>
+                  Отменить
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
