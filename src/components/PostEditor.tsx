@@ -442,6 +442,42 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
             Сохранить черновик
           </Button>
         </div>
+
+        {/* Publish result panel */}
+        {publishResult && (publishResult.errors.length > 0 || publishResult.successes.length > 0) && (
+          <Card className="border-dashed">
+            <CardContent className="p-3 space-y-2">
+              {publishResult.successes.length > 0 && (
+                <div className="space-y-1">
+                  {publishResult.successes.map((s, i) => (
+                    <p key={i} className="text-sm text-green-600 flex items-start gap-1.5">
+                      <span className="shrink-0 mt-0.5">✅</span>
+                      <span className="break-all">{s}</span>
+                    </p>
+                  ))}
+                </div>
+              )}
+              {publishResult.errors.length > 0 && (
+                <div className="space-y-1">
+                  {publishResult.errors.map((e, i) => (
+                    <p key={i} className="text-sm text-destructive flex items-start gap-1.5">
+                      <span className="shrink-0 mt-0.5">❌</span>
+                      <span className="break-all">{e}</span>
+                    </p>
+                  ))}
+                </div>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground"
+                onClick={() => setPublishResult(null)}
+              >
+                Скрыть
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
