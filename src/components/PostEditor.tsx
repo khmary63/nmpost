@@ -164,15 +164,27 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
         savedPost = data;
       }
 
-      // Publish to Telegram if selected and status is published
-      if (status === "published" && channels.includes("telegram") && savedPost) {
-        const { data: tgResult, error: tgError } = await supabase.functions.invoke("publish-telegram", {
-          body: { postId: savedPost.id },
-        });
-        if (tgError || tgResult?.error) {
-          toast.warning(tgResult?.error || "Пост сохранён, но не отправлен в Telegram");
-        } else {
-          toast.success("Пост опубликован в Telegram!");
+      // Publish to channels
+      if (status === "published" && savedPost) {
+        if (channels.includes("telegram")) {
+          const { data: tgResult, error: tgError } = await supabase.functions.invoke("publish-telegram", {
+            body: { postId: savedPost.id },
+          });
+          if (tgError || tgResult?.error) {
+            toast.warning(tgResult?.error || "Пост сохранён, но не отправлен в Telegram");
+          } else {
+            toast.success("Пост опубликован в Telegram!");
+          }
+        }
+        if (channels.includes("vk")) {
+          const { data: vkResult, error: vkError } = await supabase.functions.invoke("publish-vk", {
+            body: { postId: savedPost.id },
+          });
+          if (vkError || vkResult?.error) {
+            toast.warning(vkResult?.error || "Пост сохранён, но не отправлен в ВКонтакте");
+          } else {
+            toast.success("Пост опубликован в ВКонтакте!");
+          }
         }
       }
 
