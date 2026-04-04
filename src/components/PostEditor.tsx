@@ -134,62 +134,85 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
     setIsSaving(true);
     try {
       let savedPost: any;
+      const isImmediatePublish = status === "published";
+      const persistedStatus = isImmediatePublish ? "draft" : status;
 
       if (postId) {
-        // Update existing post
         const { data, error } = await supabase.from("posts").update({
           title,
           content,
           style: style as any,
-          status: status as any,
+          status: persistedStatus as any,
           channels,
           scheduled_at: scheduledAt,
-          published_at: status === "published" ? new Date().toISOString() : null,
+          published_at: null,
         }).eq("id", postId).select().single();
         if (error) throw error;
         savedPost = data;
       } else {
-        // Insert new post
         const { data, error } = await supabase.from("posts").insert({
           user_id: user!.id,
           title,
           content,
           style: style as any,
-          status: status as any,
+          status: persistedStatus as any,
           channels,
           scheduled_at: scheduledAt,
-          published_at: status === "published" ? new Date().toISOString() : null,
+          published_at: null,
         }).select().single();
         if (error) throw error;
         savedPost = data;
       }
 
-      // Publish to channels
-      if (status === "published" && savedPost) {
+      if (isImmediatePublish && savedPost) {
+        const publishErrors: string[] = [];
+        let publishSuccessCount = 0;
+
         if (channels.includes("telegram")) {
           const { data: tgResult, error: tgError } = await supabase.functions.invoke("publish-telegram", {
             body: { postId: savedPost.id },
           });
+
           if (tgError || tgResult?.error) {
-            toast.warning(tgResult?.error || "Пост сохранён, но не отправлен в Telegram");
+            publishErrors.push(tgResult?.error || tgError?.message || "Не удалось отправить пост в Telegram");
           } else {
+            publishSuccessCount += 1;
             toast.success("Пост опубликован в Telegram!");
           }
         }
+
         if (channels.includes("vk")) {
           const { data: vkResult, error: vkError } = await supabase.functions.invoke("publish-vk", {
             body: { postId: savedPost.id },
           });
+
           if (vkError || vkResult?.error) {
-            toast.warning(vkResult?.error || "Пост сохранён, но не отправлен в ВКонтакте");
+            publishErrors.push(vkResult?.error || vkError?.message || "Не удалось отправить пост во ВКонтакте");
           } else {
-            toast.success("Пост опубликован в ВКонтакте!");
+            publishSuccessCount += 1;
+            toast.success(
+              vkResult?.post_url
+                ? `Пост опубликован во ВКонтакте: ${vkResult.post_url}`
+                : "Пост опубликован во ВКонтакте!"
+            );
           }
         }
+
+        if (publishSuccessCount === 0) {
+          toast.error(publishErrors[0] || "Пост сохранён как черновик, но не опубликован");
+          return;
+        }
+
+        if (publishErrors.length > 0) {
+          toast.warning(`Опубликовано не во всех каналах: ${publishErrors.join("; ")}`);
+        }
+
+        toast.success("Пост опубликован!");
+      } else {
+        const msg = status === "scheduled" ? "Пост запланирован!" : "Черновик сохранён";
+        toast.success(msg);
       }
 
-      const msg = status === "published" ? "Пост опубликован!" : status === "scheduled" ? "Пост запланирован!" : "Черновик сохранён";
-      toast.success(msg);
       setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
       setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00");
       onDone?.();
