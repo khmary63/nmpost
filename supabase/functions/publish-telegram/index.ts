@@ -1,0 +1,125 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    // Auth check
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: authError } = await supabase.auth.getClaims(token);
+    if (authError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userId = claimsData.claims.sub as string;
+    const { postId } = await req.json();
+    if (!postId) {
+      return new Response(JSON.stringify({ error: "postId is required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Get post
+    const { data: post, error: postError } = await supabase
+      .from("posts")
+      .select("*")
+      .eq("id", postId)
+      .eq("user_id", userId)
+      .single();
+
+    if (postError || !post) {
+      return new Response(JSON.stringify({ error: "Пост не найден" }), {
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Get user's telegram channel setting
+    const { data: channelSetting } = await supabase
+      .from("channel_settings")
+      .select("channel_chat_id")
+      .eq("user_id", userId)
+      .eq("channel", "telegram")
+      .eq("is_active", true)
+      .single();
+
+    if (!channelSetting?.channel_chat_id) {
+      return new Response(JSON.stringify({ error: "Telegram канал не настроен. Укажите Chat ID в настройках каналов." }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const TELEGRAM_BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN");
+    if (!TELEGRAM_BOT_TOKEN) {
+      return new Response(JSON.stringify({ error: "Telegram бот не настроен" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Build message text
+    let text = "";
+    if (post.title) text += `<b>${escapeHtml(post.title)}</b>\n\n`;
+    text += escapeHtml(post.content);
+
+    // Send to Telegram
+    const tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: channelSetting.channel_chat_id,
+        text,
+        parse_mode: "HTML",
+      }),
+    });
+
+    const tgData = await tgResponse.json();
+    if (!tgResponse.ok) {
+      console.error("Telegram API error:", tgData);
+      return new Response(JSON.stringify({ error: `Ошибка Telegram: ${tgData.description || "Unknown"}` }), {
+        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Update post status
+    await supabase.from("posts").update({
+      status: "published",
+      published_at: new Date().toISOString(),
+    }).eq("id", postId);
+
+    return new Response(JSON.stringify({ ok: true, message_id: tgData.result?.message_id }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("publish-telegram error:", e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
