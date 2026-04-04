@@ -198,47 +198,17 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
 
         if (channels.includes("vk-personal")) {
           try {
-            // Get VK token from channel_settings
-            const { data: vkChannel } = await supabase
-              .from("channel_settings")
-              .select("channel_chat_id")
-              .eq("user_id", user!.id)
-              .eq("channel", "vk_personal")
-              .eq("is_active", true)
-              .single();
+            const { data: vkResult, error: vkError } = await supabase.functions.invoke("publish-vk-personal", {
+              body: { postId: savedPost.id },
+            });
 
-            if (!vkChannel?.channel_chat_id) {
-              publishErrors.push("ВК личная: Токен не найден. Обновите его в настройках каналов.");
+            if (vkError) {
+              publishErrors.push(`ВК личная: ${vkError.message || "Ошибка публикации"}`);
+            } else if (vkResult?.error) {
+              publishErrors.push(`ВК личная: ${vkResult.error}`);
             } else {
-              let message = "";
-              if (savedPost.title) message += `${savedPost.title}\n\n`;
-              message += savedPost.content;
-
-              const params = new URLSearchParams({
-                message,
-                access_token: vkChannel.channel_chat_id,
-                v: "5.199",
-              });
-
-              const vkResponse = await fetch(`https://api.vk.com/method/wall.post?${params.toString()}`, {
-                method: "POST",
-              });
-              const vkData = await vkResponse.json();
-
-              if (vkData.error) {
-                const errorText = `${vkData.error.error_msg || "Unknown"}${vkData.error.error_code ? ` (code ${vkData.error.error_code})` : ""}`;
-                publishErrors.push(`ВК личная: ${errorText}`);
-              } else {
-                const vkPostId = vkData.response?.post_id;
-                // Update post status
-                await supabase.from("posts").update({
-                  status: "published" as any,
-                  published_at: new Date().toISOString(),
-                }).eq("id", savedPost.id);
-
-                publishSuccesses.push(vkPostId ? `ВК личная ✓` : "ВК личная ✓");
-                toast.success("Пост опубликован на личную стену ВК!");
-              }
+              publishSuccesses.push("ВК личная ✓");
+              toast.success("Пост опубликован на личную стену ВК!");
             }
           } catch (e: any) {
             publishErrors.push(`ВК личная: ${e.message || "Неизвестная ошибка"}`);
