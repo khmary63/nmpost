@@ -33,8 +33,14 @@ const CHANNELS = [
   { id: "ok", label: "Макс", color: "bg-orange-500/10 text-orange-600 border-orange-200" },
 ] as const;
 
-export function PostEditor() {
+interface PostEditorProps {
+  editingPost?: EditingPost | null;
+  onDone?: () => void;
+}
+
+export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const { user } = useAuth();
+  const [postId, setPostId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [style, setStyle] = useState<string>("minimal");
@@ -46,6 +52,26 @@ export function PostEditor() {
   const [scheduledDate, setScheduledDate] = useState<Date>();
   const [scheduledTime, setScheduledTime] = useState("12:00");
 
+  // Load editing post into form
+  useEffect(() => {
+    if (editingPost) {
+      setPostId(editingPost.id);
+      setTitle(editingPost.title);
+      setContent(editingPost.content);
+      setStyle(editingPost.style);
+      setChannels(editingPost.channels);
+      if (editingPost.scheduled_at) {
+        setIsScheduled(true);
+        const d = new Date(editingPost.scheduled_at);
+        setScheduledDate(d);
+        setScheduledTime(`${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`);
+      } else {
+        setIsScheduled(false);
+        setScheduledDate(undefined);
+        setScheduledTime("12:00");
+      }
+    }
+  }, [editingPost]);
   const toggleChannel = (ch: string) => {
     setChannels((prev) => prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch]);
   };
