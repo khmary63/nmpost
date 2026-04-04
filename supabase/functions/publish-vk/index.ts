@@ -104,13 +104,24 @@ serve(async (req) => {
       });
     }
 
-    // Update post status
+    const postIdFromVk = vkData.response?.post_id;
+    if (!postIdFromVk || Number.isNaN(Number(postIdFromVk))) {
+      console.error("VK API unexpected response:", vkData);
+      return new Response(JSON.stringify({ error: "VK не подтвердил публикацию поста" }), {
+        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const postUrl = `https://vk.com/wall${ownerId}_${postIdFromVk}`;
+
     await supabase.from("posts").update({
       status: "published",
       published_at: new Date().toISOString(),
     }).eq("id", postId);
 
-    return new Response(JSON.stringify({ ok: true, post_id: vkData.response?.post_id }), {
+    console.log("VK post published:", { postId, vk_post_id: postIdFromVk, postUrl });
+
+    return new Response(JSON.stringify({ ok: true, post_id: postIdFromVk, post_url: postUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
