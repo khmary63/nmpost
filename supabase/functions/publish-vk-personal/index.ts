@@ -52,9 +52,18 @@ serve(async (req) => {
       });
     }
 
-    const VK_USER_TOKEN = Deno.env.get("VK_USER_TOKEN");
+    // Try to get token from channel_settings first, fallback to env
+    const { data: vkChannel } = await supabase
+      .from("channel_settings")
+      .select("channel_chat_id")
+      .eq("user_id", userId)
+      .eq("channel", "vk_personal")
+      .eq("is_active", true)
+      .single();
+
+    const VK_USER_TOKEN = vkChannel?.channel_chat_id || Deno.env.get("VK_USER_TOKEN");
     if (!VK_USER_TOKEN) {
-      return new Response(JSON.stringify({ error: "VK User Token не настроен" }), {
+      return new Response(JSON.stringify({ error: "VK User Token не настроен. Обновите токен в настройках каналов." }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
