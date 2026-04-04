@@ -97,33 +97,35 @@ export function ChannelSettings() {
     setChannels((prev) => prev.map((ch) => ch.channel === channel ? { ...ch, [field]: value } : ch));
   };
 
-  const exchangeVkCode = useCallback(async () => {
-    if (!vkCode.trim()) {
-      toast.error("Вставьте code из URL");
+  const saveVkToken = useCallback(async () => {
+    if (!vkToken.trim() || !user) {
+      toast.error("Вставьте access_token из URL");
       return;
     }
     setIsExchanging(true);
     try {
-      const { data, error } = await supabase.functions.invoke("exchange-vk-token", {
-        body: { code: vkCode.trim() },
-      });
+      // Save token directly to channel_settings
+      const { error } = await supabase
+        .from("channel_settings")
+        .upsert({
+          user_id: user.id,
+          channel: "vk_personal",
+          channel_chat_id: vkToken.trim(),
+          is_active: true,
+        }, { onConflict: "user_id,channel" });
+
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
 
       setVkTokenActive(true);
-      setVkCode("");
+      setVkToken("");
       updateChannel("vk_personal", "is_active", true);
-      
-      const expiresHours = data.expires_in ? Math.round(data.expires_in / 3600) : null;
-      toast.success(
-        `VK токен обновлён!${expiresHours ? ` Действует ${expiresHours}ч.` : ""}`
-      );
+      toast.success("VK токен сохранён!");
     } catch (e: any) {
-      toast.error(e.message || "Ошибка обмена кода на токен");
+      toast.error(e.message || "Ошибка сохранения токена");
     } finally {
       setIsExchanging(false);
     }
-  }, [vkCode]);
+  }, [vkToken, user]);
 
   const save = async () => {
     if (!user) return;
