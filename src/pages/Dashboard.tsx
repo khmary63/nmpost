@@ -1,8 +1,9 @@
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PostEditor } from "@/components/PostEditor";
 import { PostsList } from "@/components/PostsList";
+import { ChannelSettings } from "@/components/ChannelSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PenLine, List } from "lucide-react";
+import { PenLine, List, Settings } from "lucide-react";
 
 export default function Dashboard() {
   return (
@@ -17,6 +18,9 @@ export default function Dashboard() {
             <TabsTrigger value="posts" className="gap-2">
               <List className="h-4 w-4" /> Мои посты
             </TabsTrigger>
+            <TabsTrigger value="settings" className="gap-2">
+              <Settings className="h-4 w-4" /> Каналы
+            </TabsTrigger>
           </TabsList>
         </div>
         <TabsContent value="editor">
@@ -24,6 +28,9 @@ export default function Dashboard() {
         </TabsContent>
         <TabsContent value="posts">
           <PostsList />
+        </TabsContent>
+        <TabsContent value="settings">
+          <ChannelSettings />
         </TabsContent>
       </Tabs>
     </DashboardLayout>
