@@ -273,12 +273,64 @@ export function PostEditor() {
           </Card>
         )}
 
+        {/* Scheduling */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Clock className="h-5 w-5 text-primary" />
+              Отложенный постинг
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="schedule-toggle">Запланировать</Label>
+              <Switch id="schedule-toggle" checked={isScheduled} onCheckedChange={setIsScheduled} />
+            </div>
+            {isScheduled && (
+              <div className="space-y-3">
+                <div>
+                  <Label>Дата</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !scheduledDate && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {scheduledDate ? format(scheduledDate, "d MMMM yyyy", { locale: ru }) : "Выберите дату"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={scheduledDate}
+                        onSelect={setScheduledDate}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <Label htmlFor="schedule-time">Время</Label>
+                  <Input id="schedule-time" type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Actions */}
         <div className="flex flex-col gap-2">
-          <Button onClick={() => savePost("published")} disabled={isSaving} className="w-full">
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            Опубликовать
-          </Button>
+          {isScheduled ? (
+            <Button onClick={() => savePost("scheduled")} disabled={isSaving} className="w-full">
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarIcon className="h-4 w-4" />}
+              Запланировать публикацию
+            </Button>
+          ) : (
+            <Button onClick={() => savePost("published")} disabled={isSaving} className="w-full">
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Опубликовать
+            </Button>
+          )}
           <Button variant="outline" onClick={() => savePost("draft")} disabled={isSaving} className="w-full">
             <Save className="h-4 w-4" />
             Сохранить черновик
