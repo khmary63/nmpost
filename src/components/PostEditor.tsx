@@ -1,17 +1,21 @@
 import { useState } from "react";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  Sparkles, Send, Save, Calendar, Type, Palette,
-  MessageSquare, Loader2, Wand2, FileText,
+  Sparkles, Send, Save, CalendarIcon, Type, Palette,
+  MessageSquare, Loader2, Wand2, FileText, Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +41,9 @@ export function PostEditor() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState<Date>();
+  const [scheduledTime, setScheduledTime] = useState("12:00");
 
   const toggleChannel = (ch: string) => {
     setChannels((prev) => prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch]);
@@ -71,15 +78,32 @@ export function PostEditor() {
     }
   };
 
-  const savePost = async (status: "draft" | "published") => {
+  const savePost = async (status: "draft" | "published" | "scheduled") => {
     if (!content.trim()) {
       toast.error("Напишите или сгенерируйте текст поста");
       return;
     }
-    if (status === "published" && channels.length === 0) {
+    if ((status === "published" || status === "scheduled") && channels.length === 0) {
       toast.error("Выберите хотя бы один канал для публикации");
       return;
     }
+    if (status === "scheduled" && !scheduledDate) {
+      toast.error("Выберите дату публикации");
+      return;
+    }
+
+    let scheduledAt: string | null = null;
+    if (status === "scheduled" && scheduledDate) {
+      const [hours, minutes] = scheduledTime.split(":").map(Number);
+      const dt = new Date(scheduledDate);
+      dt.setHours(hours, minutes, 0, 0);
+      if (dt <= new Date()) {
+        toast.error("Дата публикации должна быть в будущем");
+        return;
+      }
+      scheduledAt = dt.toISOString();
+    }
+
     setIsSaving(true);
     try {
       const { error } = await supabase.from("posts").insert({
@@ -89,14 +113,14 @@ export function PostEditor() {
         style: style as any,
         status: status as any,
         channels,
+        scheduled_at: scheduledAt,
         published_at: status === "published" ? new Date().toISOString() : null,
       });
       if (error) throw error;
-      toast.success(status === "published" ? "Пост опубликован!" : "Черновик сохранён");
-      setTitle("");
-      setContent("");
-      setAiPrompt("");
-      setChannels([]);
+      const msg = status === "published" ? "Пост опубликован!" : status === "scheduled" ? "Пост запланирован!" : "Черновик сохранён";
+      toast.success(msg);
+      setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
+      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00");
     } catch (e: any) {
       toast.error(e.message || "Ошибка сохранения");
     } finally {
@@ -249,12 +273,64 @@ export function PostEditor() {
           </Card>
         )}
 
+        {/* Scheduling */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Clock className="h-5 w-5 text-primary" />
+              Отложенный постинг
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="schedule-toggle">Запланировать</Label>
+              <Switch id="schedule-toggle" checked={isScheduled} onCheckedChange={setIsScheduled} />
+            </div>
+            {isScheduled && (
+              <div className="space-y-3">
+                <div>
+                  <Label>Дата</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !scheduledDate && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {scheduledDate ? format(scheduledDate, "d MMMM yyyy", { locale: ru }) : "Выберите дату"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={scheduledDate}
+                        onSelect={setScheduledDate}
+                        disabled={(date) => date < new Date()}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <Label htmlFor="schedule-time">Время</Label>
+                  <Input id="schedule-time" type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Actions */}
         <div className="flex flex-col gap-2">
-          <Button onClick={() => savePost("published")} disabled={isSaving} className="w-full">
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            Опубликовать
-          </Button>
+          {isScheduled ? (
+            <Button onClick={() => savePost("scheduled")} disabled={isSaving} className="w-full">
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarIcon className="h-4 w-4" />}
+              Запланировать публикацию
+            </Button>
+          ) : (
+            <Button onClick={() => savePost("published")} disabled={isSaving} className="w-full">
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Опубликовать
+            </Button>
+          )}
           <Button variant="outline" onClick={() => savePost("draft")} disabled={isSaving} className="w-full">
             <Save className="h-4 w-4" />
             Сохранить черновик
