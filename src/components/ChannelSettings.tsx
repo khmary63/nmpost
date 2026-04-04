@@ -62,7 +62,7 @@ export function ChannelSettings() {
   const [channels, setChannels] = useState<ChannelConfig[]>(DEFAULT_CHANNELS);
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [vkCode, setVkCode] = useState("");
+  const [vkToken, setVkToken] = useState("");
   const [isExchanging, setIsExchanging] = useState(false);
   const [vkTokenActive, setVkTokenActive] = useState(false);
 
