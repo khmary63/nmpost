@@ -3,9 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Clock, Send, FileEdit } from "lucide-react";
+import { Trash2, FileEdit } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import type { EditingPost } from "@/pages/Dashboard";
 
 interface Post {
   id: string;
@@ -14,6 +15,7 @@ interface Post {
   style: string;
   status: string;
   channels: string[];
+  scheduled_at: string | null;
   created_at: string;
 }
 
@@ -29,7 +31,11 @@ const channelLabels: Record<string, string> = {
   ok: "Макс",
 };
 
-export function PostsList() {
+interface PostsListProps {
+  onEdit?: (post: EditingPost) => void;
+}
+
+export function PostsList({ onEdit }: PostsListProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,6 +65,7 @@ export function PostsList() {
     <div className="space-y-3">
       {posts.map((post) => {
         const st = statusMap[post.status] || statusMap.draft;
+        const canEdit = post.status !== "published";
         return (
           <Card key={post.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-4">
@@ -82,9 +89,29 @@ export function PostsList() {
                     })}
                   </p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => deletePost(post.id)} className="shrink-0 text-destructive/60 hover:text-destructive">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                <div className="flex items-center gap-1 shrink-0">
+                  {canEdit && onEdit && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onEdit({
+                        id: post.id,
+                        title: post.title,
+                        content: post.content,
+                        style: post.style,
+                        channels: post.channels,
+                        scheduled_at: post.scheduled_at,
+                        status: post.status,
+                      })}
+                      className="text-primary/60 hover:text-primary"
+                    >
+                      <FileEdit className="h-4 w-4" />
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" onClick={() => deletePost(post.id)} className="text-destructive/60 hover:text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

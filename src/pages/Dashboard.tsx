@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { PostEditor } from "@/components/PostEditor";
 import { PostsList } from "@/components/PostsList";
@@ -5,10 +6,32 @@ import { ChannelSettings } from "@/components/ChannelSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PenLine, List, Settings } from "lucide-react";
 
+export interface EditingPost {
+  id: string;
+  title: string;
+  content: string;
+  style: string;
+  channels: string[];
+  scheduled_at: string | null;
+  status: string;
+}
+
 export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState("editor");
+  const [editingPost, setEditingPost] = useState<EditingPost | null>(null);
+
+  const handleEdit = (post: EditingPost) => {
+    setEditingPost(post);
+    setActiveTab("editor");
+  };
+
+  const handleEditorDone = () => {
+    setEditingPost(null);
+  };
+
   return (
     <DashboardLayout>
-      <Tabs defaultValue="editor" className="space-y-6">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-2xl font-bold text-foreground">Дашборд</h1>
           <TabsList>
@@ -24,10 +47,10 @@ export default function Dashboard() {
           </TabsList>
         </div>
         <TabsContent value="editor">
-          <PostEditor />
+          <PostEditor editingPost={editingPost} onDone={handleEditorDone} />
         </TabsContent>
         <TabsContent value="posts">
-          <PostsList />
+          <PostsList onEdit={handleEdit} />
         </TabsContent>
         <TabsContent value="settings">
           <ChannelSettings />
