@@ -212,6 +212,51 @@ export type Database = {
         }
         Relationships: []
       }
+      posts: {
+        Row: {
+          channels: string[]
+          content: string
+          created_at: string
+          id: string
+          image_url: string | null
+          published_at: string | null
+          scheduled_at: string | null
+          status: Database["public"]["Enums"]["post_status"]
+          style: Database["public"]["Enums"]["post_style"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channels?: string[]
+          content?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: Database["public"]["Enums"]["post_status"]
+          style?: Database["public"]["Enums"]["post_style"]
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channels?: string[]
+          content?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          published_at?: string | null
+          scheduled_at?: string | null
+          status?: Database["public"]["Enums"]["post_status"]
+          style?: Database["public"]["Enums"]["post_style"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -526,6 +571,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "manager" | "agent"
+      post_status: "draft" | "scheduled" | "published"
+      post_style: "minimal" | "bold" | "elegant" | "creative"
       proposal_status: "draft" | "sent" | "viewed" | "accepted" | "rejected"
       template_category:
         | "web_design"
@@ -661,6 +708,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "agent"],
+      post_status: ["draft", "scheduled", "published"],
+      post_style: ["minimal", "bold", "elegant", "creative"],
       proposal_status: ["draft", "sent", "viewed", "accepted", "rejected"],
       template_category: [
         "web_design",
