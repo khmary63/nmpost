@@ -104,13 +104,20 @@ export function ChannelSettings() {
     }
     setIsExchanging(true);
     try {
-      // Save token directly to channel_settings
+      // Extract clean access_token — strip &expires_in=...&user_id=... if user pasted full fragment
+      const cleanToken = vkToken.trim().split("&")[0].replace(/^access_token=/, "");
+      
+      if (!cleanToken) {
+        toast.error("Не удалось извлечь токен. Скопируйте только значение access_token.");
+        return;
+      }
+
       const { error } = await supabase
         .from("channel_settings")
         .upsert({
           user_id: user.id,
           channel: "vk_personal",
-          channel_chat_id: vkToken.trim(),
+          channel_chat_id: cleanToken,
           is_active: true,
         }, { onConflict: "user_id,channel" });
 
