@@ -20,7 +20,7 @@ interface ChannelConfig {
 }
 
 const VK_CLIENT_ID = "54525496";
-const VK_AUTH_URL = `https://oauth.vk.com/authorize?client_id=${VK_CLIENT_ID}&display=page&scope=8192&response_type=code&v=5.199&redirect_uri=https://oauth.vk.com/blank.html`;
+const VK_AUTH_URL = `https://oauth.vk.com/authorize?client_id=${VK_CLIENT_ID}&display=page&scope=8192&response_type=token&v=5.199&redirect_uri=https://oauth.vk.com/blank.html`;
 
 const DEFAULT_CHANNELS: ChannelConfig[] = [
   {
