@@ -330,6 +330,45 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
             </div>
           </CardContent>
         </Card>
+
+        {/* Image Generation */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <ImageIcon className="h-5 w-5 text-primary" />
+              Генерация картинки
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="image-prompt">Опишите картинку</Label>
+              <Textarea
+                id="image-prompt"
+                placeholder="Например: яркая иллюстрация для поста про SMM, современный стиль..."
+                className="min-h-[80px]"
+                value={imagePrompt}
+                onChange={(e) => setImagePrompt(e.target.value)}
+              />
+            </div>
+            <Button onClick={generateImage} disabled={isGeneratingImage}>
+              {isGeneratingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+              Сгенерировать картинку
+            </Button>
+            {imageUrl && (
+              <div className="relative">
+                <img src={imageUrl} alt="Сгенерированная картинка" className="w-full rounded-lg border" />
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2 h-7 w-7"
+                  onClick={() => setImageUrl(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Sidebar */}
