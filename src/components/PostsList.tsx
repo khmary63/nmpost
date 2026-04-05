@@ -16,6 +16,7 @@ interface Post {
   status: string;
   channels: string[];
   scheduled_at: string | null;
+  image_url: string | null;
   created_at: string;
 }
 
@@ -102,6 +103,7 @@ export function PostsList({ onEdit }: PostsListProps) {
                         channels: post.channels,
                         scheduled_at: post.scheduled_at,
                         status: post.status,
+                        image_url: post.image_url,
                       })}
                       className="text-primary/60 hover:text-primary"
                     >

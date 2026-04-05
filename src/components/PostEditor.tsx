@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Sparkles, Send, Save, CalendarIcon, Type, Palette,
-  MessageSquare, Loader2, Wand2, FileText, Clock,
+  MessageSquare, Loader2, Wand2, FileText, Clock, ImageIcon, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EditingPost } from "@/pages/Dashboard";
@@ -52,6 +52,9 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [scheduledDate, setScheduledDate] = useState<Date>();
   const [scheduledTime, setScheduledTime] = useState("12:00");
   const [publishResult, setPublishResult] = useState<{ errors: string[]; successes: string[] } | null>(null);
+  const [imagePrompt, setImagePrompt] = useState("");
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   // Load editing post into form
   useEffect(() => {
@@ -61,6 +64,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       setContent(editingPost.content);
       setStyle(editingPost.style);
       setChannels(editingPost.channels);
+      setImageUrl(editingPost.image_url || null);
       if (editingPost.scheduled_at) {
         setIsScheduled(true);
         const d = new Date(editingPost.scheduled_at);
@@ -106,6 +110,30 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
     }
   };
 
+  const generateImage = async () => {
+    if (!imagePrompt.trim()) {
+      toast.error("Введите описание для генерации картинки");
+      return;
+    }
+    setIsGeneratingImage(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-image", {
+        body: { prompt: imagePrompt },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      setImageUrl(data.image_url);
+      toast.success("Картинка сгенерирована!");
+    } catch (e: any) {
+      toast.error(e.message || "Ошибка генерации картинки");
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
   const savePost = async (status: "draft" | "published" | "scheduled") => {
     if (!content.trim()) {
       toast.error("Напишите или сгенерируйте текст поста");
@@ -147,6 +175,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           channels,
           scheduled_at: scheduledAt,
           published_at: null,
+          image_url: imageUrl,
         }).eq("id", postId).select().single();
         if (error) throw error;
         savedPost = data;
@@ -160,6 +189,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           channels,
           scheduled_at: scheduledAt,
           published_at: null,
+          image_url: imageUrl,
         }).select().single();
         if (error) throw error;
         savedPost = data;
@@ -215,7 +245,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       }
 
       setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
-      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00");
+      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrl(null); setImagePrompt("");
       onDone?.();
     } catch (e: any) {
       toast.error(e.message || "Ошибка сохранения");
@@ -238,7 +268,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               {postId && (
                 <Button variant="ghost" size="sm" onClick={() => {
                   setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
-                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00");
+                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrl(null); setImagePrompt("");
                   onDone?.();
                 }}>
                   Отменить
@@ -299,6 +329,45 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 Контент-план
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Image Generation */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <ImageIcon className="h-5 w-5 text-primary" />
+              Генерация картинки
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="image-prompt">Опишите картинку</Label>
+              <Textarea
+                id="image-prompt"
+                placeholder="Например: яркая иллюстрация для поста про SMM, современный стиль..."
+                className="min-h-[80px]"
+                value={imagePrompt}
+                onChange={(e) => setImagePrompt(e.target.value)}
+              />
+            </div>
+            <Button onClick={generateImage} disabled={isGeneratingImage}>
+              {isGeneratingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+              Сгенерировать картинку
+            </Button>
+            {imageUrl && (
+              <div className="relative">
+                <img src={imageUrl} alt="Сгенерированная картинка" className="w-full rounded-lg border" />
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2 h-7 w-7"
+                  onClick={() => setImageUrl(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
