@@ -109,6 +109,30 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
     }
   };
 
+  const generateImage = async () => {
+    if (!imagePrompt.trim()) {
+      toast.error("Введите описание для генерации картинки");
+      return;
+    }
+    setIsGeneratingImage(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-image", {
+        body: { prompt: imagePrompt },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      setImageUrl(data.image_url);
+      toast.success("Картинка сгенерирована!");
+    } catch (e: any) {
+      toast.error(e.message || "Ошибка генерации картинки");
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
   const savePost = async (status: "draft" | "published" | "scheduled") => {
     if (!content.trim()) {
       toast.error("Напишите или сгенерируйте текст поста");
