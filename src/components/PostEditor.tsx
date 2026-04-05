@@ -244,7 +244,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       }
 
       setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
-      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00");
+      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrl(null); setImagePrompt("");
       onDone?.();
     } catch (e: any) {
       toast.error(e.message || "Ошибка сохранения");
