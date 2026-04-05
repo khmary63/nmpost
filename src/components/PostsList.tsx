@@ -102,6 +102,7 @@ export function PostsList({ onEdit }: PostsListProps) {
                         channels: post.channels,
                         scheduled_at: post.scheduled_at,
                         status: post.status,
+                        image_url: post.image_url,
                       })}
                       className="text-primary/60 hover:text-primary"
                     >
