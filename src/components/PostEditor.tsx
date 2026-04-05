@@ -64,6 +64,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       setContent(editingPost.content);
       setStyle(editingPost.style);
       setChannels(editingPost.channels);
+      setImageUrl(editingPost.image_url || null);
       if (editingPost.scheduled_at) {
         setIsScheduled(true);
         const d = new Date(editingPost.scheduled_at);

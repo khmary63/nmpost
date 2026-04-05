@@ -14,6 +14,7 @@ export interface EditingPost {
   channels: string[];
   scheduled_at: string | null;
   status: string;
+  image_url: string | null;
 }
 
 export default function Dashboard() {
