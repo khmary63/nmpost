@@ -267,7 +267,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               {postId && (
                 <Button variant="ghost" size="sm" onClick={() => {
                   setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
-                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00");
+                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrl(null); setImagePrompt("");
                   onDone?.();
                 }}>
                   Отменить
