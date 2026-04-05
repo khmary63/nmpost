@@ -16,6 +16,7 @@ interface Post {
   status: string;
   channels: string[];
   scheduled_at: string | null;
+  image_url: string | null;
   created_at: string;
 }
 
