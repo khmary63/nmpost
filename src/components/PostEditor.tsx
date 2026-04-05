@@ -174,6 +174,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           channels,
           scheduled_at: scheduledAt,
           published_at: null,
+          image_url: imageUrl,
         }).eq("id", postId).select().single();
         if (error) throw error;
         savedPost = data;
@@ -187,6 +188,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           channels,
           scheduled_at: scheduledAt,
           published_at: null,
+          image_url: imageUrl,
         }).select().single();
         if (error) throw error;
         savedPost = data;
