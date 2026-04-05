@@ -52,6 +52,9 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [scheduledDate, setScheduledDate] = useState<Date>();
   const [scheduledTime, setScheduledTime] = useState("12:00");
   const [publishResult, setPublishResult] = useState<{ errors: string[]; successes: string[] } | null>(null);
+  const [imagePrompt, setImagePrompt] = useState("");
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   // Load editing post into form
   useEffect(() => {
