@@ -290,7 +290,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       }
 
       setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
-      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrl(null); setImagePrompt("");
+      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrl(null); setImagePrompt(""); setIncludeFooter(true);
       onDone?.();
     } catch (e: any) {
       toast.error(e.message || "Ошибка сохранения");
@@ -313,7 +313,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               {postId && (
                 <Button variant="ghost" size="sm" onClick={() => {
                   setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
-                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrl(null); setImagePrompt("");
+                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrl(null); setImagePrompt(""); setIncludeFooter(true);
                   onDone?.();
                 }}>
                   Отменить
