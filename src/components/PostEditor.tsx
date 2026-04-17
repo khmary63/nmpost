@@ -30,7 +30,7 @@ const POST_STYLES = [
 const CHANNELS = [
   { id: "telegram", label: "Telegram", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
   { id: "vk", label: "ВК группа", color: "bg-sky-500/10 text-sky-600 border-sky-200" },
-  { id: "ok", label: "Макс", color: "bg-orange-500/10 text-orange-600 border-orange-200" },
+  { id: "max", label: "MAX", color: "bg-orange-500/10 text-orange-600 border-orange-200" },
 ] as const;
 
 interface PostEditorProps {
@@ -225,6 +225,18 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           }
         }
 
+        if (channels.includes("max")) {
+          const { data: maxResult, error: maxError } = await supabase.functions.invoke("publish-max", {
+            body: { postId: savedPost.id },
+          });
+
+          if (maxError || maxResult?.error) {
+            publishErrors.push(`MAX: ${maxResult?.error || maxError?.message || "Неизвестная ошибка"}`);
+          } else {
+            publishSuccesses.push("MAX ✓");
+            toast.success("Пост опубликован в MAX!");
+          }
+        }
 
         setPublishResult({ errors: publishErrors, successes: publishSuccesses });
 
