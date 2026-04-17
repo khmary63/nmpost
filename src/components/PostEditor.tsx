@@ -56,6 +56,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [includeFooter, setIncludeFooter] = useState(true);
 
   // Load editing post into form
   useEffect(() => {
@@ -66,6 +67,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       setStyle(editingPost.style);
       setChannels(editingPost.channels);
       setImageUrl(editingPost.image_url || null);
+      setIncludeFooter(editingPost.include_footer ?? true);
       if (editingPost.scheduled_at) {
         setIsScheduled(true);
         const d = new Date(editingPost.scheduled_at);

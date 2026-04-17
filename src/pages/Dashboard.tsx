@@ -15,6 +15,7 @@ export interface EditingPost {
   scheduled_at: string | null;
   status: string;
   image_url: string | null;
+  include_footer: boolean;
 }
 
 export default function Dashboard() {
