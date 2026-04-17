@@ -75,25 +75,27 @@ serve(async (req) => {
       });
     }
 
-    // Build message text
+    // Build message text. MAX supports markdown formatting via "format": "markdown".
     let text = "";
     if (post.title) text += `${post.title}\n\n`;
     text += post.content;
 
+    let useMarkdown = false;
     if (post.include_footer !== false) {
       const footerLines: string[] = [];
       if (channelSetting.manager_url?.trim()) {
-        footerLines.push(`Связаться с менеджером: ${channelSetting.manager_url.trim()}`);
+        footerLines.push(`👉 [Связаться с менеджером](${channelSetting.manager_url.trim()})`);
+        useMarkdown = true;
       }
       if (channelSetting.personal_url?.trim()) {
-        footerLines.push(`Связаться со мной: ${channelSetting.personal_url.trim()}`);
+        footerLines.push(`👉 [Связаться со мной](${channelSetting.personal_url.trim()})`);
+        useMarkdown = true;
       }
       if (footerLines.length) text += `\n\n${footerLines.join("\n")}`;
     }
 
     const chatId = channelSetting.channel_chat_id.trim();
 
-    // MAX API requires numeric chat_id (int64). Reject business-style IDs like "..._biz".
     if (!/^-?\d+$/.test(chatId)) {
       return new Response(JSON.stringify({
         error: `MAX требует числовой chat_id (int64), получено: "${chatId}". Откройте чат/канал в MAX, у бота вызовите /chats или используйте числовой ID чата, а не бизнес-идентификатор.`,
@@ -102,12 +104,11 @@ serve(async (req) => {
       });
     }
 
-    // MAX Bot API: POST https://platform-api.max.ru/messages?chat_id=...
-    // MAX expects raw token in Authorization header (without Bearer prefix)
     const url = new URL("https://platform-api.max.ru/messages");
     url.searchParams.set("chat_id", chatId);
 
     const body: Record<string, unknown> = { text };
+    if (useMarkdown) body.format = "markdown";
 
     // Upload image to MAX (two-step): /uploads -> upload binary -> token in attachment
     let imageWarning: string | null = null;

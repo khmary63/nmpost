@@ -88,16 +88,26 @@ serve(async (req) => {
     if (post.title) message += `${post.title}\n\n`;
     message += post.content;
 
-    // VK posts don't support HTML — use plain text with URL on separate lines
+    // VK supports [URL|text] syntax ONLY for vk.com links. External links are auto-linkified as plain URLs.
     if (post.include_footer !== false) {
       const footerLines: string[] = [];
+      const buildVkLine = (label: string, url: string) => {
+        const u = url.trim();
+        const vkMatch = u.match(/^https?:\/\/(?:m\.)?vk\.com\/([A-Za-z0-9_.\-]+)\/?$/);
+        if (vkMatch) {
+          // VK internal link — clickable text via [screen_name|text] syntax
+          return `👉 [${vkMatch[1]}|${label}]`;
+        }
+        // External URL — emoji + label, then URL on next line (auto-linked by VK)
+        return `👉 ${label}\n${u}`;
+      };
       if (channelSetting.manager_url?.trim()) {
-        footerLines.push(`Связаться с менеджером: ${channelSetting.manager_url.trim()}`);
+        footerLines.push(buildVkLine("Связаться с менеджером", channelSetting.manager_url));
       }
       if (channelSetting.personal_url?.trim()) {
-        footerLines.push(`Связаться со мной: ${channelSetting.personal_url.trim()}`);
+        footerLines.push(buildVkLine("Связаться со мной", channelSetting.personal_url));
       }
-      if (footerLines.length) message += `\n\n${footerLines.join("\n")}`;
+      if (footerLines.length) message += `\n\n${footerLines.join("\n\n")}`;
     }
 
     const normalizedGroupId = channelSetting.channel_chat_id.replace(/[^\d-]/g, "").trim();
