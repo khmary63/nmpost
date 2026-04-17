@@ -81,40 +81,71 @@ serve(async (req) => {
     if (post.title) text += `<b>${escapeHtml(post.title)}</b>\n\n`;
     text += escapeHtml(post.content);
 
-    // Footer with HTML hyperlinks
+    // Footer with HTML hyperlinks (👉 emoji + clickable text)
+    let footer = "";
     if (post.include_footer !== false) {
       const footerLines: string[] = [];
       if (channelSetting.manager_url?.trim()) {
-        footerLines.push(`<a href="${escapeAttr(channelSetting.manager_url.trim())}">Связаться с менеджером</a>`);
+        footerLines.push(`👉 <a href="${escapeAttr(channelSetting.manager_url.trim())}">Связаться с менеджером</a>`);
       }
       if (channelSetting.personal_url?.trim()) {
-        footerLines.push(`<a href="${escapeAttr(channelSetting.personal_url.trim())}">Связаться со мной</a>`);
+        footerLines.push(`👉 <a href="${escapeAttr(channelSetting.personal_url.trim())}">Связаться со мной</a>`);
       }
-      if (footerLines.length) text += `\n\n${footerLines.join("\n")}`;
+      if (footerLines.length) footer = `\n\n${footerLines.join("\n")}`;
     }
 
-    // Send to Telegram — sendPhoto if image present, else sendMessage
+    const fullText = text + footer;
+
+    // Send to Telegram. If image present and full text fits in caption (1024), send sendPhoto.
+    // Otherwise send photo with no caption, then sendMessage with full HTML text (so footer links survive).
     let tgResponse: Response;
+    let messageId: number | undefined;
     if (post.image_url) {
-      // Telegram captions are limited to 1024 chars
-      const caption = text.length > 1024 ? text.slice(0, 1021) + "..." : text;
-      tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: channelSetting.channel_chat_id,
-          photo: post.image_url,
-          caption,
-          parse_mode: "HTML",
-        }),
-      });
+      if (fullText.length <= 1024) {
+        tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: channelSetting.channel_chat_id,
+            photo: post.image_url,
+            caption: fullText,
+            parse_mode: "HTML",
+          }),
+        });
+      } else {
+        // Send photo without caption, then text separately to preserve all links
+        const photoResp = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: channelSetting.channel_chat_id,
+            photo: post.image_url,
+          }),
+        });
+        const photoData = await photoResp.json();
+        if (!photoResp.ok) {
+          console.error("Telegram sendPhoto error:", photoData);
+          return new Response(JSON.stringify({ error: `Ошибка Telegram (фото): ${photoData.description || "Unknown"}` }), {
+            status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: channelSetting.channel_chat_id,
+            text: fullText,
+            parse_mode: "HTML",
+          }),
+        });
+      }
     } else {
       tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           chat_id: channelSetting.channel_chat_id,
-          text,
+          text: fullText,
           parse_mode: "HTML",
         }),
       });
