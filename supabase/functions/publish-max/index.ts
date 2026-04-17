@@ -173,7 +173,7 @@ serve(async (req) => {
 
     console.log("MAX message sent:", { postId, chatId, response: maxData });
 
-    return new Response(JSON.stringify({ ok: true, message: maxData?.message ?? maxData }), {
+    return new Response(JSON.stringify({ ok: true, message: maxData?.message ?? maxData, image_warning: imageWarning }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
