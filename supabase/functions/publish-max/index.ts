@@ -82,6 +82,15 @@ serve(async (req) => {
 
     const chatId = channelSetting.channel_chat_id.trim();
 
+    // MAX API requires numeric chat_id (int64). Reject business-style IDs like "..._biz".
+    if (!/^-?\d+$/.test(chatId)) {
+      return new Response(JSON.stringify({
+        error: `MAX требует числовой chat_id (int64), получено: "${chatId}". Откройте чат/канал в MAX, у бота вызовите /chats или используйте числовой ID чата, а не бизнес-идентификатор.`,
+      }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // MAX Bot API: POST https://platform-api.max.ru/messages?chat_id=...
     // Auth format per docs: Authorization: <token>
     const url = new URL("https://platform-api.max.ru/messages");
