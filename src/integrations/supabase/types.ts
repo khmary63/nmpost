@@ -521,6 +521,42 @@ export type Database = {
           },
         ]
       }
+      support_tickets: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          status: Database["public"]["Enums"]["support_ticket_status"]
+          subject: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          message: string
+          name: string
+          status?: Database["public"]["Enums"]["support_ticket_status"]
+          subject: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          status?: Database["public"]["Enums"]["support_ticket_status"]
+          subject?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       templates: {
         Row: {
           category: Database["public"]["Enums"]["template_category"]
@@ -613,6 +649,7 @@ export type Database = {
       post_status: "draft" | "scheduled" | "published"
       post_style: "minimal" | "bold" | "elegant" | "creative"
       proposal_status: "draft" | "sent" | "viewed" | "accepted" | "rejected"
+      support_ticket_status: "new" | "in_progress" | "resolved" | "closed"
       template_category:
         | "web_design"
         | "consulting"
@@ -750,6 +787,7 @@ export const Constants = {
       post_status: ["draft", "scheduled", "published"],
       post_style: ["minimal", "bold", "elegant", "creative"],
       proposal_status: ["draft", "sent", "viewed", "accepted", "rejected"],
+      support_ticket_status: ["new", "in_progress", "resolved", "closed"],
       template_category: [
         "web_design",
         "consulting",
