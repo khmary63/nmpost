@@ -68,12 +68,19 @@ serve(async (req) => {
       });
     }
 
-    const VK_TOKEN = Deno.env.get("VK_COMMUNITY_TOKEN");
-    const VK_USER_TOKEN = Deno.env.get("VK_USER_TOKEN");
+    const VK_COMMUNITY_TOKEN_RAW = Deno.env.get("VK_COMMUNITY_TOKEN");
+    const VK_USER_TOKEN_RAW = Deno.env.get("VK_USER_TOKEN");
+    const VK_TOKEN = VK_COMMUNITY_TOKEN_RAW?.replace(/^access_token=/, "").split("&")[0].trim();
+    const VK_USER_TOKEN = VK_USER_TOKEN_RAW?.replace(/^access_token=/, "").split("&")[0].trim();
+
     if (!VK_TOKEN) {
       return new Response(JSON.stringify({ error: "VK токен не настроен" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    if (VK_USER_TOKEN_RAW && VK_USER_TOKEN_RAW.includes("&")) {
+      console.warn("VK_USER_TOKEN contains extra OAuth params, using normalized access token only");
     }
 
     // Build message
@@ -105,9 +112,13 @@ serve(async (req) => {
         console.log("VK: starting image upload, image_url=", post.image_url);
 
         // 1. Get wall upload server (USER token)
-        const uploadServerResp = await fetch(
-          `https://api.vk.com/method/photos.getWallUploadServer?group_id=${groupId}&access_token=${VK_USER_TOKEN}&v=5.199`,
-        );
+        const uploadServerUrl = new URL("https://api.vk.com/method/photos.getWallUploadServer");
+        uploadServerUrl.search = new URLSearchParams({
+          group_id: String(groupId),
+          access_token: VK_USER_TOKEN,
+          v: "5.199",
+        }).toString();
+        const uploadServerResp = await fetch(uploadServerUrl.toString());
         const uploadServerData = await uploadServerResp.json();
         console.log("VK getWallUploadServer:", JSON.stringify(uploadServerData));
         if (uploadServerData.error) throw new Error(`getWallUploadServer: ${uploadServerData.error.error_msg}`);
