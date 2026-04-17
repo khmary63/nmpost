@@ -1,0 +1,1 @@
+UPDATE public.channel_settings SET channel = 'max' WHERE channel = 'ok';
