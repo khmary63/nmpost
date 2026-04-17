@@ -135,6 +135,34 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
     }
   };
 
+  const uploadImageFile = async (file: File) => {
+    if (!user) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Можно загружать только изображения");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Размер файла не должен превышать 10 МБ");
+      return;
+    }
+    setIsUploadingImage(true);
+    try {
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("post-images")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("post-images").getPublicUrl(path);
+      setImageUrl(data.publicUrl);
+      toast.success("Картинка загружена!");
+    } catch (e: any) {
+      toast.error(e.message || "Ошибка загрузки картинки");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const savePost = async (status: "draft" | "published" | "scheduled") => {
     if (!content.trim()) {
       toast.error("Напишите или сгенерируйте текст поста");
