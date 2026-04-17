@@ -81,16 +81,32 @@ serve(async (req) => {
     if (post.title) text += `<b>${escapeHtml(post.title)}</b>\n\n`;
     text += escapeHtml(post.content);
 
-    // Send to Telegram
-    const tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: channelSetting.channel_chat_id,
-        text,
-        parse_mode: "HTML",
-      }),
-    });
+    // Send to Telegram — sendPhoto if image present, else sendMessage
+    let tgResponse: Response;
+    if (post.image_url) {
+      // Telegram captions are limited to 1024 chars
+      const caption = text.length > 1024 ? text.slice(0, 1021) + "..." : text;
+      tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: channelSetting.channel_chat_id,
+          photo: post.image_url,
+          caption,
+          parse_mode: "HTML",
+        }),
+      });
+    } else {
+      tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: channelSetting.channel_chat_id,
+          text,
+          parse_mode: "HTML",
+        }),
+      });
+    }
 
     const tgData = await tgResponse.json();
     if (!tgResponse.ok) {
