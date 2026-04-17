@@ -82,9 +82,8 @@ serve(async (req) => {
 
     const chatId = channelSetting.channel_chat_id.trim();
 
-    // MAX Bot API: POST https://botapi.max.ru/messages?access_token=...&chat_id=...
+    // MAX Bot API: POST https://botapi.max.ru/messages?chat_id=...
     const url = new URL("https://botapi.max.ru/messages");
-    url.searchParams.set("access_token", MAX_BOT_TOKEN);
     url.searchParams.set("chat_id", chatId);
 
     const body: Record<string, unknown> = { text };
@@ -96,7 +95,10 @@ serve(async (req) => {
 
     const maxResponse = await fetch(url.toString(), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${MAX_BOT_TOKEN}`,
+      },
       body: JSON.stringify(body),
     });
 
