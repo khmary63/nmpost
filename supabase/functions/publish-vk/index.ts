@@ -134,8 +134,8 @@ serve(async (req) => {
           throw new Error(`VK не принял фото: ${JSON.stringify(uploadData)}`);
         }
 
-        // 4. Save photo (USER token)
-        const saveParams = new URLSearchParams({
+        // 4. Save photo (USER token) — send as POST body because `photo` can be very large
+        const saveBody = new URLSearchParams({
           group_id: String(groupId),
           photo: uploadData.photo,
           server: String(uploadData.server),
@@ -143,7 +143,11 @@ serve(async (req) => {
           access_token: VK_USER_TOKEN,
           v: "5.199",
         });
-        const saveResp = await fetch(`https://api.vk.com/method/photos.saveWallPhoto?${saveParams.toString()}`, { method: "POST" });
+        const saveResp = await fetch("https://api.vk.com/method/photos.saveWallPhoto", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: saveBody.toString(),
+        });
         const saveData = await saveResp.json();
         console.log("VK saveWallPhoto:", JSON.stringify(saveData));
         if (saveData.error) throw new Error(`saveWallPhoto: ${saveData.error.error_msg}`);
