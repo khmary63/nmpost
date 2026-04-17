@@ -56,6 +56,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [includeFooter, setIncludeFooter] = useState(true);
 
   // Load editing post into form
   useEffect(() => {
@@ -66,6 +67,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       setStyle(editingPost.style);
       setChannels(editingPost.channels);
       setImageUrl(editingPost.image_url || null);
+      setIncludeFooter(editingPost.include_footer ?? true);
       if (editingPost.scheduled_at) {
         setIsScheduled(true);
         const d = new Date(editingPost.scheduled_at);
@@ -205,6 +207,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           scheduled_at: scheduledAt,
           published_at: null,
           image_url: imageUrl,
+          include_footer: includeFooter,
         }).eq("id", postId).select().single();
         if (error) throw error;
         savedPost = data;
@@ -219,6 +222,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           scheduled_at: scheduledAt,
           published_at: null,
           image_url: imageUrl,
+          include_footer: includeFooter,
         }).select().single();
         if (error) throw error;
         savedPost = data;
@@ -286,7 +290,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       }
 
       setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
-      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrl(null); setImagePrompt("");
+      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrl(null); setImagePrompt(""); setIncludeFooter(true);
       onDone?.();
     } catch (e: any) {
       toast.error(e.message || "Ошибка сохранения");
@@ -309,7 +313,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               {postId && (
                 <Button variant="ghost" size="sm" onClick={() => {
                   setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
-                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrl(null); setImagePrompt("");
+                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrl(null); setImagePrompt(""); setIncludeFooter(true);
                   onDone?.();
                 }}>
                   Отменить
@@ -473,7 +477,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               Каналы публикации
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-2">
               {CHANNELS.map((ch) => (
                 <Badge
@@ -488,6 +492,15 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                   {ch.label}
                 </Badge>
               ))}
+            </div>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div className="space-y-0.5 pr-3">
+                <Label htmlFor="footer-toggle" className="text-sm">Прикрепить подвал со ссылками</Label>
+                <p className="text-xs text-muted-foreground">
+                  Ссылки «Связаться с менеджером / со мной» из настроек каналов добавятся в конец поста.
+                </p>
+              </div>
+              <Switch id="footer-toggle" checked={includeFooter} onCheckedChange={setIncludeFooter} />
             </div>
           </CardContent>
         </Card>

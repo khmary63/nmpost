@@ -104,6 +104,7 @@ export function PostsList({ onEdit }: PostsListProps) {
                         scheduled_at: post.scheduled_at,
                         status: post.status,
                         image_url: post.image_url,
+                        include_footer: (post as any).include_footer ?? true,
                       })}
                       className="text-primary/60 hover:text-primary"
                     >

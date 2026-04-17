@@ -7,12 +7,14 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Settings, Save, Loader2 } from "lucide-react";
+import { Settings, Save, Loader2, Link2 } from "lucide-react";
 
 interface ChannelConfig {
   id?: string;
   channel: string;
   channel_chat_id: string;
+  manager_url: string;
+  personal_url: string;
   is_active: boolean;
   label: string;
   placeholder: string;
@@ -23,6 +25,8 @@ const DEFAULT_CHANNELS: ChannelConfig[] = [
   {
     channel: "telegram",
     channel_chat_id: "",
+    manager_url: "",
+    personal_url: "",
     is_active: false,
     label: "Telegram",
     placeholder: "@mychannel или -1001234567890",
@@ -31,6 +35,8 @@ const DEFAULT_CHANNELS: ChannelConfig[] = [
   {
     channel: "vk",
     channel_chat_id: "",
+    manager_url: "",
+    personal_url: "",
     is_active: false,
     label: "ВКонтакте (сообщество)",
     placeholder: "123456789",
@@ -39,6 +45,8 @@ const DEFAULT_CHANNELS: ChannelConfig[] = [
   {
     channel: "max",
     channel_chat_id: "",
+    manager_url: "",
+    personal_url: "",
     is_active: false,
     label: "MAX (мессенджер)",
     placeholder: "-1001234567890",
@@ -65,7 +73,14 @@ export function ChannelSettings() {
           prev.map((ch) => {
             const saved = data.find((d: any) => d.channel === ch.channel);
             if (saved) {
-              return { ...ch, id: saved.id, channel_chat_id: saved.channel_chat_id, is_active: saved.is_active };
+              return {
+                ...ch,
+                id: saved.id,
+                channel_chat_id: saved.channel_chat_id,
+                manager_url: saved.manager_url || "",
+                personal_url: saved.personal_url || "",
+                is_active: saved.is_active,
+              };
             }
             return ch;
           })
@@ -84,17 +99,19 @@ export function ChannelSettings() {
     setIsSaving(true);
     try {
       for (const ch of channels) {
+        const payload = {
+          channel_chat_id: ch.channel_chat_id,
+          manager_url: ch.manager_url.trim(),
+          personal_url: ch.personal_url.trim(),
+          is_active: ch.is_active,
+        };
         if (ch.id) {
-          await supabase.from("channel_settings").update({
-            channel_chat_id: ch.channel_chat_id,
-            is_active: ch.is_active,
-          }).eq("id", ch.id);
-        } else if (ch.channel_chat_id || ch.is_active) {
+          await supabase.from("channel_settings").update(payload).eq("id", ch.id);
+        } else if (ch.channel_chat_id || ch.is_active || ch.manager_url || ch.personal_url) {
           const { data } = await supabase.from("channel_settings").insert({
             user_id: user.id,
             channel: ch.channel,
-            channel_chat_id: ch.channel_chat_id,
-            is_active: ch.is_active,
+            ...payload,
           }).select().single();
           if (data) updateChannel(ch.channel, "id", data.id);
         }
@@ -135,13 +152,41 @@ export function ChannelSettings() {
             <CardDescription className="text-xs">{ch.hint}</CardDescription>
           </CardHeader>
           {ch.is_active && (
-            <CardContent>
-              <Label>Chat ID / ID канала</Label>
-              <Input
-                placeholder={ch.placeholder}
-                value={ch.channel_chat_id}
-                onChange={(e) => updateChannel(ch.channel, "channel_chat_id", e.target.value)}
-              />
+            <CardContent className="space-y-3">
+              <div>
+                <Label>Chat ID / ID канала</Label>
+                <Input
+                  placeholder={ch.placeholder}
+                  value={ch.channel_chat_id}
+                  onChange={(e) => updateChannel(ch.channel, "channel_chat_id", e.target.value)}
+                />
+              </div>
+
+              <div className="rounded-md border border-dashed p-3 space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Link2 className="h-4 w-4 text-primary" />
+                  Подвал поста (ссылки)
+                </div>
+                <div>
+                  <Label className="text-xs">Связаться с менеджером</Label>
+                  <Input
+                    placeholder="https://t.me/manager или https://wa.me/7900..."
+                    value={ch.manager_url}
+                    onChange={(e) => updateChannel(ch.channel, "manager_url", e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Связаться со мной</Label>
+                  <Input
+                    placeholder="https://t.me/username"
+                    value={ch.personal_url}
+                    onChange={(e) => updateChannel(ch.channel, "personal_url", e.target.value)}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Подвал прикрепляется автоматически, если ссылка задана и включён чекбокс в редакторе поста.
+                </p>
+              </div>
             </CardContent>
           )}
         </Card>
