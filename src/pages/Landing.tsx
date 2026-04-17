@@ -347,6 +347,43 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Legal & company info */}
+      <section className="border-t border-border bg-muted/30 py-12">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 grid gap-8 md:grid-cols-2">
+          <div>
+            <h3 className="font-display text-base font-semibold text-foreground mb-3">
+              Документы
+            </h3>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <a href="/offer" className="text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline">
+                  Публичная оферта
+                </a>
+              </li>
+              <li>
+                <a href="/delivery" className="text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline">
+                  Способы получения услуг
+                </a>
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-display text-base font-semibold text-foreground mb-3">
+              Контакты и реквизиты
+            </h3>
+            <div className="text-xs text-muted-foreground space-y-1 leading-relaxed">
+              <p className="text-foreground font-medium">ИП ХАБАРОВА МАРИЯ ПАВЛОВНА</p>
+              <p>ИНН: 7710140679</p>
+              <p>Расчётный счёт: 40802810900009535828</p>
+              <p>Банк: АО «Тинькофф Банк»</p>
+              <p>Корр. счёт: 30101810145250000974</p>
+              <p>БИК: 044525974</p>
+              <p>Юр. адрес: Москва, 127287, ул. Хуторская 2-я, д. 38А, стр. 26</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="border-t border-border py-8">
         <div className="mx-auto flex max-w-6xl flex-col sm:flex-row items-center justify-between gap-4 px-6">
@@ -357,7 +394,7 @@ export default function Landing() {
             <span className="font-display text-sm font-semibold text-foreground">КроссПост</span>
           </div>
           <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} КроссПост. Все права защищены.
+            © {new Date().getFullYear()} ИП Хабарова М.П. Все права защищены.
           </p>
         </div>
       </footer>
