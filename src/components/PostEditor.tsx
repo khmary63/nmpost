@@ -207,6 +207,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           scheduled_at: scheduledAt,
           published_at: null,
           image_url: imageUrl,
+          include_footer: includeFooter,
         }).eq("id", postId).select().single();
         if (error) throw error;
         savedPost = data;
@@ -221,6 +222,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           scheduled_at: scheduledAt,
           published_at: null,
           image_url: imageUrl,
+          include_footer: includeFooter,
         }).select().single();
         if (error) throw error;
         savedPost = data;
@@ -475,7 +477,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               Каналы публикации
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-2">
               {CHANNELS.map((ch) => (
                 <Badge
@@ -490,6 +492,15 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                   {ch.label}
                 </Badge>
               ))}
+            </div>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div className="space-y-0.5 pr-3">
+                <Label htmlFor="footer-toggle" className="text-sm">Прикрепить подвал со ссылками</Label>
+                <p className="text-xs text-muted-foreground">
+                  Ссылки «Связаться с менеджером / со мной» из настроек каналов добавятся в конец поста.
+                </p>
+              </div>
+              <Switch id="footer-toggle" checked={includeFooter} onCheckedChange={setIncludeFooter} />
             </div>
           </CardContent>
         </Card>
