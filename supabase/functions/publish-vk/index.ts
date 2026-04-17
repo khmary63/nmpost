@@ -69,6 +69,7 @@ serve(async (req) => {
     }
 
     const VK_TOKEN = Deno.env.get("VK_COMMUNITY_TOKEN");
+    const VK_USER_TOKEN = Deno.env.get("VK_USER_TOKEN");
     if (!VK_TOKEN) {
       return new Response(JSON.stringify({ error: "VK токен не настроен" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -92,22 +93,26 @@ serve(async (req) => {
     const ownerId = -Math.abs(numericGroupId);
     const groupId = Math.abs(numericGroupId);
 
-    // Upload image to VK if present
+    // Upload image to VK if present.
+    // photos.getWallUploadServer requires a USER token with photos scope (group token returns "method is unavailable with group auth").
     let attachments = "";
     let imageWarning: string | null = null;
     if (post.image_url) {
       try {
+        if (!VK_USER_TOKEN) {
+          throw new Error("Для загрузки картинок в VK нужен VK_USER_TOKEN (user access token со scope=photos,wall,groups). Добавьте его в секреты.");
+        }
         console.log("VK: starting image upload, image_url=", post.image_url);
 
-        // 1. Get wall upload server
+        // 1. Get wall upload server (USER token)
         const uploadServerResp = await fetch(
-          `https://api.vk.com/method/photos.getWallUploadServer?group_id=${groupId}&access_token=${VK_TOKEN}&v=5.199`,
+          `https://api.vk.com/method/photos.getWallUploadServer?group_id=${groupId}&access_token=${VK_USER_TOKEN}&v=5.199`,
         );
         const uploadServerData = await uploadServerResp.json();
         console.log("VK getWallUploadServer:", JSON.stringify(uploadServerData));
         if (uploadServerData.error) throw new Error(`getWallUploadServer: ${uploadServerData.error.error_msg}`);
         const uploadUrl = uploadServerData.response?.upload_url as string;
-        if (!uploadUrl) throw new Error("VK не вернул upload_url (проверьте, что VK_COMMUNITY_TOKEN имеет scope=photos и принадлежит этой группе)");
+        if (!uploadUrl) throw new Error("VK не вернул upload_url");
 
         // 2. Download image
         const imgResp = await fetch(post.image_url, {
@@ -129,13 +134,13 @@ serve(async (req) => {
           throw new Error(`VK не принял фото: ${JSON.stringify(uploadData)}`);
         }
 
-        // 4. Save photo
+        // 4. Save photo (USER token)
         const saveParams = new URLSearchParams({
           group_id: String(groupId),
           photo: uploadData.photo,
           server: String(uploadData.server),
           hash: uploadData.hash,
-          access_token: VK_TOKEN,
+          access_token: VK_USER_TOKEN,
           v: "5.199",
         });
         const saveResp = await fetch(`https://api.vk.com/method/photos.saveWallPhoto?${saveParams.toString()}`, { method: "POST" });
