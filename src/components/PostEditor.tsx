@@ -390,18 +390,6 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 }}
               />
             </div>
-              <Textarea
-                id="image-prompt"
-                placeholder="Например: яркая иллюстрация для поста про SMM, современный стиль..."
-                className="min-h-[80px]"
-                value={imagePrompt}
-                onChange={(e) => setImagePrompt(e.target.value)}
-              />
-            </div>
-            <Button onClick={generateImage} disabled={isGeneratingImage}>
-              {isGeneratingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
-              Сгенерировать картинку
-            </Button>
             {imageUrl && (
               <div className="relative">
                 <img src={imageUrl} alt="Сгенерированная картинка" className="w-full rounded-lg border" />
