@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Sparkles, Send, Save, CalendarIcon, Type, Palette,
-  MessageSquare, Loader2, Wand2, FileText, Clock, ImageIcon, X,
+  MessageSquare, Loader2, Wand2, FileText, Clock, ImageIcon, X, Paperclip,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EditingPost } from "@/pages/Dashboard";
@@ -54,6 +54,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [publishResult, setPublishResult] = useState<{ errors: string[]; successes: string[] } | null>(null);
   const [imagePrompt, setImagePrompt] = useState("");
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   // Load editing post into form
