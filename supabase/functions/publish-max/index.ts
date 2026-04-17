@@ -92,6 +92,7 @@ serve(async (req) => {
     }
 
     // MAX Bot API: POST https://platform-api.max.ru/messages?chat_id=...
+    // MAX expects raw token in Authorization header (without Bearer prefix)
     const url = new URL("https://platform-api.max.ru/messages");
     url.searchParams.set("chat_id", chatId);
 
@@ -108,7 +109,7 @@ serve(async (req) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${MAX_BOT_TOKEN}`,
+        "Authorization": MAX_BOT_TOKEN,
       },
       body: JSON.stringify(body),
     });
