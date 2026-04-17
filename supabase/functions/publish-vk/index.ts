@@ -90,6 +90,49 @@ serve(async (req) => {
 
     // owner_id for community is negative
     const ownerId = -Math.abs(numericGroupId);
+    const groupId = Math.abs(numericGroupId);
+
+    // Upload image to VK if present
+    let attachments = "";
+    if (post.image_url) {
+      try {
+        // 1. Get wall upload server
+        const uploadServerResp = await fetch(
+          `https://api.vk.com/method/photos.getWallUploadServer?group_id=${groupId}&access_token=${VK_TOKEN}&v=5.199`,
+        );
+        const uploadServerData = await uploadServerResp.json();
+        if (uploadServerData.error) throw new Error(uploadServerData.error.error_msg);
+        const uploadUrl = uploadServerData.response.upload_url as string;
+
+        // 2. Download image and upload to VK
+        const imgResp = await fetch(post.image_url);
+        if (!imgResp.ok) throw new Error("Не удалось скачать картинку");
+        const imgBlob = await imgResp.blob();
+        const formData = new FormData();
+        formData.append("photo", imgBlob, "photo.png");
+        const uploadResp = await fetch(uploadUrl, { method: "POST", body: formData });
+        const uploadData = await uploadResp.json();
+        if (!uploadData.photo || uploadData.photo === "[]") throw new Error("VK не принял фото");
+
+        // 3. Save photo
+        const saveParams = new URLSearchParams({
+          group_id: String(groupId),
+          photo: uploadData.photo,
+          server: String(uploadData.server),
+          hash: uploadData.hash,
+          access_token: VK_TOKEN,
+          v: "5.199",
+        });
+        const saveResp = await fetch(`https://api.vk.com/method/photos.saveWallPhoto?${saveParams.toString()}`, { method: "POST" });
+        const saveData = await saveResp.json();
+        if (saveData.error) throw new Error(saveData.error.error_msg);
+        const photo = saveData.response?.[0];
+        if (photo) attachments = `photo${photo.owner_id}_${photo.id}`;
+      } catch (imgErr) {
+        console.error("VK image upload failed:", imgErr);
+        // Continue without image rather than failing the whole post
+      }
+    }
 
     // Call VK API wall.post
     const params = new URLSearchParams({
@@ -99,6 +142,7 @@ serve(async (req) => {
       access_token: VK_TOKEN,
       v: "5.199",
     });
+    if (attachments) params.set("attachments", attachments);
 
     const vkResponse = await fetch(`https://api.vk.com/method/wall.post?${params.toString()}`, {
       method: "POST",
