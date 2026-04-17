@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Sparkles, Send, Save, CalendarIcon, Type, Palette,
-  MessageSquare, Loader2, Wand2, FileText, Clock, ImageIcon, X,
+  MessageSquare, Loader2, Wand2, FileText, Clock, ImageIcon, X, Paperclip,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EditingPost } from "@/pages/Dashboard";
@@ -54,6 +54,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [publishResult, setPublishResult] = useState<{ errors: string[]; successes: string[] } | null>(null);
   const [imagePrompt, setImagePrompt] = useState("");
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   // Load editing post into form
@@ -131,6 +132,34 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       toast.error(e.message || "Ошибка генерации картинки");
     } finally {
       setIsGeneratingImage(false);
+    }
+  };
+
+  const uploadImageFile = async (file: File) => {
+    if (!user) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Можно загружать только изображения");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Размер файла не должен превышать 10 МБ");
+      return;
+    }
+    setIsUploadingImage(true);
+    try {
+      const ext = (file.name.split(".").pop() || "png").toLowerCase();
+      const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("post-images")
+        .upload(path, file, { contentType: file.type, upsert: false });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("post-images").getPublicUrl(path);
+      setImageUrl(data.publicUrl);
+      toast.success("Картинка загружена!");
+    } catch (e: any) {
+      toast.error(e.message || "Ошибка загрузки картинки");
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -349,12 +378,12 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <ImageIcon className="h-5 w-5 text-primary" />
-              Генерация картинки
+              Картинка к посту
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="image-prompt">Опишите картинку</Label>
+              <Label htmlFor="image-prompt">Опишите картинку (AI)</Label>
               <Textarea
                 id="image-prompt"
                 placeholder="Например: яркая иллюстрация для поста про SMM, современный стиль..."
@@ -363,10 +392,32 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 onChange={(e) => setImagePrompt(e.target.value)}
               />
             </div>
-            <Button onClick={generateImage} disabled={isGeneratingImage}>
-              {isGeneratingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
-              Сгенерировать картинку
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={generateImage} disabled={isGeneratingImage || isUploadingImage}>
+                {isGeneratingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+                Сгенерировать
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isGeneratingImage || isUploadingImage}
+                onClick={() => document.getElementById("post-image-upload")?.click()}
+              >
+                {isUploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                Прикрепить файл
+              </Button>
+              <input
+                id="post-image-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadImageFile(f);
+                  e.target.value = "";
+                }}
+              />
+            </div>
             {imageUrl && (
               <div className="relative">
                 <img src={imageUrl} alt="Сгенерированная картинка" className="w-full rounded-lg border" />
