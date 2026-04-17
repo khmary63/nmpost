@@ -56,7 +56,7 @@ serve(async (req) => {
     // Get user's MAX channel setting
     const { data: channelSetting } = await supabase
       .from("channel_settings")
-      .select("channel_chat_id")
+      .select("channel_chat_id, manager_url, personal_url")
       .eq("user_id", userId)
       .eq("channel", "max")
       .eq("is_active", true)
@@ -79,6 +79,17 @@ serve(async (req) => {
     let text = "";
     if (post.title) text += `${post.title}\n\n`;
     text += post.content;
+
+    if (post.include_footer !== false) {
+      const footerLines: string[] = [];
+      if (channelSetting.manager_url?.trim()) {
+        footerLines.push(`Связаться с менеджером: ${channelSetting.manager_url.trim()}`);
+      }
+      if (channelSetting.personal_url?.trim()) {
+        footerLines.push(`Связаться со мной: ${channelSetting.personal_url.trim()}`);
+      }
+      if (footerLines.length) text += `\n\n${footerLines.join("\n")}`;
+    }
 
     const chatId = channelSetting.channel_chat_id.trim();
 

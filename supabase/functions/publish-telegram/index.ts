@@ -57,7 +57,7 @@ serve(async (req) => {
     // Get user's telegram channel setting
     const { data: channelSetting } = await supabase
       .from("channel_settings")
-      .select("channel_chat_id")
+      .select("channel_chat_id, manager_url, personal_url")
       .eq("user_id", userId)
       .eq("channel", "telegram")
       .eq("is_active", true)
@@ -80,6 +80,18 @@ serve(async (req) => {
     let text = "";
     if (post.title) text += `<b>${escapeHtml(post.title)}</b>\n\n`;
     text += escapeHtml(post.content);
+
+    // Footer with HTML hyperlinks
+    if (post.include_footer !== false) {
+      const footerLines: string[] = [];
+      if (channelSetting.manager_url?.trim()) {
+        footerLines.push(`<a href="${escapeAttr(channelSetting.manager_url.trim())}">Связаться с менеджером</a>`);
+      }
+      if (channelSetting.personal_url?.trim()) {
+        footerLines.push(`<a href="${escapeAttr(channelSetting.personal_url.trim())}">Связаться со мной</a>`);
+      }
+      if (footerLines.length) text += `\n\n${footerLines.join("\n")}`;
+    }
 
     // Send to Telegram — sendPhoto if image present, else sendMessage
     let tgResponse: Response;
@@ -138,4 +150,8 @@ function escapeHtml(text: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function escapeAttr(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }

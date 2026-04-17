@@ -56,7 +56,7 @@ serve(async (req) => {
     // Get user's VK channel setting
     const { data: channelSetting } = await supabase
       .from("channel_settings")
-      .select("channel_chat_id")
+      .select("channel_chat_id, manager_url, personal_url")
       .eq("user_id", userId)
       .eq("channel", "vk")
       .eq("is_active", true)
@@ -87,6 +87,18 @@ serve(async (req) => {
     let message = "";
     if (post.title) message += `${post.title}\n\n`;
     message += post.content;
+
+    // VK posts don't support HTML — use plain text with URL on separate lines
+    if (post.include_footer !== false) {
+      const footerLines: string[] = [];
+      if (channelSetting.manager_url?.trim()) {
+        footerLines.push(`Связаться с менеджером: ${channelSetting.manager_url.trim()}`);
+      }
+      if (channelSetting.personal_url?.trim()) {
+        footerLines.push(`Связаться со мной: ${channelSetting.personal_url.trim()}`);
+      }
+      if (footerLines.length) message += `\n\n${footerLines.join("\n")}`;
+    }
 
     const normalizedGroupId = channelSetting.channel_chat_id.replace(/[^\d-]/g, "").trim();
     const numericGroupId = Number.parseInt(normalizedGroupId, 10);
