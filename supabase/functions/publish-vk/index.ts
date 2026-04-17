@@ -94,27 +94,42 @@ serve(async (req) => {
 
     // Upload image to VK if present
     let attachments = "";
+    let imageWarning: string | null = null;
     if (post.image_url) {
       try {
+        console.log("VK: starting image upload, image_url=", post.image_url);
+
         // 1. Get wall upload server
         const uploadServerResp = await fetch(
           `https://api.vk.com/method/photos.getWallUploadServer?group_id=${groupId}&access_token=${VK_TOKEN}&v=5.199`,
         );
         const uploadServerData = await uploadServerResp.json();
-        if (uploadServerData.error) throw new Error(uploadServerData.error.error_msg);
-        const uploadUrl = uploadServerData.response.upload_url as string;
+        console.log("VK getWallUploadServer:", JSON.stringify(uploadServerData));
+        if (uploadServerData.error) throw new Error(`getWallUploadServer: ${uploadServerData.error.error_msg}`);
+        const uploadUrl = uploadServerData.response?.upload_url as string;
+        if (!uploadUrl) throw new Error("VK не вернул upload_url (проверьте, что VK_COMMUNITY_TOKEN имеет scope=photos и принадлежит этой группе)");
 
-        // 2. Download image and upload to VK
-        const imgResp = await fetch(post.image_url);
-        if (!imgResp.ok) throw new Error("Не удалось скачать картинку");
-        const imgBlob = await imgResp.blob();
+        // 2. Download image
+        const imgResp = await fetch(post.image_url, {
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; LovableBot/1.0)" },
+        });
+        if (!imgResp.ok) throw new Error(`Не удалось скачать картинку: HTTP ${imgResp.status}`);
+        const contentType = imgResp.headers.get("content-type") || "image/jpeg";
+        const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+        const imgBuffer = await imgResp.arrayBuffer();
+        console.log("VK: downloaded image bytes=", imgBuffer.byteLength, "type=", contentType);
+
+        // 3. Upload to VK
         const formData = new FormData();
-        formData.append("photo", imgBlob, "photo.png");
+        formData.append("photo", new Blob([imgBuffer], { type: contentType }), `photo.${ext}`);
         const uploadResp = await fetch(uploadUrl, { method: "POST", body: formData });
         const uploadData = await uploadResp.json();
-        if (!uploadData.photo || uploadData.photo === "[]") throw new Error("VK не принял фото");
+        console.log("VK upload response:", JSON.stringify(uploadData));
+        if (!uploadData.photo || uploadData.photo === "[]" || uploadData.photo === "") {
+          throw new Error(`VK не принял фото: ${JSON.stringify(uploadData)}`);
+        }
 
-        // 3. Save photo
+        // 4. Save photo
         const saveParams = new URLSearchParams({
           group_id: String(groupId),
           photo: uploadData.photo,
@@ -125,12 +140,19 @@ serve(async (req) => {
         });
         const saveResp = await fetch(`https://api.vk.com/method/photos.saveWallPhoto?${saveParams.toString()}`, { method: "POST" });
         const saveData = await saveResp.json();
-        if (saveData.error) throw new Error(saveData.error.error_msg);
+        console.log("VK saveWallPhoto:", JSON.stringify(saveData));
+        if (saveData.error) throw new Error(`saveWallPhoto: ${saveData.error.error_msg}`);
         const photo = saveData.response?.[0];
-        if (photo) attachments = `photo${photo.owner_id}_${photo.id}`;
+        if (photo) {
+          attachments = `photo${photo.owner_id}_${photo.id}`;
+          console.log("VK attachment built:", attachments);
+        } else {
+          throw new Error("saveWallPhoto не вернул фото");
+        }
       } catch (imgErr) {
-        console.error("VK image upload failed:", imgErr);
-        // Continue without image rather than failing the whole post
+        const msg = imgErr instanceof Error ? imgErr.message : String(imgErr);
+        console.error("VK image upload failed:", msg);
+        imageWarning = msg;
       }
     }
 
@@ -174,7 +196,7 @@ serve(async (req) => {
 
     console.log("VK post published:", { postId, vk_post_id: postIdFromVk, postUrl, ownerId });
 
-    return new Response(JSON.stringify({ ok: true, post_id: postIdFromVk, post_url: postUrl }), {
+    return new Response(JSON.stringify({ ok: true, post_id: postIdFromVk, post_url: postUrl, image_warning: imageWarning }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
