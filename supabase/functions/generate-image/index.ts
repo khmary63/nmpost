@@ -41,46 +41,66 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [
-          { role: "user", content: prompt },
-        ],
-        modalities: ["image", "text"],
-      }),
-    });
+    const callModel = async (model: string) => {
+      const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: prompt }],
+          modalities: ["image", "text"],
+        }),
+      });
+      const text = await r.text();
+      let json: any = {};
+      try { json = JSON.parse(text); } catch { /* keep raw */ }
+      return { status: r.status, ok: r.ok, text, json };
+    };
 
-    if (!response.ok) {
-      if (response.status === 429) {
+    let result = await callModel("google/gemini-2.5-flash-image");
+    console.log("AI image attempt 1:", result.status, result.text.slice(0, 400));
+
+    if (!result.ok) {
+      if (result.status === 429) {
         return new Response(JSON.stringify({ error: "Превышен лимит запросов. Попробуйте через минуту." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
+      if (result.status === 402) {
         return new Response(JSON.stringify({ error: "AI-кредиты исчерпаны." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Ошибка сервиса генерации изображений" }), {
+      console.error("AI gateway error:", result.status, result.text.slice(0, 500));
+      return new Response(JSON.stringify({ error: `Ошибка сервиса генерации изображений (${result.status})` }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const data = await response.json();
-    const images = data.choices?.[0]?.message?.images;
+    let images = result.json?.choices?.[0]?.message?.images;
     if (!images || images.length === 0) {
-      return new Response(JSON.stringify({ error: "Изображение не было сгенерировано" }), {
+      console.warn("No image in attempt 1, retrying with gemini-3.1-flash-image-preview");
+      result = await callModel("google/gemini-3.1-flash-image-preview");
+      console.log("AI image attempt 2:", result.status, result.text.slice(0, 400));
+      images = result.json?.choices?.[0]?.message?.images;
+    }
+
+    if (!images || images.length === 0) {
+      const finishReason = result.json?.choices?.[0]?.finish_reason;
+      const refusal = result.json?.choices?.[0]?.message?.refusal || result.json?.choices?.[0]?.message?.content;
+      console.error("No image generated. finish_reason:", finishReason, "msg:", refusal);
+      return new Response(JSON.stringify({
+        error: refusal
+          ? `Изображение не сгенерировано: ${String(refusal).slice(0, 200)}`
+          : "Изображение не было сгенерировано. Попробуйте изменить описание (без имён людей, брендов и чувствительного контента).",
+      }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const data = result.json;
 
     const base64Url = images[0].image_url.url as string;
     const base64Data = base64Url.replace(/^data:image\/\w+;base64,/, "");
