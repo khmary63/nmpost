@@ -91,10 +91,10 @@ serve(async (req) => {
       });
     }
 
-    // MAX Bot API: POST https://platform-api.max.ru/messages?chat_id=...
-    // Auth format per docs: Authorization: <token>
+    // MAX Bot API: POST https://platform-api.max.ru/messages?chat_id=...&access_token=...
     const url = new URL("https://platform-api.max.ru/messages");
     url.searchParams.set("chat_id", chatId);
+    url.searchParams.set("access_token", MAX_BOT_TOKEN);
 
     const body: Record<string, unknown> = { text };
     if (post.image_url) {
@@ -103,19 +103,22 @@ serve(async (req) => {
       ];
     }
 
+    console.log("MAX request:", { chatId, hasImage: !!post.image_url, textLen: text.length });
+
     const maxResponse = await fetch(url.toString(), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": MAX_BOT_TOKEN,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
 
-    const maxData = await maxResponse.json().catch(() => ({}));
+    const rawText = await maxResponse.text();
+    let maxData: any = {};
+    try { maxData = JSON.parse(rawText); } catch { /* keep raw */ }
+    console.log("MAX response:", maxResponse.status, rawText.slice(0, 500));
+
     if (!maxResponse.ok || maxData?.code) {
       console.error("MAX API error:", maxResponse.status, maxData);
-      const errMsg = maxData?.message || maxData?.code || `HTTP ${maxResponse.status}`;
+      const errMsg = maxData?.message || maxData?.code || rawText.slice(0, 200) || `HTTP ${maxResponse.status}`;
       return new Response(JSON.stringify({ error: `Ошибка MAX: ${errMsg}` }), {
         status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
