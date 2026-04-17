@@ -69,6 +69,7 @@ serve(async (req) => {
     }
 
     const VK_TOKEN = Deno.env.get("VK_COMMUNITY_TOKEN");
+    const VK_USER_TOKEN = Deno.env.get("VK_USER_TOKEN");
     if (!VK_TOKEN) {
       return new Response(JSON.stringify({ error: "VK токен не настроен" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
