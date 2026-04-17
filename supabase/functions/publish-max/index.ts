@@ -91,10 +91,9 @@ serve(async (req) => {
       });
     }
 
-    // MAX Bot API: POST https://platform-api.max.ru/messages?chat_id=...&access_token=...
+    // MAX Bot API: POST https://platform-api.max.ru/messages?chat_id=...
     const url = new URL("https://platform-api.max.ru/messages");
     url.searchParams.set("chat_id", chatId);
-    url.searchParams.set("access_token", MAX_BOT_TOKEN);
 
     const body: Record<string, unknown> = { text };
     if (post.image_url) {
@@ -107,7 +106,10 @@ serve(async (req) => {
 
     const maxResponse = await fetch(url.toString(), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${MAX_BOT_TOKEN}`,
+      },
       body: JSON.stringify(body),
     });
 
