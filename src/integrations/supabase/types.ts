@@ -54,6 +54,8 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          manager_url: string
+          personal_url: string
           updated_at: string
           user_id: string
         }
@@ -63,6 +65,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          manager_url?: string
+          personal_url?: string
           updated_at?: string
           user_id: string
         }
@@ -72,6 +76,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          manager_url?: string
+          personal_url?: string
           updated_at?: string
           user_id?: string
         }
@@ -249,6 +255,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          include_footer: boolean
           published_at: string | null
           scheduled_at: string | null
           status: Database["public"]["Enums"]["post_status"]
@@ -263,6 +270,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          include_footer?: boolean
           published_at?: string | null
           scheduled_at?: string | null
           status?: Database["public"]["Enums"]["post_status"]
@@ -277,6 +285,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          include_footer?: boolean
           published_at?: string | null
           scheduled_at?: string | null
           status?: Database["public"]["Enums"]["post_status"]
