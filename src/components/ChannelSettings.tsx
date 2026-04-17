@@ -37,12 +37,12 @@ const DEFAULT_CHANNELS: ChannelConfig[] = [
     hint: "Укажите числовой ID вашей группы ВК (без минуса). Бот опубликует пост от имени сообщества.",
   },
   {
-    channel: "ok",
+    channel: "max",
     channel_chat_id: "",
     is_active: false,
-    label: "Макс (ok.ru)",
-    placeholder: "ID группы",
-    hint: "Интеграция с Макс будет доступна в ближайшем обновлении",
+    label: "MAX (мессенджер)",
+    placeholder: "-1001234567890",
+    hint: "Создайте бота через @MasterBot, добавьте его администратором в канал MAX и укажите Chat ID канала",
   },
 ];
 
