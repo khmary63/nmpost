@@ -350,12 +350,46 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <ImageIcon className="h-5 w-5 text-primary" />
-              Генерация картинки
+              Картинка к посту
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="image-prompt">Опишите картинку</Label>
+              <Label htmlFor="image-prompt">Опишите картинку (AI)</Label>
+              <Textarea
+                id="image-prompt"
+                placeholder="Например: яркая иллюстрация для поста про SMM, современный стиль..."
+                className="min-h-[80px]"
+                value={imagePrompt}
+                onChange={(e) => setImagePrompt(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={generateImage} disabled={isGeneratingImage || isUploadingImage}>
+                {isGeneratingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+                Сгенерировать
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isGeneratingImage || isUploadingImage}
+                onClick={() => document.getElementById("post-image-upload")?.click()}
+              >
+                {isUploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                Прикрепить файл
+              </Button>
+              <input
+                id="post-image-upload"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) uploadImageFile(f);
+                  e.target.value = "";
+                }}
+              />
+            </div>
               <Textarea
                 id="image-prompt"
                 placeholder="Например: яркая иллюстрация для поста про SMM, современный стиль..."
