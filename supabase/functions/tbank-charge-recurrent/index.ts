@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     // Найти подписки, которые истекают в ближайшие 24 часа и имеют автопродление
     const { data: subs, error: subsErr } = await supabaseAdmin
       .from("subscriptions")
-      .select("user_id, plan, current_period_end, rebill_id, customer_key")
+      .select("user_id, plan, current_period_start, current_period_end, rebill_id, customer_key")
       .eq("auto_renew", true)
       .eq("is_active", true)
       .not("rebill_id", "is", null)
@@ -90,7 +90,15 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const amount = PLAN_PRICES_KOPECKS[plan];
+      // Определяем была ли подписка годовой по длине предыдущего периода (>180 дней => yearly)
+      const startMs = new Date(sub.current_period_start).getTime();
+      const endMs = new Date(sub.current_period_end as string).getTime();
+      const periodDays = (endMs - startMs) / (1000 * 60 * 60 * 24);
+      const isYearly = periodDays > 180;
+      const monthlyAmount = PLAN_PRICES_KOPECKS[plan];
+      const amount = isYearly ? Math.round(monthlyAmount * 12 * 0.9) : monthlyAmount;
+      const months = isYearly ? 12 : 1;
+      const periodLabel = isYearly ? "12 месяцев (-10%)" : "1 месяц";
       const orderId = `rec_${String(sub.user_id).slice(0, 8)}_${Date.now()}`;
 
       try {
@@ -99,7 +107,7 @@ Deno.serve(async (req) => {
           TerminalKey: TBANK_TERMINAL_KEY,
           Amount: amount,
           OrderId: orderId,
-          Description: `Автопродление «${PLAN_LABELS[plan]}» — 1 месяц`,
+          Description: `Автопродление «${PLAN_LABELS[plan]}» — ${periodLabel}`,
           CustomerKey: sub.customer_key ?? `user_${sub.user_id}`,
           Recurrent: "Y",
         };
