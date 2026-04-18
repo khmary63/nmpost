@@ -88,6 +88,8 @@ export default function Delivery() {
               </p>
             </CardContent>
           </Card>
+
+          <DeveloperPromo />
         </div>
       </div>
     </div>
