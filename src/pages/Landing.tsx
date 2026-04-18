@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { VisaLogo, MastercardLogo, MirLogo, TBankLogo, SbpLogo } from "@/components/PaymentLogos";
 
 const features = [
   {
@@ -433,30 +434,32 @@ export default function Landing() {
               не хранятся.
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground">
-                VISA
+              <span className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background px-2">
+                <VisaLogo className="h-4 w-auto" />
               </span>
-              <span className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground">
-                MasterCard
+              <span className="inline-flex h-9 w-12 items-center justify-center rounded-md border border-border bg-background px-2">
+                <MastercardLogo className="h-6 w-auto" />
               </span>
-              <span className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground">
-                МИР
+              <span className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background overflow-hidden">
+                <MirLogo className="h-9 w-auto" />
               </span>
               <a
                 href="https://www.tbank.ru/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+                aria-label="Т-Банк"
+                className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background overflow-hidden hover:opacity-90 transition-opacity"
               >
-                Т-Банк
+                <TBankLogo className="h-9 w-auto" />
               </a>
               <a
                 href="https://sbp.nspk.ru/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+                aria-label="СБП"
+                className="inline-flex h-9 items-center justify-center rounded-md border border-border bg-background overflow-hidden hover:opacity-90 transition-opacity"
               >
-                СБП
+                <SbpLogo className="h-9 w-auto" />
               </a>
             </div>
           </div>
