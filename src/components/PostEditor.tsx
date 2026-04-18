@@ -211,6 +211,20 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       toast.error("Выберите дату публикации");
       return;
     }
+    // Проверка функции отложенного постинга
+    if (status === "scheduled" && !subscription.hasFeature("scheduled_posting")) {
+      showUpgrade("Отложенный постинг", "Доступно на тарифах Базовый и Про.");
+      return;
+    }
+    // Проверка лимита постов (только для нового, не редактирования)
+    if (!postId && (status === "published" || status === "scheduled")) {
+      if (!subscription.hasFeature("posts")) {
+        const limit = subscription.limits.posts;
+        showUpgrade("Публикация постов",
+          `Вы достигли лимита ${limit} постов в этом месяце. Обновите тариф, чтобы публиковать больше.`);
+        return;
+      }
+    }
 
     let scheduledAt: string | null = null;
     if (status === "scheduled" && scheduledDate) {
