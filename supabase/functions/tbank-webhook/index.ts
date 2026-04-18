@@ -85,15 +85,26 @@ Deno.serve(async (req) => {
 
     // Активируем подписку при успехе
     if (status === "CONFIRMED" && paymentRow?.user_id && paymentRow?.plan) {
+      // RebillId возвращается от Т-Банка только если платёж был с Recurrent: "Y"
+      const rebillId = payload.RebillId ? String(payload.RebillId) : null;
+      const dataField = (payload.DATA ?? {}) as Record<string, string>;
+      const autoRenewFlag = dataField.AutoRenew === "1" || !!rebillId;
+      const customerKey = `user_${paymentRow.user_id}`;
+
       const { error: actErr } = await supabaseAdmin.rpc("activate_subscription", {
         _user_id: paymentRow.user_id,
         _plan: paymentRow.plan,
         _months: 1,
+        _auto_renew: autoRenewFlag,
+        _rebill_id: rebillId,
+        _customer_key: rebillId ? customerKey : null,
       });
       if (actErr) {
         console.error("Failed to activate subscription:", actErr);
       } else {
-        console.log(`Subscription activated for user ${paymentRow.user_id}, plan ${paymentRow.plan}`);
+        console.log(
+          `Subscription activated for user ${paymentRow.user_id}, plan ${paymentRow.plan}, auto_renew=${autoRenewFlag}, rebill=${rebillId ?? "none"}`,
+        );
       }
     }
 

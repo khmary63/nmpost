@@ -86,6 +86,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const plan = body.plan as PlanTier;
+    const autoRenew = body.auto_renew !== false; // по умолчанию true
     if (plan !== "basic" && plan !== "pro") {
       return new Response(JSON.stringify({ error: "invalid_plan" }), {
         status: 400,
@@ -95,6 +96,7 @@ Deno.serve(async (req) => {
 
     const amount = PLAN_PRICES_KOPECKS[plan];
     const orderId = `ord_${userId.slice(0, 8)}_${Date.now()}`;
+    const customerKey = `user_${userId}`; // для рекуррентных платежей
 
     // Сохраняем платёж в БД (через service role, чтобы пройти RLS)
     const supabaseAdmin = createClient(
@@ -114,6 +116,12 @@ Deno.serve(async (req) => {
       NotificationURL: `${Deno.env.get("SUPABASE_URL")}/functions/v1/tbank-webhook`,
     };
 
+    // Если включено автопродление — передаём Recurrent + CustomerKey
+    if (autoRenew) {
+      initParams.Recurrent = "Y";
+      initParams.CustomerKey = customerKey;
+    }
+
     const tbankToken = await generateToken(initParams, TBANK_PASSWORD);
 
     const initBody = {
@@ -123,6 +131,7 @@ Deno.serve(async (req) => {
         UserId: userId,
         Plan: plan,
         Email: userEmail,
+        AutoRenew: autoRenew ? "1" : "0",
       },
     };
 
