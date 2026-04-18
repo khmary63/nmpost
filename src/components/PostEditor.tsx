@@ -171,6 +171,8 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       setIsGenerating(false);
     }
   };
+
+  const generateImage = async () => {
     if (!imagePrompt.trim()) {
       toast.error("Введите описание для генерации картинки");
       return;
