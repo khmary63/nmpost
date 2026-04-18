@@ -469,6 +469,8 @@ export default function Landing() {
         </div>
       </section>
 
+      <DeveloperPromo />
+
       {/* Footer */}
       <footer className="border-t border-border py-8">
         <div className="mx-auto flex max-w-6xl flex-col sm:flex-row items-center justify-between gap-4 px-6">
