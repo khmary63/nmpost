@@ -272,6 +272,51 @@ export type Database = {
         }
         Relationships: []
       }
+      payments: {
+        Row: {
+          amount_kopecks: number
+          created_at: string
+          id: string
+          order_id: string
+          payment_url: string | null
+          plan: Database["public"]["Enums"]["plan_tier"]
+          raw_response: Json | null
+          raw_webhook: Json | null
+          status: string
+          tbank_payment_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_kopecks: number
+          created_at?: string
+          id?: string
+          order_id: string
+          payment_url?: string | null
+          plan: Database["public"]["Enums"]["plan_tier"]
+          raw_response?: Json | null
+          raw_webhook?: Json | null
+          status?: string
+          tbank_payment_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_kopecks?: number
+          created_at?: string
+          id?: string
+          order_id?: string
+          payment_url?: string | null
+          plan?: Database["public"]["Enums"]["plan_tier"]
+          raw_response?: Json | null
+          raw_webhook?: Json | null
+          status?: string
+          tbank_payment_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       posts: {
         Row: {
           channels: string[]
@@ -723,6 +768,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_subscription: {
+        Args: {
+          _months?: number
+          _plan: Database["public"]["Enums"]["plan_tier"]
+          _user_id: string
+        }
+        Returns: undefined
+      }
       check_and_increment_usage: {
         Args: { _resource: string; _user_id: string }
         Returns: Json
