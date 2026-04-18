@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { stripMarkdown } from "../_shared/markdown.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -85,8 +86,8 @@ serve(async (req) => {
 
     // Build message
     let message = "";
-    if (post.title) message += `${post.title}\n\n`;
-    message += post.content;
+    if (post.title) message += `${stripMarkdown(post.title)}\n\n`;
+    message += stripMarkdown(post.content);
 
     // VK supports [URL|text] syntax ONLY for vk.com links. External links are auto-linkified as plain URLs.
     if (post.include_footer !== false) {

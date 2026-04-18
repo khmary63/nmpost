@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { markdownToTelegramHtml, stripMarkdown } from "../_shared/markdown.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,7 +39,7 @@ async function publishTelegram(post: any, ch: ChannelSetting): Promise<{ ok: boo
 
   let text = "";
   if (post.title) text += `<b>${escapeHtml(post.title)}</b>\n\n`;
-  text += escapeHtml(post.content);
+  text += markdownToTelegramHtml(post.content);
 
   let footer = "";
   if (post.include_footer !== false) {
@@ -100,8 +101,8 @@ async function publishVk(post: any, ch: ChannelSetting): Promise<{ ok: boolean; 
   if (!VK_TOKEN) return { ok: false, error: "VK_COMMUNITY_TOKEN missing" };
 
   let message = "";
-  if (post.title) message += `${post.title}\n\n`;
-  message += post.content;
+  if (post.title) message += `${stripMarkdown(post.title)}\n\n`;
+  message += stripMarkdown(post.content);
 
   if (post.include_footer !== false) {
     const lines: string[] = [];

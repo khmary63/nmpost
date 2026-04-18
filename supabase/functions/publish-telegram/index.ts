@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { markdownToTelegramHtml } from "../_shared/markdown.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -79,7 +80,7 @@ serve(async (req) => {
     // Build message text
     let text = "";
     if (post.title) text += `<b>${escapeHtml(post.title)}</b>\n\n`;
-    text += escapeHtml(post.content);
+    text += markdownToTelegramHtml(post.content);
 
     // Footer with HTML hyperlinks (👉 emoji + clickable text)
     let footer = "";
