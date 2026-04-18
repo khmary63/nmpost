@@ -8,6 +8,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "content-type",
 };
 
+const TBANK_CONFIRM_API = "https://securepay.tinkoff.ru/v2/Confirm";
+
 async function generateToken(
   params: Record<string, unknown>,
   password: string,
@@ -35,6 +37,7 @@ Deno.serve(async (req) => {
 
   try {
     const TBANK_PASSWORD = Deno.env.get("TBANK_PASSWORD");
+    const TBANK_TERMINAL_KEY = Deno.env.get("TBANK_TERMINAL_KEY");
     if (!TBANK_PASSWORD) {
       return new Response("Misconfigured", { status: 500 });
     }
@@ -59,11 +62,42 @@ Deno.serve(async (req) => {
     );
 
     const orderId = payload.OrderId as string | undefined;
-    const status = (payload.Status as string | undefined) ?? "UNKNOWN";
+    let status = (payload.Status as string | undefined) ?? "UNKNOWN";
     const tbankPaymentId = payload.PaymentId ? String(payload.PaymentId) : null;
 
     if (!orderId) {
       return new Response("OK", { status: 200 });
+    }
+
+    let storedWebhookPayload: Record<string, unknown> = payload;
+
+    if (status === "AUTHORIZED" && payload.Success === true && tbankPaymentId && TBANK_TERMINAL_KEY) {
+      const amount = typeof payload.Amount === "number"
+        ? payload.Amount
+        : Number.parseInt(String(payload.Amount ?? ""), 10);
+      const confirmParams: Record<string, string | number> = {
+        TerminalKey: TBANK_TERMINAL_KEY,
+        PaymentId: tbankPaymentId,
+      };
+      if (Number.isFinite(amount) && amount > 0) {
+        confirmParams.Amount = amount;
+      }
+
+      const confirmToken = await generateToken(confirmParams, TBANK_PASSWORD);
+      const confirmResp = await fetch(TBANK_CONFIRM_API, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...confirmParams, Token: confirmToken }),
+      });
+      const confirmJson = await confirmResp.json();
+      console.log("T-Bank confirm response:", JSON.stringify(confirmJson));
+
+      if (confirmJson.Success) {
+        status = confirmJson.Status ?? "CONFIRMED";
+        storedWebhookPayload = { ...payload, confirm_response: confirmJson };
+      } else {
+        console.error("T-Bank confirm failed:", confirmJson);
+      }
     }
 
     const { data: existingPayment, error: existingPaymentErr } = await supabaseAdmin
@@ -78,6 +112,7 @@ Deno.serve(async (req) => {
 
     const ignoreOutOfOrderAuthorized =
       existingPayment?.status === "CONFIRMED" && status === "AUTHORIZED";
+    const wasAlreadyConfirmed = existingPayment?.status === "CONFIRMED";
 
     if (ignoreOutOfOrderAuthorized) {
       console.log(`Ignoring late AUTHORIZED for already confirmed order ${orderId}`);
@@ -91,7 +126,7 @@ Deno.serve(async (req) => {
           .update({
             status,
             tbank_payment_id: tbankPaymentId,
-            raw_webhook: payload,
+            raw_webhook: storedWebhookPayload,
             updated_at: new Date().toISOString(),
           })
           .eq("order_id", orderId)
@@ -103,7 +138,7 @@ Deno.serve(async (req) => {
     }
 
     // Активируем подписку при успехе
-    if (status === "CONFIRMED" && paymentRow?.user_id && paymentRow?.plan) {
+    if (status === "CONFIRMED" && !wasAlreadyConfirmed && paymentRow?.user_id && paymentRow?.plan) {
       // RebillId возвращается от Т-Банка только если платёж был с Recurrent: "Y"
       const rebillId = payload.RebillId ? String(payload.RebillId) : null;
       const dataField = (payload.DATA ?? {}) as Record<string, string>;
