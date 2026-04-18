@@ -273,6 +273,13 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
         }).select().single();
         if (error) throw error;
         savedPost = data;
+        // Инкремент счётчика постов только при создании нового, не для черновика
+        if (status !== "draft") {
+          await supabase.rpc("check_and_increment_usage", {
+            _user_id: user!.id, _resource: "posts",
+          });
+          subscription.refresh();
+        }
       }
 
       if (isImmediatePublish && savedPost) {
