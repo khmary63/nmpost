@@ -6,12 +6,14 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Send, LayoutDashboard, Settings, LogOut, User, Menu } from "lucide-react";
+import { Send, LayoutDashboard, Settings, LogOut, User, Menu, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSubscription, PLAN_LABELS } from "@/hooks/useSubscription";
 
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Дашборд" },
   { to: "/profile", icon: User, label: "Кабинет" },
+  { to: "/pricing", icon: Sparkles, label: "Тарифы" },
 ];
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
