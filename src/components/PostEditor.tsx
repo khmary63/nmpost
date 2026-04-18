@@ -60,6 +60,9 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [includeFooter, setIncludeFooter] = useState(true);
+  const [planPostsCount, setPlanPostsCount] = useState(7);
+  const [planPeriod, setPlanPeriod] = useState<"week" | "month" | "custom">("week");
+  const [planDays, setPlanDays] = useState(7);
   const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string; reason?: string }>({
     open: false, feature: "",
   });
