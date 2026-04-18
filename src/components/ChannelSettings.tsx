@@ -195,6 +195,20 @@ export function ChannelSettings() {
                 />
               </div>
 
+              <details className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+                <summary className="cursor-pointer font-medium text-foreground">
+                  ❓ {ch.guide.title}
+                </summary>
+                <ol className="mt-2 list-decimal space-y-1 pl-4">
+                  {ch.guide.steps.map((step, i) => (
+                    <li key={i}>{step}</li>
+                  ))}
+                </ol>
+                {ch.guide.note && (
+                  <p className="mt-2 text-foreground"><span className="font-medium">Важно:</span> {ch.guide.note}</p>
+                )}
+              </details>
+
               <div className="rounded-md border border-dashed p-3 space-y-3">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <Link2 className="h-4 w-4 text-primary" />
