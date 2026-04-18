@@ -33,8 +33,8 @@ export default function Delivery() {
                 </h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   Доступ к платным функциям открывается автоматически сразу после
-                  успешной оплаты через ЮKassa. Дополнительные действия от Пользователя
-                  не требуются.
+                  успешной оплаты через платёжный сервис Т-Банк. Дополнительные
+                  действия от Пользователя не требуются.
                 </p>
               </div>
             </CardContent>
@@ -51,7 +51,7 @@ export default function Delivery() {
                 </h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
                   После оплаты Пользователь получает на указанный электронный адрес
-                  чек ЮKassa и уведомление об активации тарифа.
+                  фискальный чек от Т-Банка и уведомление об активации тарифа.
                 </p>
               </div>
             </CardContent>
@@ -78,12 +78,12 @@ export default function Delivery() {
           <Card>
             <CardContent className="p-5">
               <h3 className="font-display font-semibold text-foreground mb-2">
-                Физическая доставка
+                Регион оказания услуг
               </h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Сервис не предусматривает доставку физических товаров. Все услуги
-                являются цифровыми и предоставляются дистанционно через личный кабинет
-                на сайте.
+                Сервис доступен на территории Российской Федерации и стран СНГ.
+                Все услуги предоставляются дистанционно через личный кабинет на сайте,
+                физическая доставка не требуется.
               </p>
             </CardContent>
           </Card>
