@@ -138,6 +138,40 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
     }
   };
 
+  const decorateText = async () => {
+    if (!content.trim()) {
+      toast.error("Сначала напишите или вставьте текст поста");
+      return;
+    }
+    if (!subscription.hasFeature("ai_text")) {
+      showUpgrade("Оформление текста",
+        subscription.limits.ai_text === 0
+          ? "На вашем тарифе AI-оформление недоступно."
+          : `Вы использовали все ${subscription.limits.ai_text} AI-запросов в этом месяце.`);
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-post", {
+        body: { type: "decorate", style, originalText: content },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      if (data?.content) {
+        setContent(data.content);
+        toast.success("Текст оформлен!");
+        subscription.refresh();
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Ошибка оформления");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const generateImage = async () => {
     if (!imagePrompt.trim()) {
       toast.error("Введите описание для генерации картинки");
@@ -534,12 +568,22 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 );
               })}
             </div>
+            <Button
+              onClick={decorateText}
+              disabled={isGenerating || !content.trim()}
+              variant="secondary"
+              className="mt-3 w-full"
+            >
+              {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              Оформить текст в этом стиле
+            </Button>
             <div className="mt-3 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
               <p className="mb-1 font-medium text-foreground">Как это работает:</p>
+              <p className="mb-1">
+                <span className="font-medium text-foreground">«Оформить текст»</span> — добавит эмодзи, жирный/курсив и разделители к вашему тексту, не меняя слов.
+              </p>
               <p>
-                Стиль — это инструкция для AI. Чтобы он применился, выберите стиль и нажмите{" "}
-                <span className="font-medium text-foreground">«Сгенерировать пост»</span> в блоке AI-генерации.
-                На уже написанный текст стиль автоматически не применяется — нужно перегенерировать.
+                <span className="font-medium text-foreground">«Сгенерировать пост»</span> в блоке AI — напишет новый текст с нуля в выбранном стиле.
               </p>
             </div>
           </CardContent>
