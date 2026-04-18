@@ -6,11 +6,11 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Send, LayoutDashboard, Settings, LogOut, User, Menu, Sparkles } from "lucide-react";
+import { Send, LayoutDashboard, Settings, LogOut, User, Menu, Sparkles, Users as UsersIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSubscription, PLAN_LABELS } from "@/hooks/useSubscription";
 
-const navItems = [
+const baseNavItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Дашборд" },
   { to: "/profile", icon: User, label: "Кабинет" },
   { to: "/pricing", icon: Sparkles, label: "Тарифы" },
@@ -18,10 +18,13 @@ const navItems = [
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, signOut, role } = useAuth();
   const navigate = useNavigate();
   const { plan } = useSubscription();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const navItems = role === "admin"
+    ? [...baseNavItems, { to: "/admin/users", icon: UsersIcon, label: "Пользователи" }]
+    : baseNavItems;
 
   const handleSignOut = async () => {
     await signOut();
