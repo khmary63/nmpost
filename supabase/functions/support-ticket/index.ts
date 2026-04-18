@@ -110,7 +110,7 @@ Deno.serve(async (req) => {
   } catch (e) {
     console.error("support-ticket error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Ошибка" }),
+      JSON.stringify({ error: "internal_error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
