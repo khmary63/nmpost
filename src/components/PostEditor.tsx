@@ -505,20 +505,34 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-2">
-              {POST_STYLES.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => setStyle(s.id)}
-                  className={cn(
-                    "flex flex-col items-center gap-1 rounded-lg border-2 p-3 text-center transition-all hover:border-primary/50",
-                    style === s.id ? "border-primary bg-primary/5" : "border-border"
-                  )}
-                >
-                  <span className="text-xl">{s.icon}</span>
-                  <span className="text-sm font-medium">{s.label}</span>
-                  <span className="text-xs text-muted-foreground">{s.description}</span>
-                </button>
-              ))}
+              {POST_STYLES.map((s) => {
+                // На бесплатном — только "minimal". На остальных — все.
+                const isLocked = !subscription.hasFeature("all_styles") && s.id !== "minimal";
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      if (isLocked) {
+                        showUpgrade(`Стиль «${s.label}»`, "Все стили доступны на тарифах Базовый и Про.");
+                        return;
+                      }
+                      setStyle(s.id);
+                    }}
+                    className={cn(
+                      "relative flex flex-col items-center gap-1 rounded-lg border-2 p-3 text-center transition-all hover:border-primary/50",
+                      style === s.id ? "border-primary bg-primary/5" : "border-border",
+                      isLocked && "opacity-60",
+                    )}
+                  >
+                    {isLocked && (
+                      <Lock className="absolute right-1.5 top-1.5 h-3 w-3 text-muted-foreground" />
+                    )}
+                    <span className="text-xl">{s.icon}</span>
+                    <span className="text-sm font-medium">{s.label}</span>
+                    <span className="text-xs text-muted-foreground">{s.description}</span>
+                  </button>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
