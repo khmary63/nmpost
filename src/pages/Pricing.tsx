@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { CheckCircle2, ArrowLeft, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription, PLAN_LABELS, type PlanTier } from "@/hooks/useSubscription";
@@ -63,6 +65,7 @@ export default function Pricing() {
   const { user } = useAuth();
   const { plan: currentPlan, usage, limits } = useSubscription();
   const [loadingPlan, setLoadingPlan] = useState<PlanTier | null>(null);
+  const [autoRenew, setAutoRenew] = useState(true);
 
   const handleSelectPlan = async (planId: PlanTier) => {
     if (!user) {
@@ -76,7 +79,7 @@ export default function Pricing() {
     setLoadingPlan(planId);
     try {
       const { data, error } = await supabase.functions.invoke("tbank-create-payment", {
-        body: { plan: planId },
+        body: { plan: planId, auto_renew: autoRenew },
       });
       if (error) throw error;
       if (data?.payment_url) {
@@ -186,8 +189,29 @@ export default function Pricing() {
             );
           })}
         </div>
-        <p className="mt-8 text-center text-sm text-muted-foreground">
-          Оплата картой через Т-Банк (тестовый режим). Чек по 54-ФЗ выставляется отдельно.
+
+        <div className="mx-auto mt-8 max-w-md rounded-lg border border-border bg-card p-4">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="auto-renew"
+              checked={autoRenew}
+              onCheckedChange={(v) => setAutoRenew(v === true)}
+              className="mt-0.5"
+            />
+            <div className="flex-1 space-y-1">
+              <Label htmlFor="auto-renew" className="text-sm font-medium cursor-pointer">
+                Автопродление подписки
+              </Label>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Подписка будет автоматически продлеваться каждый месяц с привязанной карты.
+                Отписаться от автопродления можно в любой момент в личном кабинете.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Оплата картой через Т-Банк. Чек по 54-ФЗ выставляется отдельно.
         </p>
       </div>
     </div>

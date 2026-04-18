@@ -5,15 +5,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { User, Lock, Mail, Shield } from "lucide-react";
+import { User, Lock, Mail, Shield, CreditCard, RotateCw, XCircle } from "lucide-react";
+import { useSubscription, PLAN_LABELS } from "@/hooks/useSubscription";
+import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
 
 export default function Profile() {
   const { user, updatePassword } = useAuth();
   const { toast } = useToast();
+  const { plan, details, refresh, loading: subLoading } = useSubscription();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [renewLoading, setRenewLoading] = useState(false);
+  const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,8 +47,44 @@ export default function Profile() {
     }
   };
 
+  const handleCancelRenewal = async () => {
+    if (!user) return;
+    setRenewLoading(true);
+    const { error } = await supabase.rpc("cancel_subscription_renewal", { _user_id: user.id });
+    setRenewLoading(false);
+    setConfirmCancelOpen(false);
+    if (error) {
+      toast({ title: "Ошибка", description: error.message, variant: "destructive" });
+    } else {
+      toast({
+        title: "Автопродление отключено",
+        description: "Подписка будет работать до конца оплаченного периода",
+      });
+      await refresh();
+    }
+  };
+
+  const handleEnableRenewal = async () => {
+    if (!user) return;
+    setRenewLoading(true);
+    const { error } = await supabase.rpc("enable_subscription_renewal", { _user_id: user.id });
+    setRenewLoading(false);
+    if (error) {
+      toast({ title: "Ошибка", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Автопродление включено", description: "Подписка будет продлеваться автоматически" });
+      await refresh();
+    }
+  };
+
   const provider = user?.app_metadata?.provider;
   const isOAuth = provider && provider !== "email";
+  const isPaidPlan = plan === "basic" || plan === "pro";
+  const periodEndDate = details.current_period_end
+    ? new Date(details.current_period_end).toLocaleDateString("ru-RU", {
+        day: "numeric", month: "long", year: "numeric",
+      })
+    : null;
 
   return (
     <DashboardLayout>
@@ -66,6 +112,93 @@ export default function Profile() {
                 </Label>
                 <div className="rounded-md border border-input bg-muted/50 px-3 py-2 text-sm capitalize">{provider}</div>
               </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <CreditCard className="h-5 w-5" /> Подписка
+            </CardTitle>
+            <CardDescription>Текущий тариф и управление автопродлением</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label className="text-muted-foreground text-xs">Тариф</Label>
+                <div className="rounded-md border border-input bg-muted/50 px-3 py-2 text-sm font-medium">
+                  {PLAN_LABELS[plan]}
+                </div>
+              </div>
+              {isPaidPlan && periodEndDate && (
+                <div className="space-y-1">
+                  <Label className="text-muted-foreground text-xs">Действует до</Label>
+                  <div className="rounded-md border border-input bg-muted/50 px-3 py-2 text-sm">{periodEndDate}</div>
+                </div>
+              )}
+            </div>
+
+            {isPaidPlan && (
+              <div className="rounded-lg border border-border bg-muted/30 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-foreground">
+                      Автопродление: {details.auto_renew ? (
+                        <span className="text-primary">включено</span>
+                      ) : (
+                        <span className="text-muted-foreground">отключено</span>
+                      )}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                      {details.auto_renew
+                        ? "Подписка будет автоматически продлеваться с привязанной карты. Списание произойдёт за 1 день до окончания текущего периода."
+                        : details.cancelled_at
+                          ? `Вы отписались ${new Date(details.cancelled_at).toLocaleDateString("ru-RU")}. Доступ к платным функциям сохраняется до окончания оплаченного периода.`
+                          : "Автопродление выключено — следующее списание не произойдёт."}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                  {details.auto_renew ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setConfirmCancelOpen(true)}
+                      disabled={renewLoading || subLoading}
+                      className="w-full sm:w-auto"
+                    >
+                      <XCircle className="mr-1.5 h-4 w-4" />
+                      Отписаться от автопродления
+                    </Button>
+                  ) : details.has_rebill ? (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleEnableRenewal}
+                      disabled={renewLoading || subLoading}
+                      className="w-full sm:w-auto"
+                    >
+                      <RotateCw className="mr-1.5 h-4 w-4" />
+                      Включить автопродление
+                    </Button>
+                  ) : (
+                    <Link to="/pricing" className="w-full sm:w-auto">
+                      <Button variant="default" size="sm" className="w-full">
+                        Продлить подписку
+                      </Button>
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {!isPaidPlan && (
+              <Link to="/pricing">
+                <Button variant="default" size="sm">
+                  Оформить подписку
+                </Button>
+              </Link>
             )}
           </CardContent>
         </Card>
@@ -110,6 +243,26 @@ export default function Profile() {
           </Card>
         )}
       </div>
+
+      <AlertDialog open={confirmCancelOpen} onOpenChange={setConfirmCancelOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Отключить автопродление?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Доступ к тарифу «{PLAN_LABELS[plan]}» сохранится до{" "}
+              {periodEndDate ? <strong>{periodEndDate}</strong> : "конца оплаченного периода"}.
+              Дальнейшие списания производиться не будут. Вы сможете включить автопродление снова
+              в любой момент.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={renewLoading}>Не отписываться</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancelRenewal} disabled={renewLoading}>
+              {renewLoading ? "Отключение…" : "Отписаться"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

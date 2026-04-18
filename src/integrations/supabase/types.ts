@@ -196,32 +196,44 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          auto_renew: boolean
+          cancelled_at: string | null
           created_at: string
           current_period_end: string | null
           current_period_start: string
+          customer_key: string | null
           id: string
           is_active: boolean
           plan: Database["public"]["Enums"]["plan_tier"]
+          rebill_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          auto_renew?: boolean
+          cancelled_at?: string | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string
+          customer_key?: string | null
           id?: string
           is_active?: boolean
           plan?: Database["public"]["Enums"]["plan_tier"]
+          rebill_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          auto_renew?: boolean
+          cancelled_at?: string | null
           created_at?: string
           current_period_end?: string | null
           current_period_start?: string
+          customer_key?: string | null
           id?: string
           is_active?: boolean
           plan?: Database["public"]["Enums"]["plan_tier"]
+          rebill_id?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -322,17 +334,37 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      activate_subscription: {
-        Args: {
-          _months?: number
-          _plan: Database["public"]["Enums"]["plan_tier"]
-          _user_id: string
-        }
+      activate_subscription:
+        | {
+            Args: {
+              _months?: number
+              _plan: Database["public"]["Enums"]["plan_tier"]
+              _user_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              _auto_renew?: boolean
+              _customer_key?: string
+              _months?: number
+              _plan: Database["public"]["Enums"]["plan_tier"]
+              _rebill_id?: string
+              _user_id: string
+            }
+            Returns: undefined
+          }
+      cancel_subscription_renewal: {
+        Args: { _user_id: string }
         Returns: undefined
       }
       check_and_increment_usage: {
         Args: { _resource: string; _user_id: string }
         Returns: Json
+      }
+      enable_subscription_renewal: {
+        Args: { _user_id: string }
+        Returns: undefined
       }
       get_ai_model: {
         Args: { _default: string; _key: string }
