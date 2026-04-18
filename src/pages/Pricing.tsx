@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, ArrowLeft } from "lucide-react";
+import { CheckCircle2, ArrowLeft, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription, PLAN_LABELS, type PlanTier } from "@/hooks/useSubscription";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 const plans: Array<{
   id: PlanTier;
@@ -57,6 +60,37 @@ export default function Pricing() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { plan: currentPlan, usage, limits } = useSubscription();
+  const [loadingPlan, setLoadingPlan] = useState<PlanTier | null>(null);
+
+  const handleSelectPlan = async (planId: PlanTier) => {
+    if (!user) {
+      navigate("/signup");
+      return;
+    }
+    if (planId === "free") {
+      navigate("/dashboard");
+      return;
+    }
+    setLoadingPlan(planId);
+    try {
+      const { data, error } = await supabase.functions.invoke("tbank-create-payment", {
+        body: { plan: planId },
+      });
+      if (error) throw error;
+      if (data?.payment_url) {
+        window.location.href = data.payment_url as string;
+        return;
+      }
+      throw new Error(data?.message || "Не удалось получить ссылку на оплату");
+    } catch (e: any) {
+      toast({
+        title: "Ошибка оплаты",
+        description: e?.message || "Попробуйте ещё раз позже",
+        variant: "destructive",
+      });
+      setLoadingPlan(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background py-12">
@@ -132,17 +166,18 @@ export default function Pricing() {
                   <Button
                     className="mt-6 w-full"
                     variant={isCurrent ? "outline" : plan.popular ? "default" : "outline"}
-                    disabled={!!isCurrent}
-                    onClick={() => {
-                      if (!user) {
-                        navigate("/signup");
-                      } else {
-                        // Оплата — отдельная задача (ЮKassa). Пока только информирование.
-                        navigate("/dashboard");
-                      }
-                    }}
+                    disabled={!!isCurrent || loadingPlan === plan.id}
+                    onClick={() => handleSelectPlan(plan.id)}
                   >
-                    {isCurrent ? "Текущий тариф" : plan.id === "free" ? "Начать бесплатно" : "Выбрать план"}
+                    {loadingPlan === plan.id ? (
+                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Переход к оплате…</>
+                    ) : isCurrent ? (
+                      "Текущий тариф"
+                    ) : plan.id === "free" ? (
+                      "Начать бесплатно"
+                    ) : (
+                      "Оплатить картой"
+                    )}
                   </Button>
                 </CardContent>
               </Card>
@@ -150,7 +185,7 @@ export default function Pricing() {
           })}
         </div>
         <p className="mt-8 text-center text-sm text-muted-foreground">
-          Годовая подписка — скидка 10%. Оплата через ЮKassa (скоро).
+          Оплата картой через Т-Банк (тестовый режим). Чек по 54-ФЗ выставляется отдельно.
         </p>
       </div>
     </div>
