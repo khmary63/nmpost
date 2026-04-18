@@ -2,6 +2,11 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
+const ADMIN_LIMITS: PlanLimits = {
+  posts: -1, ai_text: -1, ai_image: -1, content_plan: -1,
+  scheduled_posting: true, all_styles: true, priority_support: true,
+};
+
 export type PlanTier = "free" | "basic" | "pro";
 
 export interface PlanLimits {
@@ -36,7 +41,8 @@ export const PLAN_LABELS: Record<PlanTier, string> = {
 export type FeatureKey = "posts" | "ai_text" | "ai_image" | "content_plan" | "scheduled_posting" | "all_styles";
 
 export function useSubscription() {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isAdmin = role === "admin";
   const [plan, setPlan] = useState<PlanTier>("free");
   const [usage, setUsage] = useState<UsageCounts>({
     posts_count: 0, ai_text_count: 0, ai_image_count: 0, content_plan_count: 0,
@@ -73,9 +79,10 @@ export function useSubscription() {
     refresh();
   }, [refresh]);
 
-  const limits = PLAN_LIMITS[plan];
+  const limits = isAdmin ? ADMIN_LIMITS : PLAN_LIMITS[plan];
 
   const remaining = (key: "posts" | "ai_text" | "ai_image" | "content_plan"): number => {
+    if (isAdmin) return Infinity;
     const limit = limits[key];
     if (limit === -1) return Infinity;
     const used = key === "posts" ? usage.posts_count
@@ -86,9 +93,10 @@ export function useSubscription() {
   };
 
   const hasFeature = (key: FeatureKey): boolean => {
+    if (isAdmin) return true;
     if (key === "scheduled_posting" || key === "all_styles") return limits[key];
     return remaining(key) > 0;
   };
 
-  return { plan, limits, usage, loading, refresh, remaining, hasFeature };
+  return { plan, limits, usage, loading, refresh, remaining, hasFeature, isAdmin };
 }
