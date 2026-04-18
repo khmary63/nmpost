@@ -105,7 +105,7 @@ serve(async (req) => {
         model: textModel || "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: prompt || "Напиши интересный пост на свободную тему" },
+          { role: "user", content: userMessage },
         ],
       }),
     });
