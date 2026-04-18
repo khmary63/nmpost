@@ -87,6 +87,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const plan = body.plan as PlanTier;
     const autoRenew = body.auto_renew !== false; // по умолчанию true
+    const billingPeriod = body.billing_period === "yearly" ? "yearly" : "monthly";
     if (plan !== "basic" && plan !== "pro") {
       return new Response(JSON.stringify({ error: "invalid_plan" }), {
         status: 400,
@@ -94,7 +95,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const amount = PLAN_PRICES_KOPECKS[plan];
+    const monthlyAmount = PLAN_PRICES_KOPECKS[plan];
+    const months = billingPeriod === "yearly" ? 12 : 1;
+    // Годовая: 12 месяцев со скидкой 10%
+    const amount = billingPeriod === "yearly"
+      ? Math.round(monthlyAmount * 12 * 0.9)
+      : monthlyAmount;
+    const periodLabel = billingPeriod === "yearly" ? "12 месяцев (-10%)" : "1 месяц";
     const orderId = `ord_${userId.slice(0, 8)}_${Date.now()}`;
     const customerKey = `user_${userId}`; // для рекуррентных платежей
 
@@ -110,7 +117,7 @@ Deno.serve(async (req) => {
       TerminalKey: TBANK_TERMINAL_KEY,
       Amount: amount,
       OrderId: orderId,
-      Description: `Подписка «${PLAN_LABELS[plan]}» — 1 месяц`,
+      Description: `Подписка «${PLAN_LABELS[plan]}» — ${periodLabel}`,
       SuccessURL: `${origin}/dashboard?payment=success`,
       FailURL: `${origin}/pricing?payment=fail`,
       NotificationURL: `${Deno.env.get("SUPABASE_URL")}/functions/v1/tbank-webhook`,
@@ -132,6 +139,8 @@ Deno.serve(async (req) => {
         Plan: plan,
         Email: userEmail,
         AutoRenew: autoRenew ? "1" : "0",
+        BillingPeriod: billingPeriod,
+        Months: String(months),
       },
     };
 
