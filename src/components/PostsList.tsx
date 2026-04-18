@@ -85,10 +85,19 @@ export function PostsList({ onEdit }: PostsListProps) {
                     {post.content}
                   </p>
                   <p className="text-xs text-muted-foreground mt-2">
+                    Создан:{" "}
                     {new Date(post.created_at).toLocaleDateString("ru-RU", {
                       day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit",
                     })}
                   </p>
+                  {post.status === "scheduled" && post.scheduled_at && (
+                    <p className="text-xs font-medium text-yellow-700 mt-1">
+                      📅 Запланирован на:{" "}
+                      {new Date(post.scheduled_at).toLocaleDateString("ru-RU", {
+                        day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+                      })}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
                   {canEdit && onEdit && (
