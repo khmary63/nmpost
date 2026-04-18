@@ -24,9 +24,10 @@ export default function Offer() {
             <h2 className="font-display text-xl font-semibold mb-2">1. Общие положения</h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
               Настоящая публичная оферта (далее — «Оферта») регулирует отношения между
-              Индивидуальным предпринимателем Хабаровой Марией Павловной (ИНН 7710140679),
-              далее — «Исполнитель», и любым физическим или юридическим лицом, принявшим
-              условия настоящей Оферты, далее — «Пользователь».
+              Индивидуальным предпринимателем Хабаровой Марией Павловной
+              (ИНН 631212609521, ОГРНИП 326632700064940), далее — «Исполнитель»,
+              и любым физическим или юридическим лицом, принявшим условия
+              настоящей Оферты, далее — «Пользователь».
             </p>
           </section>
 
@@ -44,8 +45,10 @@ export default function Offer() {
             <h2 className="font-display text-xl font-semibold mb-2">3. Стоимость и оплата</h2>
             <p className="text-sm leading-relaxed text-muted-foreground">
               Стоимость услуг указана на странице тарифов. Оплата производится через
-              платёжный сервис ЮKassa. Доступны тарифы: Бесплатный, Базовый (490 ₽/мес)
-              и Про (1 490 ₽/мес). Подписка списывается ежемесячно с момента активации.
+              платёжный сервис АО «Т-Банк» (tbank.ru). Доступны тарифы: Бесплатный,
+              Базовый (990 ₽/мес) и Про (1 990 ₽/мес). Подписка списывается ежемесячно
+              с момента активации. Услуги оказываются на территории Российской Федерации
+              и стран СНГ.
             </p>
           </section>
 
@@ -78,13 +81,12 @@ export default function Offer() {
           <section>
             <h2 className="font-display text-xl font-semibold mb-2">7. Реквизиты Исполнителя</h2>
             <div className="rounded-lg border border-border bg-card p-4 text-sm space-y-1 text-foreground">
-              <p><span className="text-muted-foreground">Наименование:</span> ИП ХАБАРОВА МАРИЯ ПАВЛОВНА</p>
-              <p><span className="text-muted-foreground">ИНН:</span> 7710140679</p>
-              <p><span className="text-muted-foreground">Расчётный счёт:</span> 40802810900009535828</p>
-              <p><span className="text-muted-foreground">Банк:</span> АО «Тинькофф Банк»</p>
-              <p><span className="text-muted-foreground">Корр. счёт:</span> 30101810145250000974</p>
-              <p><span className="text-muted-foreground">БИК:</span> 044525974</p>
-              <p><span className="text-muted-foreground">Юридический адрес:</span> Москва, 127287, ул. Хуторская 2-я, д. 38А, стр. 26</p>
+              <p><span className="text-muted-foreground">Наименование:</span> ИП Хабарова Мария Павловна</p>
+              <p><span className="text-muted-foreground">ИНН:</span> 631212609521</p>
+              <p><span className="text-muted-foreground">ОГРНИП:</span> 326632700064940</p>
+              <p><span className="text-muted-foreground">Адрес:</span> г. Самара, ул. Ташкентская, 173</p>
+              <p><span className="text-muted-foreground">Email:</span> neyromarket@yandex.ru</p>
+              <p><span className="text-muted-foreground">Телефон:</span> +7 917 111-40-30</p>
             </div>
           </section>
         </div>

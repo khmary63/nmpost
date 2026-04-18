@@ -367,7 +367,7 @@ export default function Landing() {
 
       {/* Legal & company info */}
       <section className="border-t border-border bg-muted/30 py-12">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 grid gap-8 md:grid-cols-2">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 grid gap-8 md:grid-cols-3">
           <div>
             <h3 className="font-display text-base font-semibold text-foreground mb-3">
               Документы
@@ -379,24 +379,85 @@ export default function Landing() {
                 </a>
               </li>
               <li>
+                <a href="/privacy" className="text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline">
+                  Политика конфиденциальности
+                </a>
+              </li>
+              <li>
                 <a href="/delivery" className="text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline">
                   Способы получения услуг
                 </a>
               </li>
             </ul>
+            <h3 className="font-display text-base font-semibold text-foreground mt-6 mb-3">
+              Поддержка
+            </h3>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <a href="mailto:neyromarket@yandex.ru" className="text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline">
+                  neyromarket@yandex.ru
+                </a>
+              </li>
+              <li>
+                <a href="tel:+79171114030" className="text-muted-foreground hover:text-foreground transition-colors underline-offset-4 hover:underline">
+                  +7 917 111-40-30
+                </a>
+              </li>
+              <li className="text-muted-foreground">
+                Регион оказания услуг: Россия и страны СНГ
+              </li>
+            </ul>
           </div>
+
           <div>
             <h3 className="font-display text-base font-semibold text-foreground mb-3">
               Контакты и реквизиты
             </h3>
             <div className="text-xs text-muted-foreground space-y-1 leading-relaxed">
-              <p className="text-foreground font-medium">ИП ХАБАРОВА МАРИЯ ПАВЛОВНА</p>
-              <p>ИНН: 7710140679</p>
-              <p>Расчётный счёт: 40802810900009535828</p>
-              <p>Банк: АО «Тинькофф Банк»</p>
-              <p>Корр. счёт: 30101810145250000974</p>
-              <p>БИК: 044525974</p>
-              <p>Юр. адрес: Москва, 127287, ул. Хуторская 2-я, д. 38А, стр. 26</p>
+              <p className="text-foreground font-medium">ИП Хабарова Мария Павловна</p>
+              <p>ИНН: 631212609521</p>
+              <p>ОГРНИП: 326632700064940</p>
+              <p>Адрес: г. Самара, ул. Ташкентская, 173</p>
+              <p>Email: neyromarket@yandex.ru</p>
+              <p>Телефон: +7 917 111-40-30</p>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="font-display text-base font-semibold text-foreground mb-3">
+              Безопасные платежи
+            </h3>
+            <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+              Оплата принимается через платёжный сервис АО «Т-Банк» с поддержкой
+              стандарта PCI DSS. Данные карты вводятся на стороне банка и на сайте
+              не хранятся.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground">
+                VISA
+              </span>
+              <span className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground">
+                MasterCard
+              </span>
+              <span className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground">
+                МИР
+              </span>
+              <a
+                href="https://www.tbank.ru/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+              >
+                Т-Банк
+              </a>
+              <a
+                href="https://sbp.nspk.ru/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-md border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+              >
+                СБП
+              </a>
             </div>
           </div>
         </div>
