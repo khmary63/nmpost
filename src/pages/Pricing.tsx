@@ -255,6 +255,8 @@ export default function Pricing() {
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Оплата картой через Т-Банк. Чек по 54-ФЗ выставляется отдельно.
         </p>
+
+        <DeveloperPromo />
       </div>
     </div>
   );
