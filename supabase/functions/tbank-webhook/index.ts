@@ -66,21 +66,40 @@ Deno.serve(async (req) => {
       return new Response("OK", { status: 200 });
     }
 
-    // Обновляем запись платежа
-    const { data: paymentRow, error: payErr } = await supabaseAdmin
+    const { data: existingPayment, error: existingPaymentErr } = await supabaseAdmin
       .from("payments")
-      .update({
-        status,
-        tbank_payment_id: tbankPaymentId,
-        raw_webhook: payload,
-        updated_at: new Date().toISOString(),
-      })
+      .select("user_id, plan, status")
       .eq("order_id", orderId)
-      .select("user_id, plan")
       .maybeSingle();
 
-    if (payErr) {
-      console.error("Failed to update payment:", payErr);
+    if (existingPaymentErr) {
+      console.error("Failed to load payment before update:", existingPaymentErr);
+    }
+
+    const ignoreOutOfOrderAuthorized =
+      existingPayment?.status === "CONFIRMED" && status === "AUTHORIZED";
+
+    if (ignoreOutOfOrderAuthorized) {
+      console.log(`Ignoring late AUTHORIZED for already confirmed order ${orderId}`);
+    }
+
+    // Обновляем запись платежа, но не даём позднему AUTHORIZED затирать CONFIRMED
+    const paymentRow = ignoreOutOfOrderAuthorized
+      ? existingPayment
+      : (await supabaseAdmin
+          .from("payments")
+          .update({
+            status,
+            tbank_payment_id: tbankPaymentId,
+            raw_webhook: payload,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("order_id", orderId)
+          .select("user_id, plan")
+          .maybeSingle()).data;
+
+    if (!ignoreOutOfOrderAuthorized && !paymentRow) {
+      console.error("Failed to update payment: row not found", { orderId, status });
     }
 
     // Активируем подписку при успехе
