@@ -6,7 +6,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Send, LayoutDashboard, Settings, LogOut, User, Menu, Sparkles, Users as UsersIcon } from "lucide-react";
+import { Send, LayoutDashboard, Settings, LogOut, User, Menu, Sparkles, Users as UsersIcon, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSubscription, PLAN_LABELS } from "@/hooks/useSubscription";
 
@@ -23,7 +23,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { plan } = useSubscription();
   const [mobileOpen, setMobileOpen] = useState(false);
   const navItems = role === "admin"
-    ? [...baseNavItems, { to: "/admin/users", icon: UsersIcon, label: "Пользователи" }]
+    ? [...baseNavItems,
+        { to: "/admin/users", icon: UsersIcon, label: "Пользователи" },
+        { to: "/admin/ai-models", icon: Bot, label: "AI-модели" }]
     : baseNavItems;
 
   const handleSignOut = async () => {

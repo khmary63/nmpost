@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_model_settings: {
+        Row: {
+          id: string
+          model_id: string
+          setting_key: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          model_id: string
+          setting_key: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          model_id?: string
+          setting_key?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
@@ -702,6 +726,10 @@ export type Database = {
       check_and_increment_usage: {
         Args: { _resource: string; _user_id: string }
         Returns: Json
+      }
+      get_ai_model: {
+        Args: { _default: string; _key: string }
+        Returns: string
       }
       get_current_usage: {
         Args: { _user_id: string }

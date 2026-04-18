@@ -19,6 +19,7 @@ import Offer from "./pages/Offer";
 import Delivery from "./pages/Delivery";
 import Pricing from "./pages/Pricing";
 import AdminUsers from "./pages/AdminUsers";
+import AdminAIModels from "./pages/AdminAIModels";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/delivery" element={<Delivery />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
+            <Route path="/admin/ai-models" element={<ProtectedRoute><AdminAIModels /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <SupportWidget />
