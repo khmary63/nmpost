@@ -17,6 +17,7 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import Offer from "./pages/Offer";
 import Delivery from "./pages/Delivery";
+import Pricing from "./pages/Pricing";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/offer" element={<Offer />} />
             <Route path="/delivery" element={<Delivery />} />
+            <Route path="/pricing" element={<Pricing />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <SupportWidget />
