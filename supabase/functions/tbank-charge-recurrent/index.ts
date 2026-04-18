@@ -50,6 +50,16 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Защита от публичного вызова: cron-планировщик передаёт x-cron-secret.
+    const CRON_SECRET = Deno.env.get("CRON_SECRET");
+    const incomingSecret = req.headers.get("x-cron-secret");
+    if (!CRON_SECRET || incomingSecret !== CRON_SECRET) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const TBANK_TERMINAL_KEY = Deno.env.get("TBANK_TERMINAL_KEY");
     const TBANK_PASSWORD = Deno.env.get("TBANK_PASSWORD");
     if (!TBANK_TERMINAL_KEY || !TBANK_PASSWORD) {
