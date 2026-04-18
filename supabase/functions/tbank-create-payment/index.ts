@@ -119,6 +119,7 @@ Deno.serve(async (req) => {
       TerminalKey: TBANK_TERMINAL_KEY,
       Amount: amount,
       OrderId: orderId,
+      PayType: "O",
       Description: `Подписка «${PLAN_LABELS[plan]}» — ${periodLabel}`,
       NotificationURL: `${Deno.env.get("SUPABASE_URL")}/functions/v1/tbank-webhook`,
     };
