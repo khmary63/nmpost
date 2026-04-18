@@ -8,16 +8,18 @@ export function DeveloperPromo({ variant = "default" }: DeveloperPromoProps) {
   if (variant === "compact") {
     return (
       <div className="border-t border-border bg-muted/30 px-4 py-3 text-center text-xs text-muted-foreground">
-        Разработчик:{" "}
-        <a
-          href="https://neyromarket.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium text-primary hover:underline"
-        >
-          НейроМаркет | ИИ для бизнеса
-        </a>
-        {" · "}
+        <span className="block sm:inline">
+          Закажите разработку своего веб-приложения у{" "}
+          <a
+            href="https://neyromarket.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary hover:underline"
+          >
+            НейроМаркет | ИИ для бизнеса
+          </a>
+        </span>
+        <span className="hidden sm:inline"> · </span>
         <a href="mailto:Neuromarket@yandex.ru" className="text-primary hover:underline">
           Neuromarket@yandex.ru
         </a>
