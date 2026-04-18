@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { CheckCircle2, ArrowLeft, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription, PLAN_LABELS, type PlanTier } from "@/hooks/useSubscription";
@@ -63,6 +65,7 @@ export default function Pricing() {
   const { user } = useAuth();
   const { plan: currentPlan, usage, limits } = useSubscription();
   const [loadingPlan, setLoadingPlan] = useState<PlanTier | null>(null);
+  const [autoRenew, setAutoRenew] = useState(true);
 
   const handleSelectPlan = async (planId: PlanTier) => {
     if (!user) {
@@ -76,7 +79,7 @@ export default function Pricing() {
     setLoadingPlan(planId);
     try {
       const { data, error } = await supabase.functions.invoke("tbank-create-payment", {
-        body: { plan: planId },
+        body: { plan: planId, auto_renew: autoRenew },
       });
       if (error) throw error;
       if (data?.payment_url) {
