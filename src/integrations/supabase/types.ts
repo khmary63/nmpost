@@ -521,6 +521,39 @@ export type Database = {
           },
         ]
       }
+      subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string
+          id: string
+          is_active: boolean
+          plan: Database["public"]["Enums"]["plan_tier"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string
+          id?: string
+          is_active?: boolean
+          plan?: Database["public"]["Enums"]["plan_tier"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string
+          id?: string
+          is_active?: boolean
+          plan?: Database["public"]["Enums"]["plan_tier"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       support_tickets: {
         Row: {
           created_at: string
@@ -607,6 +640,42 @@ export type Database = {
           },
         ]
       }
+      usage_counters: {
+        Row: {
+          ai_image_count: number
+          ai_text_count: number
+          content_plan_count: number
+          created_at: string
+          id: string
+          period_month: string
+          posts_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_image_count?: number
+          ai_text_count?: number
+          content_plan_count?: number
+          created_at?: string
+          id?: string
+          period_month: string
+          posts_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_image_count?: number
+          ai_text_count?: number
+          content_plan_count?: number
+          created_at?: string
+          id?: string
+          period_month?: string
+          posts_count?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -630,7 +699,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_and_increment_usage: {
+        Args: { _resource: string; _user_id: string }
+        Returns: Json
+      }
+      get_current_usage: {
+        Args: { _user_id: string }
+        Returns: {
+          ai_image_count: number
+          ai_text_count: number
+          content_plan_count: number
+          posts_count: number
+        }[]
+      }
+      get_plan_limits: {
+        Args: { _plan: Database["public"]["Enums"]["plan_tier"] }
+        Returns: Json
+      }
       get_user_org_id: { Args: { _user_id: string }; Returns: string }
+      get_user_plan: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["plan_tier"]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -646,6 +736,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "manager" | "agent"
+      plan_tier: "free" | "basic" | "pro"
       post_status: "draft" | "scheduled" | "published"
       post_style: "minimal" | "bold" | "elegant" | "creative"
       proposal_status: "draft" | "sent" | "viewed" | "accepted" | "rejected"
@@ -784,6 +875,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "manager", "agent"],
+      plan_tier: ["free", "basic", "pro"],
       post_status: ["draft", "scheduled", "published"],
       post_style: ["minimal", "bold", "elegant", "creative"],
       proposal_status: ["draft", "sent", "viewed", "accepted", "rejected"],
