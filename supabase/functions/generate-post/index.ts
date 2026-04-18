@@ -69,6 +69,9 @@ serve(async (req) => {
 Возвращай ТОЛЬКО текст поста, без пояснений.`;
     }
 
+    const { data: textModel } = await supabase.rpc("get_ai_model", { _key: "text", _default: "google/gemini-3-flash-preview" });
+    console.log(`generate-post using model: ${textModel}`);
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -76,7 +79,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: textModel || "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: prompt || "Напиши интересный пост на свободную тему" },

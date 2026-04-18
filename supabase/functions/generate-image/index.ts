@@ -49,9 +49,12 @@ serve(async (req) => {
     const { data: planData } = await supabase.rpc("get_user_plan", { _user_id: user.id });
     const { data: isAdminData } = await supabase.rpc("has_role", { _user_id: user.id, _role: "admin" });
     const isPro = planData === "pro" || isAdminData === true;
-    const primaryModel = isPro ? "google/gemini-3-pro-image-preview" : "google/gemini-3.1-flash-image-preview";
+    const settingKey = isPro ? "image_pro" : "image_basic";
+    const defaultModel = isPro ? "google/gemini-3-pro-image-preview" : "google/gemini-3.1-flash-image-preview";
+    const { data: configuredModel } = await supabase.rpc("get_ai_model", { _key: settingKey, _default: defaultModel });
+    const primaryModel = configuredModel || defaultModel;
     const fallbackModel = "google/gemini-2.5-flash-image";
-    console.log(`Image gen: plan=${planData}, isAdmin=${isAdminData}, model=${primaryModel}`);
+    console.log(`Image gen: plan=${planData}, admin=${isAdminData}, model=${primaryModel}`);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
