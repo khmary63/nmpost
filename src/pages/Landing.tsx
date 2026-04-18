@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { VisaLogo, MastercardLogo, MirLogo, TBankLogo, SbpLogo } from "@/components/PaymentLogos";
+import { DeveloperPromo } from "@/components/DeveloperPromo";
 
 const features = [
   {
@@ -467,6 +468,8 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      <DeveloperPromo />
 
       {/* Footer */}
       <footer className="border-t border-border py-8">

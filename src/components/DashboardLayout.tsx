@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Send, LayoutDashboard, Settings, LogOut, User, Menu, Sparkles, Users as UsersIcon, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSubscription, PLAN_LABELS } from "@/hooks/useSubscription";
+import { DeveloperPromo } from "@/components/DeveloperPromo";
 
 const baseNavItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Дашборд" },
@@ -118,6 +119,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       </Sheet>
 
       <main className="mx-auto max-w-7xl px-4 py-6 lg:px-6">{children}</main>
+      <DeveloperPromo variant="compact" />
     </div>
   );
 }
