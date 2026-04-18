@@ -100,6 +100,8 @@ export default function Offer() {
               <p><span className="text-muted-foreground">Телефон:</span> +7 917 111-40-30</p>
             </div>
           </section>
+
+          <DeveloperPromo />
         </div>
       </div>
     </div>
