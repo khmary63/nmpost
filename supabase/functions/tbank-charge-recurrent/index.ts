@@ -115,7 +115,17 @@ Deno.serve(async (req) => {
         const initResp = await fetch(TBANK_INIT, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ...initParams, Token: initToken }),
+          body: JSON.stringify({
+            ...initParams,
+            Token: initToken,
+            DATA: {
+              UserId: sub.user_id,
+              Plan: plan,
+              AutoRenew: "1",
+              BillingPeriod: isYearly ? "yearly" : "monthly",
+              Months: String(months),
+            },
+          }),
         });
         const initJson = await initResp.json();
 
