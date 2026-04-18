@@ -101,15 +101,9 @@ Deno.serve(async (req) => {
       const periodLabel = isYearly ? "12 месяцев (-10%)" : "1 месяц";
       const orderId = `rec_${String(sub.user_id).slice(0, 8)}_${Date.now()}`;
 
-      // Получаем email пользователя для чека
-      let userEmail = "noreply@neyromarket.com";
-      try {
-        const { data: u } = await supabaseAdmin.auth.admin.getUserById(sub.user_id);
-        if (u?.user?.email) userEmail = u.user.email;
-      } catch (_) { /* ignore */ }
-
       try {
         // Шаг 1: Init с теми же CustomerKey + Recurrent="Y"
+        // НПД: Receipt не передаём — чеки формируются вручную в «Мой налог».
         const initParams: Record<string, string | number> = {
           TerminalKey: TBANK_TERMINAL_KEY,
           Amount: amount,
@@ -119,24 +113,6 @@ Deno.serve(async (req) => {
           Recurrent: "Y",
         };
         const initToken = await generateToken(initParams, TBANK_PASSWORD);
-
-        const taxation = Deno.env.get("TBANK_TAXATION") || "usn_income";
-        const vatTax = Deno.env.get("TBANK_VAT") || "none";
-        const receipt = {
-          Email: userEmail,
-          Taxation: taxation,
-          Items: [
-            {
-              Name: `Автопродление «${PLAN_LABELS[plan]}» — ${periodLabel}`.slice(0, 128),
-              Price: amount,
-              Quantity: 1,
-              Amount: amount,
-              PaymentMethod: "full_prepayment",
-              PaymentObject: "service",
-              Tax: vatTax,
-            },
-          ],
-        };
 
         const initResp = await fetch(TBANK_INIT, {
           method: "POST",
@@ -151,7 +127,6 @@ Deno.serve(async (req) => {
               BillingPeriod: isYearly ? "yearly" : "monthly",
               Months: String(months),
             },
-            Receipt: receipt,
           }),
         });
         const initJson = await initResp.json();

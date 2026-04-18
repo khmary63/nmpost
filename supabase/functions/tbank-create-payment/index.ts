@@ -130,28 +130,8 @@ Deno.serve(async (req) => {
 
     const tbankToken = await generateToken(initParams, TBANK_PASSWORD);
 
-    // Чек по 54-ФЗ. Email обязателен для отправки чека покупателю.
-    // Систему налогообложения и ставку НДС можно переопределить через ENV.
-    const taxation = Deno.env.get("TBANK_TAXATION") || "usn_income"; // по умолчанию УСН доход
-    const vatTax = Deno.env.get("TBANK_VAT") || "none"; // по умолчанию без НДС (типично для УСН)
-    const customerEmail = userEmail || "noreply@neyromarket.com";
-
-    const receipt = {
-      Email: customerEmail,
-      Taxation: taxation,
-      Items: [
-        {
-          Name: `Подписка «${PLAN_LABELS[plan]}» — ${periodLabel}`.slice(0, 128),
-          Price: amount, // цена за единицу в копейках
-          Quantity: 1,
-          Amount: amount, // итого в копейках
-          PaymentMethod: "full_prepayment",
-          PaymentObject: "service",
-          Tax: vatTax,
-        },
-      ],
-    };
-
+    // НПД (самозанятые/ИП на НПД): онлайн-касса по 54-ФЗ не требуется,
+    // чеки формируются вручную в приложении «Мой налог». Receipt не передаём.
     const initBody = {
       ...initParams,
       Token: tbankToken,
@@ -163,7 +143,6 @@ Deno.serve(async (req) => {
         BillingPeriod: billingPeriod,
         Months: String(months),
       },
-      Receipt: receipt,
     };
 
     const tbankResp = await fetch(TBANK_API, {
