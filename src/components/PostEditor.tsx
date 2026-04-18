@@ -766,6 +766,17 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 </div>
               </div>
             )}
+            <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+              <p className="mb-1 font-medium text-foreground">Как запланировать несколько постов:</p>
+              <ol className="list-decimal space-y-1 pl-4">
+                <li>Напишите или сгенерируйте текст одного поста.</li>
+                <li>Выберите каналы публикации.</li>
+                <li>Включите переключатель «Запланировать», задайте дату и время.</li>
+                <li>Нажмите <span className="font-medium text-foreground">«Запланировать публикацию»</span> — пост уйдёт в раздел «Мои посты» со статусом «Запланирован».</li>
+                <li>Редактор очистится — повторите шаги 1-4 для следующего поста с другой датой/временем.</li>
+              </ol>
+              <p className="mt-2">Все запланированные посты опубликуются автоматически в указанное время.</p>
+            </div>
           </CardContent>
         </Card>
 
