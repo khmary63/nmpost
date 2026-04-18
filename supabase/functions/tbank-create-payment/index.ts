@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
 
     // ВАЖНО: SuccessURL/FailURL НЕ передаём — тогда Т-Банк показывает
     // собственную финальную страницу «Оплачено» с кнопкой «В магазин»
-    // (ссылка задаётся в ЛК терминала). Это требование тестового терминала.
+    // (ссылка задаётся в ЛК терминала).
     const initParams: Record<string, string | number> = {
       TerminalKey: TBANK_TERMINAL_KEY,
       Amount: amount,
@@ -124,10 +124,12 @@ Deno.serve(async (req) => {
     };
     void origin;
 
-    // ВАЖНО: для теста №1 Т-Банка флаг Recurrent НЕ передаём.
-    // Автопродление будет настроено отдельно после прохождения сертификации.
-    void autoRenew;
-    void customerKey;
+    // Автопродление: добавляем Recurrent + CustomerKey, чтобы получить RebillId
+    // в вебхуке и потом списывать через /Charge.
+    if (autoRenew) {
+      initParams.Recurrent = "Y";
+      initParams.CustomerKey = customerKey;
+    }
 
     const tbankToken = await generateToken(initParams, TBANK_PASSWORD);
 
