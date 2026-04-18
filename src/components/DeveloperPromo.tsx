@@ -40,14 +40,16 @@ export function DeveloperPromo({ variant = "default" }: DeveloperPromoProps) {
     <section className="mx-auto my-8 max-w-3xl rounded-lg border border-primary/20 bg-primary/5 p-5 text-center">
       <div className="mb-2 flex items-center justify-center gap-2 text-primary">
         <Code2 className="h-5 w-5" />
-        <span className="text-sm font-semibold uppercase tracking-wide">Разработка веб-приложений</span>
+        <span className="text-sm font-semibold uppercase tracking-wide">Заказная разработка веб-приложений</span>
       </div>
+      <p className="mb-2 text-base font-semibold text-foreground">
+        Закажите разработку аналогичного или любого другого веб-приложения под ваш бизнес.
+      </p>
       <p className="mb-1 text-sm text-foreground">
-        Если вы хотите разработать аналогичное или любое другое веб-приложение —
-        обратитесь к разработчику.
+        Создаём SaaS-сервисы, личные кабинеты, AI-интеграции, CRM и автоматизации «под ключ».
       </p>
       <p className="mb-4 text-sm text-foreground">
-        Разработчик данного веб-приложения —{" "}
+        Разработчик —{" "}
         <a
           href="https://neyromarket.com/"
           target="_blank"
@@ -59,7 +61,7 @@ export function DeveloperPromo({ variant = "default" }: DeveloperPromoProps) {
         .
       </p>
       <p className="mb-3 text-xs text-muted-foreground">
-        По вопросам приобретения услуг и сотрудничества:
+        По вопросам приобретения услуг и сотрудничества обращаться:
       </p>
       <div className="flex flex-wrap items-center justify-center gap-2">
         <a
