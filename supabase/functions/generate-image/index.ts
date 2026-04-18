@@ -67,7 +67,7 @@ serve(async (req) => {
       return { status: r.status, ok: r.ok, text, json };
     };
 
-    let result = await callModel("google/gemini-3.1-flash-image-preview");
+    let result = await callModel(primaryModel);
     console.log("AI image attempt 1:", result.status, result.text.slice(0, 400));
 
     if (!result.ok) {
@@ -89,8 +89,8 @@ serve(async (req) => {
 
     let images = result.json?.choices?.[0]?.message?.images;
     if (!images || images.length === 0) {
-      console.warn("No image in attempt 1, retrying with gemini-2.5-flash-image");
-      result = await callModel("google/gemini-2.5-flash-image");
+      console.warn(`No image in attempt 1, retrying with ${fallbackModel}`);
+      result = await callModel(fallbackModel);
       console.log("AI image attempt 2:", result.status, result.text.slice(0, 400));
       images = result.json?.choices?.[0]?.message?.images;
     }
