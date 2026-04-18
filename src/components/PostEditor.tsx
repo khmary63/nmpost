@@ -706,6 +706,13 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           </Card>
         )}
       </div>
+      <UpgradeModal
+        open={upgradeModal.open}
+        onOpenChange={(o) => setUpgradeModal((s) => ({ ...s, open: o }))}
+        feature={upgradeModal.feature}
+        currentPlan={subscription.plan}
+        reason={upgradeModal.reason}
+      />
     </div>
   );
 }
