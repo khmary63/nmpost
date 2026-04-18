@@ -534,6 +534,14 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 );
               })}
             </div>
+            <div className="mt-3 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+              <p className="mb-1 font-medium text-foreground">Как это работает:</p>
+              <p>
+                Стиль — это инструкция для AI. Чтобы он применился, выберите стиль и нажмите{" "}
+                <span className="font-medium text-foreground">«Сгенерировать пост»</span> в блоке AI-генерации.
+                На уже написанный текст стиль автоматически не применяется — нужно перегенерировать.
+              </p>
+            </div>
           </CardContent>
         </Card>
 
