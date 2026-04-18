@@ -466,18 +466,59 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
                 Сгенерировать пост
               </Button>
-              <Button variant="outline" onClick={() => generateContent("content-plan")} disabled={isGenerating}>
-                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-                Контент-план
-              </Button>
             </div>
-            <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
-              <p className="mb-1 font-medium text-foreground">Контент-план — что это:</p>
-              <p>
-                Опишите тему или нишу в поле выше (например: «фитнес-студия для женщин» или «доставка кофе»)
-                и нажмите <span className="font-medium text-foreground">«Контент-план»</span>. AI составит план из 7 постов
-                на неделю: тему каждого поста, краткое описание и рекомендуемое время публикации.
-                План появится в поле «Текст поста» — скопируйте его себе и используйте как основу для генерации отдельных постов.
+
+            <div className="rounded-md border p-3 space-y-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">Контент-план</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="plan-count" className="text-xs">Количество постов</Label>
+                  <Input
+                    id="plan-count"
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={planPostsCount}
+                    onChange={(e) => setPlanPostsCount(Math.max(1, Math.min(60, Number(e.target.value) || 1)))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="plan-period" className="text-xs">Период</Label>
+                  <select
+                    id="plan-period"
+                    value={planPeriod}
+                    onChange={(e) => setPlanPeriod(e.target.value as "week" | "month" | "custom")}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <option value="week">Неделя (7 дней)</option>
+                    <option value="month">Месяц (30 дней)</option>
+                    <option value="custom">Свой период</option>
+                  </select>
+                </div>
+              </div>
+              {planPeriod === "custom" && (
+                <div>
+                  <Label htmlFor="plan-days" className="text-xs">Количество дней</Label>
+                  <Input
+                    id="plan-days"
+                    type="number"
+                    min={1}
+                    max={90}
+                    value={planDays}
+                    onChange={(e) => setPlanDays(Math.max(1, Math.min(90, Number(e.target.value) || 1)))}
+                  />
+                </div>
+              )}
+              <Button variant="outline" onClick={() => generateContent("content-plan")} disabled={isGenerating} className="w-full">
+                {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                Сгенерировать контент-план
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Опишите тему/нишу в поле выше — AI составит план из выбранного количества постов на указанный период
+                (тема, описание, рекомендуемое время публикации). Результат появится в поле «Текст поста».
               </p>
             </div>
           </CardContent>
