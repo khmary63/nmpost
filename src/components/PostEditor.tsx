@@ -98,6 +98,21 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       toast.error("Введите тему или описание для генерации");
       return;
     }
+    // Проверка лимита тарифа
+    if (type === "post" && !subscription.hasFeature("ai_text")) {
+      showUpgrade("AI-генерация текста",
+        subscription.limits.ai_text === 0
+          ? "На вашем тарифе AI-генерация текста недоступна."
+          : `Вы использовали все ${subscription.limits.ai_text} запросов AI-текста в этом месяце.`);
+      return;
+    }
+    if (type === "content-plan" && !subscription.hasFeature("content_plan")) {
+      showUpgrade("AI-генерация контент-плана",
+        subscription.limits.content_plan === 0
+          ? "Контент-план доступен только на тарифе Про."
+          : `Вы использовали все ${subscription.limits.content_plan} контент-планов в этом месяце.`);
+      return;
+    }
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-post", {
@@ -115,6 +130,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
         setContent(data.content);
         toast.success("Контент-план готов!");
       }
+      subscription.refresh();
     } catch (e: any) {
       toast.error(e.message || "Ошибка генерации");
     } finally {
@@ -125,6 +141,13 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const generateImage = async () => {
     if (!imagePrompt.trim()) {
       toast.error("Введите описание для генерации картинки");
+      return;
+    }
+    if (!subscription.hasFeature("ai_image")) {
+      showUpgrade("AI-генерация изображений",
+        subscription.limits.ai_image === 0
+          ? "На вашем тарифе AI-генерация изображений недоступна."
+          : `Вы использовали все ${subscription.limits.ai_image} запросов в этом месяце.`);
       return;
     }
     setIsGeneratingImage(true);
@@ -139,6 +162,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       }
       setImageUrl(data.image_url);
       toast.success("Картинка сгенерирована!");
+      subscription.refresh();
     } catch (e: any) {
       toast.error(e.message || "Ошибка генерации картинки");
     } finally {
