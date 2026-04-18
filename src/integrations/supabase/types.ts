@@ -38,39 +38,6 @@ export type Database = {
         }
         Relationships: []
       }
-      audit_logs: {
-        Row: {
-          action: string
-          created_at: string
-          id: string
-          new_data: Json | null
-          old_data: Json | null
-          performed_by: string | null
-          record_id: string | null
-          table_name: string
-        }
-        Insert: {
-          action: string
-          created_at?: string
-          id?: string
-          new_data?: Json | null
-          old_data?: Json | null
-          performed_by?: string | null
-          record_id?: string | null
-          table_name: string
-        }
-        Update: {
-          action?: string
-          created_at?: string
-          id?: string
-          new_data?: Json | null
-          old_data?: Json | null
-          performed_by?: string | null
-          record_id?: string | null
-          table_name?: string
-        }
-        Relationships: []
-      }
       channel_settings: {
         Row: {
           channel: string
@@ -104,171 +71,6 @@ export type Database = {
           personal_url?: string
           updated_at?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      clients: {
-        Row: {
-          company: string | null
-          created_at: string
-          created_by: string | null
-          email: string | null
-          id: string
-          name: string
-          notes: string | null
-          org_id: string | null
-          phone: string | null
-          updated_at: string
-        }
-        Insert: {
-          company?: string | null
-          created_at?: string
-          created_by?: string | null
-          email?: string | null
-          id?: string
-          name: string
-          notes?: string | null
-          org_id?: string | null
-          phone?: string | null
-          updated_at?: string
-        }
-        Update: {
-          company?: string | null
-          created_at?: string
-          created_by?: string | null
-          email?: string | null
-          id?: string
-          name?: string
-          notes?: string | null
-          org_id?: string | null
-          phone?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "clients_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      departments: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          org_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          org_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          org_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "departments_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      line_items: {
-        Row: {
-          amount: number | null
-          created_at: string
-          description: string
-          discount: number | null
-          id: string
-          proposal_id: string
-          quantity: number
-          rate: number
-          sort_order: number
-        }
-        Insert: {
-          amount?: number | null
-          created_at?: string
-          description: string
-          discount?: number | null
-          id?: string
-          proposal_id: string
-          quantity?: number
-          rate?: number
-          sort_order?: number
-        }
-        Update: {
-          amount?: number | null
-          created_at?: string
-          description?: string
-          discount?: number | null
-          id?: string
-          proposal_id?: string
-          quantity?: number
-          rate?: number
-          sort_order?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "line_items_proposal_id_fkey"
-            columns: ["proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      organizations: {
-        Row: {
-          address: string | null
-          brand_font: string | null
-          brand_primary_color: string | null
-          brand_secondary_color: string | null
-          created_at: string
-          id: string
-          industry: string | null
-          logo_url: string | null
-          name: string
-          phone: string | null
-          updated_at: string
-          website: string | null
-        }
-        Insert: {
-          address?: string | null
-          brand_font?: string | null
-          brand_primary_color?: string | null
-          brand_secondary_color?: string | null
-          created_at?: string
-          id?: string
-          industry?: string | null
-          logo_url?: string | null
-          name?: string
-          phone?: string | null
-          updated_at?: string
-          website?: string | null
-        }
-        Update: {
-          address?: string | null
-          brand_font?: string | null
-          brand_primary_color?: string | null
-          brand_secondary_color?: string | null
-          created_at?: string
-          id?: string
-          industry?: string | null
-          logo_url?: string | null
-          name?: string
-          phone?: string | null
-          updated_at?: string
-          website?: string | null
         }
         Relationships: []
       }
@@ -369,226 +171,28 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
-          department_id: string | null
           full_name: string | null
           id: string
-          org_id: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
-          department_id?: string | null
           full_name?: string | null
           id?: string
-          org_id?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
-          department_id?: string | null
           full_name?: string | null
           id?: string
-          org_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "profiles_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "profiles_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      proposal_events: {
-        Row: {
-          created_at: string
-          event_type: string
-          id: string
-          ip_address: string | null
-          metadata: Json | null
-          proposal_id: string
-          user_agent: string | null
-        }
-        Insert: {
-          created_at?: string
-          event_type: string
-          id?: string
-          ip_address?: string | null
-          metadata?: Json | null
-          proposal_id: string
-          user_agent?: string | null
-        }
-        Update: {
-          created_at?: string
-          event_type?: string
-          id?: string
-          ip_address?: string | null
-          metadata?: Json | null
-          proposal_id?: string
-          user_agent?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "proposal_events_proposal_id_fkey"
-            columns: ["proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      proposal_versions: {
-        Row: {
-          content: Json
-          created_at: string
-          id: string
-          pricing: Json
-          proposal_id: string
-          version_number: number
-        }
-        Insert: {
-          content?: Json
-          created_at?: string
-          id?: string
-          pricing?: Json
-          proposal_id: string
-          version_number: number
-        }
-        Update: {
-          content?: Json
-          created_at?: string
-          id?: string
-          pricing?: Json
-          proposal_id?: string
-          version_number?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "proposal_versions_proposal_id_fkey"
-            columns: ["proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      proposals: {
-        Row: {
-          client_id: string | null
-          content: Json
-          created_at: string
-          department_id: string | null
-          discount_total: number | null
-          id: string
-          notes: string | null
-          org_id: string | null
-          pricing: Json
-          share_expires_at: string | null
-          share_id: string | null
-          share_password_hash: string | null
-          status: Database["public"]["Enums"]["proposal_status"]
-          subtotal: number | null
-          tax_rate: number | null
-          template_id: string | null
-          title: string
-          total: number | null
-          updated_at: string
-          user_id: string
-          valid_until: string | null
-          version_number: number
-        }
-        Insert: {
-          client_id?: string | null
-          content?: Json
-          created_at?: string
-          department_id?: string | null
-          discount_total?: number | null
-          id?: string
-          notes?: string | null
-          org_id?: string | null
-          pricing?: Json
-          share_expires_at?: string | null
-          share_id?: string | null
-          share_password_hash?: string | null
-          status?: Database["public"]["Enums"]["proposal_status"]
-          subtotal?: number | null
-          tax_rate?: number | null
-          template_id?: string | null
-          title?: string
-          total?: number | null
-          updated_at?: string
-          user_id: string
-          valid_until?: string | null
-          version_number?: number
-        }
-        Update: {
-          client_id?: string | null
-          content?: Json
-          created_at?: string
-          department_id?: string | null
-          discount_total?: number | null
-          id?: string
-          notes?: string | null
-          org_id?: string | null
-          pricing?: Json
-          share_expires_at?: string | null
-          share_id?: string | null
-          share_password_hash?: string | null
-          status?: Database["public"]["Enums"]["proposal_status"]
-          subtotal?: number | null
-          tax_rate?: number | null
-          template_id?: string | null
-          title?: string
-          total?: number | null
-          updated_at?: string
-          user_id?: string
-          valid_until?: string | null
-          version_number?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "proposals_client_id_fkey"
-            columns: ["client_id"]
-            isOneToOne: false
-            referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proposals_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proposals_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proposals_template_id_fkey"
-            columns: ["template_id"]
-            isOneToOne: false
-            referencedRelation: "templates"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       subscriptions: {
         Row: {
@@ -658,56 +262,6 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
-      }
-      templates: {
-        Row: {
-          category: Database["public"]["Enums"]["template_category"]
-          created_at: string
-          default_pricing_items: Json
-          description: string | null
-          id: string
-          is_default: boolean
-          name: string
-          org_id: string | null
-          sections: Json
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          category?: Database["public"]["Enums"]["template_category"]
-          created_at?: string
-          default_pricing_items?: Json
-          description?: string | null
-          id?: string
-          is_default?: boolean
-          name: string
-          org_id?: string | null
-          sections?: Json
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          category?: Database["public"]["Enums"]["template_category"]
-          created_at?: string
-          default_pricing_items?: Json
-          description?: string | null
-          id?: string
-          is_default?: boolean
-          name?: string
-          org_id?: string | null
-          sections?: Json
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "templates_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       usage_counters: {
         Row: {
@@ -797,7 +351,6 @@ export type Database = {
         Args: { _plan: Database["public"]["Enums"]["plan_tier"] }
         Returns: Json
       }
-      get_user_org_id: { Args: { _user_id: string }; Returns: string }
       get_user_plan: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["plan_tier"]
@@ -809,25 +362,13 @@ export type Database = {
         }
         Returns: boolean
       }
-      hash_share_password: { Args: { _password: string }; Returns: string }
-      verify_share_password: {
-        Args: { _password: string; _share_id: string }
-        Returns: boolean
-      }
     }
     Enums: {
       app_role: "admin" | "manager" | "agent"
       plan_tier: "free" | "basic" | "pro"
       post_status: "draft" | "scheduled" | "published"
       post_style: "minimal" | "bold" | "elegant" | "creative"
-      proposal_status: "draft" | "sent" | "viewed" | "accepted" | "rejected"
       support_ticket_status: "new" | "in_progress" | "resolved" | "closed"
-      template_category:
-        | "web_design"
-        | "consulting"
-        | "development"
-        | "marketing"
-        | "general"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -959,15 +500,7 @@ export const Constants = {
       plan_tier: ["free", "basic", "pro"],
       post_status: ["draft", "scheduled", "published"],
       post_style: ["minimal", "bold", "elegant", "creative"],
-      proposal_status: ["draft", "sent", "viewed", "accepted", "rejected"],
       support_ticket_status: ["new", "in_progress", "resolved", "closed"],
-      template_category: [
-        "web_design",
-        "consulting",
-        "development",
-        "marketing",
-        "general",
-      ],
     },
   },
 } as const
