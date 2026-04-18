@@ -6,18 +6,21 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Send, LayoutDashboard, Settings, LogOut, User, Menu } from "lucide-react";
+import { Send, LayoutDashboard, Settings, LogOut, User, Menu, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSubscription, PLAN_LABELS } from "@/hooks/useSubscription";
 
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Дашборд" },
   { to: "/profile", icon: User, label: "Кабинет" },
+  { to: "/pricing", icon: Sparkles, label: "Тарифы" },
 ];
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { plan } = useSubscription();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleSignOut = async () => {
@@ -56,6 +59,12 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="flex items-center gap-3 ml-auto md:ml-0">
+            <Link to="/pricing" className="hidden sm:inline-flex">
+              <span className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-xs font-medium text-foreground hover:bg-primary/10 transition-colors">
+                <Sparkles className="h-3 w-3 text-primary" />
+                {PLAN_LABELS[plan]}
+              </span>
+            </Link>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
@@ -65,6 +74,9 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <DropdownMenuContent align="end" className="w-48">
                 <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">{user?.email}</div>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/pricing")}>
+                  <Sparkles className="mr-2 h-4 w-4" /> Тариф: {PLAN_LABELS[plan]}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" /> Выйти
                 </DropdownMenuItem>

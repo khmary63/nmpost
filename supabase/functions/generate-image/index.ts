@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { checkAndIncrementUsage, limitExceededResponse } from "../_shared/usage.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,6 +37,12 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Prompt is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Проверка лимита по тарифу
+    const usage = await checkAndIncrementUsage(authHeader, user.id, "ai_image");
+    if (!usage.allowed) {
+      return limitExceededResponse(usage, "ai_image", corsHeaders);
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

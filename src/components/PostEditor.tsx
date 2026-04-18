@@ -15,10 +15,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Sparkles, Send, Save, CalendarIcon, Type, Palette,
-  MessageSquare, Loader2, Wand2, FileText, Clock, ImageIcon, X, Paperclip,
+  MessageSquare, Loader2, Wand2, FileText, Clock, ImageIcon, X, Paperclip, Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EditingPost } from "@/pages/Dashboard";
+import { useSubscription } from "@/hooks/useSubscription";
+import { UpgradeModal } from "@/components/UpgradeModal";
 
 const POST_STYLES = [
   { id: "minimal", label: "Минимал", description: "Чистый, лаконичный", icon: "◻️" },
@@ -40,6 +42,7 @@ interface PostEditorProps {
 
 export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const { user } = useAuth();
+  const subscription = useSubscription();
   const [postId, setPostId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -57,6 +60,12 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [includeFooter, setIncludeFooter] = useState(true);
+  const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string; reason?: string }>({
+    open: false, feature: "",
+  });
+
+  const showUpgrade = (feature: string, reason?: string) =>
+    setUpgradeModal({ open: true, feature, reason });
 
   // Load editing post into form
   useEffect(() => {
@@ -89,6 +98,21 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       toast.error("Введите тему или описание для генерации");
       return;
     }
+    // Проверка лимита тарифа
+    if (type === "post" && !subscription.hasFeature("ai_text")) {
+      showUpgrade("AI-генерация текста",
+        subscription.limits.ai_text === 0
+          ? "На вашем тарифе AI-генерация текста недоступна."
+          : `Вы использовали все ${subscription.limits.ai_text} запросов AI-текста в этом месяце.`);
+      return;
+    }
+    if (type === "content-plan" && !subscription.hasFeature("content_plan")) {
+      showUpgrade("AI-генерация контент-плана",
+        subscription.limits.content_plan === 0
+          ? "Контент-план доступен только на тарифе Про."
+          : `Вы использовали все ${subscription.limits.content_plan} контент-планов в этом месяце.`);
+      return;
+    }
     setIsGenerating(true);
     try {
       const { data, error } = await supabase.functions.invoke("generate-post", {
@@ -106,6 +130,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
         setContent(data.content);
         toast.success("Контент-план готов!");
       }
+      subscription.refresh();
     } catch (e: any) {
       toast.error(e.message || "Ошибка генерации");
     } finally {
@@ -116,6 +141,13 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const generateImage = async () => {
     if (!imagePrompt.trim()) {
       toast.error("Введите описание для генерации картинки");
+      return;
+    }
+    if (!subscription.hasFeature("ai_image")) {
+      showUpgrade("AI-генерация изображений",
+        subscription.limits.ai_image === 0
+          ? "На вашем тарифе AI-генерация изображений недоступна."
+          : `Вы использовали все ${subscription.limits.ai_image} запросов в этом месяце.`);
       return;
     }
     setIsGeneratingImage(true);
@@ -130,6 +162,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       }
       setImageUrl(data.image_url);
       toast.success("Картинка сгенерирована!");
+      subscription.refresh();
     } catch (e: any) {
       toast.error(e.message || "Ошибка генерации картинки");
     } finally {
@@ -177,6 +210,20 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
     if (status === "scheduled" && !scheduledDate) {
       toast.error("Выберите дату публикации");
       return;
+    }
+    // Проверка функции отложенного постинга
+    if (status === "scheduled" && !subscription.hasFeature("scheduled_posting")) {
+      showUpgrade("Отложенный постинг", "Доступно на тарифах Базовый и Про.");
+      return;
+    }
+    // Проверка лимита постов (только для нового, не редактирования)
+    if (!postId && (status === "published" || status === "scheduled")) {
+      if (!subscription.hasFeature("posts")) {
+        const limit = subscription.limits.posts;
+        showUpgrade("Публикация постов",
+          `Вы достигли лимита ${limit} постов в этом месяце. Обновите тариф, чтобы публиковать больше.`);
+        return;
+      }
     }
 
     let scheduledAt: string | null = null;
@@ -226,6 +273,13 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
         }).select().single();
         if (error) throw error;
         savedPost = data;
+        // Инкремент счётчика постов только при создании нового, не для черновика
+        if (status !== "draft") {
+          await supabase.rpc("check_and_increment_usage", {
+            _user_id: user!.id, _resource: "posts",
+          });
+          subscription.refresh();
+        }
       }
 
       if (isImmediatePublish && savedPost) {
@@ -451,20 +505,34 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-2">
-              {POST_STYLES.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => setStyle(s.id)}
-                  className={cn(
-                    "flex flex-col items-center gap-1 rounded-lg border-2 p-3 text-center transition-all hover:border-primary/50",
-                    style === s.id ? "border-primary bg-primary/5" : "border-border"
-                  )}
-                >
-                  <span className="text-xl">{s.icon}</span>
-                  <span className="text-sm font-medium">{s.label}</span>
-                  <span className="text-xs text-muted-foreground">{s.description}</span>
-                </button>
-              ))}
+              {POST_STYLES.map((s) => {
+                // На бесплатном — только "minimal". На остальных — все.
+                const isLocked = !subscription.hasFeature("all_styles") && s.id !== "minimal";
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      if (isLocked) {
+                        showUpgrade(`Стиль «${s.label}»`, "Все стили доступны на тарифах Базовый и Про.");
+                        return;
+                      }
+                      setStyle(s.id);
+                    }}
+                    className={cn(
+                      "relative flex flex-col items-center gap-1 rounded-lg border-2 p-3 text-center transition-all hover:border-primary/50",
+                      style === s.id ? "border-primary bg-primary/5" : "border-border",
+                      isLocked && "opacity-60",
+                    )}
+                  >
+                    {isLocked && (
+                      <Lock className="absolute right-1.5 top-1.5 h-3 w-3 text-muted-foreground" />
+                    )}
+                    <span className="text-xl">{s.icon}</span>
+                    <span className="text-sm font-medium">{s.label}</span>
+                    <span className="text-xs text-muted-foreground">{s.description}</span>
+                  </button>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -535,8 +603,21 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label htmlFor="schedule-toggle">Запланировать</Label>
-              <Switch id="schedule-toggle" checked={isScheduled} onCheckedChange={setIsScheduled} />
+              <Label htmlFor="schedule-toggle" className="flex items-center gap-1.5">
+                Запланировать
+                {!subscription.hasFeature("scheduled_posting") && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <Switch
+                id="schedule-toggle"
+                checked={isScheduled}
+                onCheckedChange={(v) => {
+                  if (v && !subscription.hasFeature("scheduled_posting")) {
+                    showUpgrade("Отложенный постинг", "Доступно на тарифах Базовый и Про.");
+                    return;
+                  }
+                  setIsScheduled(v);
+                }}
+              />
             </div>
             {isScheduled && (
               <div className="space-y-3">
@@ -625,6 +706,13 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           </Card>
         )}
       </div>
+      <UpgradeModal
+        open={upgradeModal.open}
+        onOpenChange={(o) => setUpgradeModal((s) => ({ ...s, open: o }))}
+        feature={upgradeModal.feature}
+        currentPlan={subscription.plan}
+        reason={upgradeModal.reason}
+      />
     </div>
   );
 }

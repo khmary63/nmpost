@@ -300,7 +300,7 @@ export default function Landing() {
                   <Button
                     className="mt-6 w-full"
                     variant={plan.popular ? "default" : "outline"}
-                    onClick={() => navigate("/signup")}
+                    onClick={() => navigate(plan.price === "0" ? "/signup" : "/pricing")}
                   >
                     {plan.price === "0" ? "Начать бесплатно" : "Выбрать план"}
                   </Button>
