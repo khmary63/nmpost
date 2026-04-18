@@ -112,15 +112,17 @@ Deno.serve(async (req) => {
 
     const origin = req.headers.get("origin") || "https://nmpost.lovable.app";
 
+    // ВАЖНО: SuccessURL/FailURL НЕ передаём — тогда Т-Банк показывает
+    // собственную финальную страницу «Оплачено» с кнопкой «В магазин»
+    // (ссылка задаётся в ЛК терминала). Это требование тестового терминала.
     const initParams: Record<string, string | number> = {
       TerminalKey: TBANK_TERMINAL_KEY,
       Amount: amount,
       OrderId: orderId,
       Description: `Подписка «${PLAN_LABELS[plan]}» — ${periodLabel}`,
-      SuccessURL: `${origin}/payment/success?OrderId=${orderId}`,
-      FailURL: `${origin}/pricing?payment=fail`,
       NotificationURL: `${Deno.env.get("SUPABASE_URL")}/functions/v1/tbank-webhook`,
     };
+    void origin;
 
     // Если включено автопродление — передаём Recurrent + CustomerKey
     if (autoRenew) {
