@@ -15,10 +15,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Sparkles, Send, Save, CalendarIcon, Type, Palette,
-  MessageSquare, Loader2, Wand2, FileText, Clock, ImageIcon, X, Paperclip,
+  MessageSquare, Loader2, Wand2, FileText, Clock, ImageIcon, X, Paperclip, Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EditingPost } from "@/pages/Dashboard";
+import { useSubscription } from "@/hooks/useSubscription";
+import { UpgradeModal } from "@/components/UpgradeModal";
 
 const POST_STYLES = [
   { id: "minimal", label: "Минимал", description: "Чистый, лаконичный", icon: "◻️" },
