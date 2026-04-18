@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.tbank-charge-recurrent]
 verify_jwt = false
+
+[functions.publish-scheduled]
+verify_jwt = false
