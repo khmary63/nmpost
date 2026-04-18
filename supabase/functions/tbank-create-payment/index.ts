@@ -124,11 +124,10 @@ Deno.serve(async (req) => {
     };
     void origin;
 
-    // Если включено автопродление — передаём Recurrent + CustomerKey
-    if (autoRenew) {
-      initParams.Recurrent = "Y";
-      initParams.CustomerKey = customerKey;
-    }
+    // ВАЖНО: для теста №1 Т-Банка флаг Recurrent НЕ передаём.
+    // Автопродление будет настроено отдельно после прохождения сертификации.
+    void autoRenew;
+    void customerKey;
 
     const tbankToken = await generateToken(initParams, TBANK_PASSWORD);
 
