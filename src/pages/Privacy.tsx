@@ -121,6 +121,8 @@ export default function Privacy() {
               <p><span className="text-muted-foreground">Телефон:</span> +7 917 111-40-30</p>
             </div>
           </section>
+
+          <DeveloperPromo />
         </div>
       </div>
     </div>
