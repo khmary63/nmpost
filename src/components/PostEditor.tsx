@@ -568,12 +568,22 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 );
               })}
             </div>
+            <Button
+              onClick={decorateText}
+              disabled={isGenerating || !content.trim()}
+              variant="secondary"
+              className="mt-3 w-full"
+            >
+              {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              Оформить текст в этом стиле
+            </Button>
             <div className="mt-3 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
               <p className="mb-1 font-medium text-foreground">Как это работает:</p>
+              <p className="mb-1">
+                <span className="font-medium text-foreground">«Оформить текст»</span> — добавит эмодзи, жирный/курсив и разделители к вашему тексту, не меняя слов.
+              </p>
               <p>
-                Стиль — это инструкция для AI. Чтобы он применился, выберите стиль и нажмите{" "}
-                <span className="font-medium text-foreground">«Сгенерировать пост»</span> в блоке AI-генерации.
-                На уже написанный текст стиль автоматически не применяется — нужно перегенерировать.
+                <span className="font-medium text-foreground">«Сгенерировать пост»</span> в блоке AI — напишет новый текст с нуля в выбранном стиле.
               </p>
             </div>
           </CardContent>
