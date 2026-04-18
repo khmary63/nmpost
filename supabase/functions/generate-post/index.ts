@@ -32,7 +32,7 @@ serve(async (req) => {
       });
     }
 
-    const { prompt, style, type, originalText } = await req.json();
+    const { prompt, style, type, originalText, postsCount, periodDays } = await req.json();
 
     // Проверка лимита по тарифу
     const resource = type === "content-plan" ? "content_plan" : "ai_text";
@@ -65,10 +65,12 @@ serve(async (req) => {
     let userMessage: string;
 
     if (type === "content-plan") {
+      const count = Math.max(1, Math.min(60, Number(postsCount) || 7));
+      const days = Math.max(1, Math.min(90, Number(periodDays) || 7));
       systemPrompt = `Ты — эксперт по контент-маркетингу и SMM. ${dateContext}
-Создай контент-план на неделю (7 постов) на основе темы пользователя.
-Для каждого поста укажи: день, тему, краткое описание и рекомендуемое время публикации.
-Пиши на русском языке. Формат — структурированный текст.`;
+Создай контент-план из ${count} постов, равномерно распределённых на ${days} дней, на основе темы пользователя.
+Для каждого поста укажи: порядковый номер, дату/день (распредели равномерно по периоду), тему, краткое описание (1-2 предложения) и рекомендуемое время публикации.
+Пиши на русском языке. Формат — структурированный текст с нумерацией.`;
       userMessage = prompt || "Напиши интересный пост на свободную тему";
     } else if (type === "decorate") {
       systemPrompt = `Ты — оформитель текста для соцсетей (Telegram, ВК, MAX).
