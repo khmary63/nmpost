@@ -309,7 +309,7 @@ export default function Landing() {
             ))}
           </div>
           <p className="mt-8 text-center text-sm text-muted-foreground">
-            Годовая подписка — скидка 10%. Оплата через ЮКасса.
+            Годовая подписка — скидка 10%.
           </p>
         </div>
       </section>
