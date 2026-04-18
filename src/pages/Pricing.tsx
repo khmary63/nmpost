@@ -66,6 +66,7 @@ export default function Pricing() {
   const { plan: currentPlan, usage, limits } = useSubscription();
   const [loadingPlan, setLoadingPlan] = useState<PlanTier | null>(null);
   const [autoRenew, setAutoRenew] = useState(true);
+  const [yearly, setYearly] = useState(false);
 
   const handleSelectPlan = async (planId: PlanTier) => {
     if (!user) {
@@ -79,7 +80,11 @@ export default function Pricing() {
     setLoadingPlan(planId);
     try {
       const { data, error } = await supabase.functions.invoke("tbank-create-payment", {
-        body: { plan: planId, auto_renew: autoRenew },
+        body: {
+          plan: planId,
+          auto_renew: autoRenew,
+          billing_period: yearly ? "yearly" : "monthly",
+        },
       });
       if (error) throw error;
       if (data?.payment_url) {

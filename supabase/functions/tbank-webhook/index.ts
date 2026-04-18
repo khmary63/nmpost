@@ -89,12 +89,14 @@ Deno.serve(async (req) => {
       const rebillId = payload.RebillId ? String(payload.RebillId) : null;
       const dataField = (payload.DATA ?? {}) as Record<string, string>;
       const autoRenewFlag = dataField.AutoRenew === "1" || !!rebillId;
+      const monthsParsed = parseInt(dataField.Months ?? "1", 10);
+      const months = Number.isFinite(monthsParsed) && monthsParsed > 0 ? monthsParsed : 1;
       const customerKey = `user_${paymentRow.user_id}`;
 
       const { error: actErr } = await supabaseAdmin.rpc("activate_subscription", {
         _user_id: paymentRow.user_id,
         _plan: paymentRow.plan,
-        _months: 1,
+        _months: months,
         _auto_renew: autoRenewFlag,
         _rebill_id: rebillId,
         _customer_key: rebillId ? customerKey : null,
