@@ -91,7 +91,7 @@ export function PostsList({ onEdit }: PostsListProps) {
                     })}
                   </p>
                   {post.status === "scheduled" && post.scheduled_at && (
-                    <p className="text-xs font-medium text-yellow-700 mt-1">
+                    <p className="text-xs font-medium text-foreground mt-1">
                       📅 Запланирован на:{" "}
                       {new Date(post.scheduled_at).toLocaleDateString("ru-RU", {
                         day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
