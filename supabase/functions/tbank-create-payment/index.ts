@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
       Amount: amount,
       OrderId: orderId,
       Description: `Подписка «${PLAN_LABELS[plan]}» — ${periodLabel}`,
-      SuccessURL: `${origin}/dashboard?payment=success`,
+      SuccessURL: `${origin}/payment/success?OrderId=${orderId}`,
       FailURL: `${origin}/pricing?payment=fail`,
       NotificationURL: `${Deno.env.get("SUPABASE_URL")}/functions/v1/tbank-webhook`,
     };
