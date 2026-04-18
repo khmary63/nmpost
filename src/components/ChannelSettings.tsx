@@ -19,6 +19,7 @@ interface ChannelConfig {
   label: string;
   placeholder: string;
   hint: string;
+  guide: { title: string; steps: string[]; note?: string };
 }
 
 const DEFAULT_CHANNELS: ChannelConfig[] = [
@@ -31,6 +32,16 @@ const DEFAULT_CHANNELS: ChannelConfig[] = [
     label: "Telegram",
     placeholder: "@mychannel или -1001234567890",
     hint: "Добавьте бота администратором в канал, затем укажите @username канала или числовой Chat ID",
+    guide: {
+      title: "Как найти Chat ID канала Telegram",
+      steps: [
+        "Если у канала есть публичный @username — просто укажите его в формате @mychannel.",
+        "Для приватного канала: добавьте нашего бота администратором в канал (с правом «Публикация сообщений»).",
+        "Откройте бота @userinfobot или @getmyid_bot, перешлите ему любое сообщение из вашего канала — он пришлёт числовой Chat ID (например -1001234567890).",
+        "Скопируйте этот ID (со знаком минус) и вставьте в поле ниже.",
+      ],
+      note: "Бот обязательно должен быть администратором канала, иначе публикация не пройдёт.",
+    },
   },
   {
     channel: "vk",
@@ -41,6 +52,17 @@ const DEFAULT_CHANNELS: ChannelConfig[] = [
     label: "ВКонтакте (сообщество)",
     placeholder: "123456789",
     hint: "Укажите числовой ID вашей группы ВК (без минуса). Бот опубликует пост от имени сообщества.",
+    guide: {
+      title: "Как найти ID сообщества ВКонтакте",
+      steps: [
+        "Откройте свою группу ВК в браузере.",
+        "Зайдите в «Управление» → «Настройки» → «Работа с API» (или скопируйте короткий адрес группы).",
+        "ID — это число в URL вида vk.com/club123456789 (берётся 123456789).",
+        "Если у группы короткое имя (vk.com/myclub) — посмотрите ID в «Управление» → «Адрес страницы» → строка «ID сообщества».",
+        "Вставьте только цифры, без «club» и без минуса.",
+      ],
+      note: "Вы должны быть администратором сообщества. Публикация идёт через токен сообщества, настроенный в системе.",
+    },
   },
   {
     channel: "max",
@@ -51,6 +73,17 @@ const DEFAULT_CHANNELS: ChannelConfig[] = [
     label: "MAX (мессенджер)",
     placeholder: "-1001234567890",
     hint: "Создайте бота через @MasterBot, добавьте его администратором в канал MAX и укажите Chat ID канала",
+    guide: {
+      title: "Как найти Chat ID канала MAX",
+      steps: [
+        "В мессенджере MAX откройте чат с @MasterBot и создайте своего бота — получите токен (он уже настроен в системе).",
+        "Добавьте бота администратором в нужный канал MAX (с правом публикации).",
+        "Опубликуйте в канале любое сообщение, затем перешлите его в чат с @getmyid_bot или используйте бота @MaxIDBot.",
+        "Бот пришлёт числовой Chat ID канала (формат -1001234567890).",
+        "Вставьте этот ID (со знаком минус) в поле ниже.",
+      ],
+      note: "Без прав администратора бот не сможет публиковать посты в канал.",
+    },
   },
 ];
 
@@ -161,6 +194,20 @@ export function ChannelSettings() {
                   onChange={(e) => updateChannel(ch.channel, "channel_chat_id", e.target.value)}
                 />
               </div>
+
+              <details className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+                <summary className="cursor-pointer font-medium text-foreground">
+                  ❓ {ch.guide.title}
+                </summary>
+                <ol className="mt-2 list-decimal space-y-1 pl-4">
+                  {ch.guide.steps.map((step, i) => (
+                    <li key={i}>{step}</li>
+                  ))}
+                </ol>
+                {ch.guide.note && (
+                  <p className="mt-2 text-foreground"><span className="font-medium">Важно:</span> {ch.guide.note}</p>
+                )}
+              </details>
 
               <div className="rounded-md border border-dashed p-3 space-y-3">
                 <div className="flex items-center gap-2 text-sm font-medium">
