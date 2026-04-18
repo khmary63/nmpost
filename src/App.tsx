@@ -18,6 +18,7 @@ import NotFound from "./pages/NotFound";
 import Offer from "./pages/Offer";
 import Delivery from "./pages/Delivery";
 import Pricing from "./pages/Pricing";
+import AdminUsers from "./pages/AdminUsers";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
             <Route path="/offer" element={<Offer />} />
             <Route path="/delivery" element={<Delivery />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <SupportWidget />
