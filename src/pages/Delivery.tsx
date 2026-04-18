@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Zap, Mail, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { DeveloperPromo } from "@/components/DeveloperPromo";
 
 export default function Delivery() {
   return (
