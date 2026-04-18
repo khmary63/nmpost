@@ -42,6 +42,7 @@ interface PostEditorProps {
 
 export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const { user } = useAuth();
+  const subscription = useSubscription();
   const [postId, setPostId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -59,6 +60,12 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [includeFooter, setIncludeFooter] = useState(true);
+  const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string; reason?: string }>({
+    open: false, feature: "",
+  });
+
+  const showUpgrade = (feature: string, reason?: string) =>
+    setUpgradeModal({ open: true, feature, reason });
 
   // Load editing post into form
   useEffect(() => {
