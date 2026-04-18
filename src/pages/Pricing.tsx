@@ -189,8 +189,29 @@ export default function Pricing() {
             );
           })}
         </div>
-        <p className="mt-8 text-center text-sm text-muted-foreground">
-          Оплата картой через Т-Банк (тестовый режим). Чек по 54-ФЗ выставляется отдельно.
+
+        <div className="mx-auto mt-8 max-w-md rounded-lg border border-border bg-card p-4">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="auto-renew"
+              checked={autoRenew}
+              onCheckedChange={(v) => setAutoRenew(v === true)}
+              className="mt-0.5"
+            />
+            <div className="flex-1 space-y-1">
+              <Label htmlFor="auto-renew" className="text-sm font-medium cursor-pointer">
+                Автопродление подписки
+              </Label>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Подписка будет автоматически продлеваться каждый месяц с привязанной карты.
+                Отписаться от автопродления можно в любой момент в личном кабинете.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          Оплата картой через Т-Банк. Чек по 54-ФЗ выставляется отдельно.
         </p>
       </div>
     </div>
