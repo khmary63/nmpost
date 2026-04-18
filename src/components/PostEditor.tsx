@@ -138,7 +138,39 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
     }
   };
 
-  const generateImage = async () => {
+  const decorateText = async () => {
+    if (!content.trim()) {
+      toast.error("Сначала напишите или вставьте текст поста");
+      return;
+    }
+    if (!subscription.hasFeature("ai_text")) {
+      showUpgrade("Оформление текста",
+        subscription.limits.ai_text === 0
+          ? "На вашем тарифе AI-оформление недоступно."
+          : `Вы использовали все ${subscription.limits.ai_text} AI-запросов в этом месяце.`);
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-post", {
+        body: { type: "decorate", style, originalText: content },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      if (data?.content) {
+        setContent(data.content);
+        toast.success("Текст оформлен!");
+        subscription.refresh();
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Ошибка оформления");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
     if (!imagePrompt.trim()) {
       toast.error("Введите описание для генерации картинки");
       return;
