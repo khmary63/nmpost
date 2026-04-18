@@ -32,7 +32,7 @@ serve(async (req) => {
       });
     }
 
-    const { prompt, style, type, originalText } = await req.json();
+    const { prompt, style, type, originalText, postsCount, periodDays } = await req.json();
 
     // Проверка лимита по тарифу
     const resource = type === "content-plan" ? "content_plan" : "ai_text";
