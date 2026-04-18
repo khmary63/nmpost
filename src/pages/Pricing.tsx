@@ -162,8 +162,28 @@ export default function Pricing() {
                 <CardContent className="p-6">
                   <h3 className="font-display text-xl font-bold text-foreground">{PLAN_LABELS[plan.id]}</h3>
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="font-display text-4xl font-extrabold text-foreground">{plan.price} ₽</span>
-                    <span className="text-sm text-muted-foreground">{plan.period}</span>
+                    {(() => {
+                      const monthly = parseInt(plan.price.replace(/\s/g, ""), 10);
+                      if (!yearly || plan.id === "free" || isNaN(monthly)) {
+                        return (
+                          <>
+                            <span className="font-display text-4xl font-extrabold text-foreground">{plan.price} ₽</span>
+                            <span className="text-sm text-muted-foreground">{plan.period}</span>
+                          </>
+                        );
+                      }
+                      const yearlyTotal = Math.round(monthly * 12 * 0.9);
+                      const formatted = yearlyTotal.toLocaleString("ru-RU");
+                      return (
+                        <div className="flex flex-col">
+                          <div className="flex items-baseline gap-1">
+                            <span className="font-display text-4xl font-extrabold text-foreground">{formatted} ₽</span>
+                            <span className="text-sm text-muted-foreground">/ год</span>
+                          </div>
+                          <span className="mt-1 text-xs text-primary font-medium">Скидка 10% при оплате за год</span>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <ul className="mt-6 space-y-3">
                     {plan.features.map((f) => (
@@ -195,8 +215,24 @@ export default function Pricing() {
           })}
         </div>
 
-        <div className="mx-auto mt-8 max-w-md rounded-lg border border-border bg-card p-4">
+        <div className="mx-auto mt-8 max-w-md space-y-3 rounded-lg border border-border bg-card p-4">
           <div className="flex items-start gap-3">
+            <Checkbox
+              id="yearly"
+              checked={yearly}
+              onCheckedChange={(v) => setYearly(v === true)}
+              className="mt-0.5"
+            />
+            <div className="flex-1 space-y-1">
+              <Label htmlFor="yearly" className="text-sm font-medium cursor-pointer">
+                Годовая подписка — скидка 10%
+              </Label>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Оплата сразу за 12 месяцев со скидкой 10% от месячной стоимости.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3 border-t border-border pt-3">
             <Checkbox
               id="auto-renew"
               checked={autoRenew}
@@ -208,7 +244,7 @@ export default function Pricing() {
                 Автопродление подписки
               </Label>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Подписка будет автоматически продлеваться каждый месяц с привязанной карты.
+                Подписка будет автоматически продлеваться {yearly ? "каждый год" : "каждый месяц"} с привязанной карты.
                 Отписаться от автопродления можно в любой момент в личном кабинете.
               </p>
             </div>
