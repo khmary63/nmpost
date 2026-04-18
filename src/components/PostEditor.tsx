@@ -462,6 +462,15 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 Контент-план
               </Button>
             </div>
+            <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+              <p className="mb-1 font-medium text-foreground">Контент-план — что это:</p>
+              <p>
+                Опишите тему или нишу в поле выше (например: «фитнес-студия для женщин» или «доставка кофе»)
+                и нажмите <span className="font-medium text-foreground">«Контент-план»</span>. AI составит план из 7 постов
+                на неделю: тему каждого поста, краткое описание и рекомендуемое время публикации.
+                План появится в поле «Текст поста» — скопируйте его себе и используйте как основу для генерации отдельных постов.
+              </p>
+            </div>
           </CardContent>
         </Card>
 
