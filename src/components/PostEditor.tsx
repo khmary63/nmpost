@@ -603,8 +603,21 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label htmlFor="schedule-toggle">Запланировать</Label>
-              <Switch id="schedule-toggle" checked={isScheduled} onCheckedChange={setIsScheduled} />
+              <Label htmlFor="schedule-toggle" className="flex items-center gap-1.5">
+                Запланировать
+                {!subscription.hasFeature("scheduled_posting") && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <Switch
+                id="schedule-toggle"
+                checked={isScheduled}
+                onCheckedChange={(v) => {
+                  if (v && !subscription.hasFeature("scheduled_posting")) {
+                    showUpgrade("Отложенный постинг", "Доступно на тарифах Базовый и Про.");
+                    return;
+                  }
+                  setIsScheduled(v);
+                }}
+              />
             </div>
             {isScheduled && (
               <div className="space-y-3">
