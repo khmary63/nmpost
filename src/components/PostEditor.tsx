@@ -657,6 +657,9 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Нажмите на нужные каналы, чтобы выделить их — пост опубликуется во всех выбранных. Можно выбрать несколько.
+            </p>
             <div className="flex flex-wrap gap-2">
               {CHANNELS.map((ch) => (
                 <Badge
