@@ -118,8 +118,14 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
     }
     setIsGenerating(true);
     try {
+      const periodDays = planPeriod === "week" ? 7 : planPeriod === "month" ? 30 : planDays;
       const { data, error } = await supabase.functions.invoke("generate-post", {
-        body: { prompt: aiPrompt, style, type },
+        body: {
+          prompt: aiPrompt,
+          style,
+          type,
+          ...(type === "content-plan" && { postsCount: planPostsCount, periodDays }),
+        },
       });
       if (error) throw error;
       if (data?.error) {
