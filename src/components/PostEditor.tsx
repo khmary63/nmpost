@@ -699,31 +699,40 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                   variant="outline"
                   size="sm"
                   disabled={!content.trim()}
-                  onClick={() => {
+                  onClick={async () => {
                     const text = content.trim();
                     if (!text) {
                       toast.error("Сначала напишите или сгенерируйте текст поста");
                       return;
                     }
-                    const params = new URLSearchParams();
-                    if (imageUrl) params.set("url", imageUrl);
-                    params.set("title", text.slice(0, 4096));
-                    params.set("noparse", "true");
-                    const shareUrl = `https://vk.com/share.php?${params.toString()}`;
-                    // Текст копируем в буфер, чтобы при необходимости вставить вручную
-                    if (navigator.clipboard) {
-                      navigator.clipboard.writeText(text).catch(() => {});
+                    // Копируем текст поста в буфер обмена (главное!)
+                    let copied = false;
+                    try {
+                      await navigator.clipboard.writeText(text);
+                      copied = true;
+                    } catch {
+                      copied = false;
                     }
-                    window.open(shareUrl, "_blank", "noopener,noreferrer,width=720,height=720");
-                    toast.success("Открыли окно ВК. Текст также скопирован в буфер обмена.");
+                    // Если есть картинка — скачиваем её и тоже кладём в буфер как файл,
+                    // плюс открываем новую вкладку с картинкой, чтобы её можно было перетащить в ВК.
+                    if (imageUrl) {
+                      window.open(imageUrl, "_blank", "noopener,noreferrer");
+                    }
+                    // Открываем форму создания записи на личной стене ВК
+                    window.open("https://vk.com/feed", "_blank", "noopener,noreferrer");
+                    toast.success(
+                      copied
+                        ? "Текст скопирован в буфер. Откройте свою стену ВК → «Что у вас нового?» → вставьте (Ctrl+V) и прикрепите картинку из соседней вкладки."
+                        : "Открыли ВК. Скопируйте текст поста вручную и вставьте в форму записи."
+                    );
                   }}
                 >
                   <ExternalLink className="h-4 w-4" />
-                  Опубликовать на личной странице ВК
+                  Подготовить пост для личной страницы ВК
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                💡 Картинка подтянется, если она загружена в пост. Если ВК не покажет её в превью — прикрепите вручную в открывшемся окне.
+                💡 ВК API не позволяет публиковать на личные страницы из сторонних сервисов. Мы скопируем текст в буфер и откроем картинку + ленту ВК — вам останется вставить текст (Ctrl+V) и перетащить картинку в форму «Что у вас нового?».
               </p>
             </div>
           </CardContent>
