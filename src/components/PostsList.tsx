@@ -66,7 +66,6 @@ export function PostsList({ onEdit }: PostsListProps) {
     <div className="space-y-3">
       {posts.map((post) => {
         const st = statusMap[post.status] || statusMap.draft;
-        const canEdit = post.status !== "published";
         return (
           <Card key={post.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-4">
