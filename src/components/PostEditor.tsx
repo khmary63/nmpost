@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Sparkles, Send, Save, CalendarIcon, Type, Palette,
-  MessageSquare, Loader2, Wand2, FileText, Clock, ImageIcon, X, Paperclip, Lock,
+  MessageSquare, Loader2, Wand2, FileText, Clock, ImageIcon, X, Paperclip, Lock, ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EditingPost } from "@/pages/Dashboard";
