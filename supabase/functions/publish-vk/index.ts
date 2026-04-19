@@ -69,19 +69,29 @@ serve(async (req) => {
       });
     }
 
+    const normalizeToken = (raw?: string | null) =>
+      raw?.replace(/^access_token=/, "").split("&")[0].trim() || "";
+
     const VK_COMMUNITY_TOKEN_RAW = Deno.env.get("VK_COMMUNITY_TOKEN");
-    const VK_USER_TOKEN_RAW = Deno.env.get("VK_USER_TOKEN");
-    const VK_TOKEN = VK_COMMUNITY_TOKEN_RAW?.replace(/^access_token=/, "").split("&")[0].trim();
-    const VK_USER_TOKEN = VK_USER_TOKEN_RAW?.replace(/^access_token=/, "").split("&")[0].trim();
+    const VK_TOKEN = normalizeToken(VK_COMMUNITY_TOKEN_RAW);
+
+    // Prefer per-user VK token from channel_settings (channel = "vk_user_token"),
+    // fallback to global VK_USER_TOKEN secret for backward compatibility.
+    const { data: vkUserTokenRow } = await supabase
+      .from("channel_settings")
+      .select("channel_chat_id")
+      .eq("user_id", userId)
+      .eq("channel", "vk_user_token")
+      .eq("is_active", true)
+      .maybeSingle();
+
+    const VK_USER_TOKEN = normalizeToken(vkUserTokenRow?.channel_chat_id) ||
+      normalizeToken(Deno.env.get("VK_USER_TOKEN"));
 
     if (!VK_TOKEN) {
-      return new Response(JSON.stringify({ error: "VK токен не настроен" }), {
+      return new Response(JSON.stringify({ error: "VK токен сообщества не настроен" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    }
-
-    if (VK_USER_TOKEN_RAW && VK_USER_TOKEN_RAW.includes("&")) {
-      console.warn("VK_USER_TOKEN contains extra OAuth params, using normalized access token only");
     }
 
     // Build message
@@ -130,7 +140,7 @@ serve(async (req) => {
     if (post.image_url) {
       try {
         if (!VK_USER_TOKEN) {
-          throw new Error("Для загрузки картинок в VK нужен VK_USER_TOKEN (user access token со scope=photos,wall,groups). Добавьте его в секреты.");
+          throw new Error("Для загрузки картинок в VK подключите ваш аккаунт: откройте настройки канала VK и нажмите «Подключить VK».");
         }
         console.log("VK: starting image upload, image_url=", post.image_url);
 
