@@ -99,7 +99,7 @@ export function PostsList({ onEdit }: PostsListProps) {
                   )}
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  {canEdit && onEdit && (
+                  {onEdit && (
                     <Button
                       variant="ghost"
                       size="icon"
