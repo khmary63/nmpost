@@ -7,8 +7,7 @@ Updated: now
 UI strictly in Russian. Mobile-first (sm/md/lg), vertical flex on mobile, w-full buttons, 44x44px touch targets.
 Supabase RLS with `WITH CHECK` for updates. Edge functions JWT protected.
 NO VK personal pages (error 15) and NO Odnoklassniki.
-Published posts are read-only; status updates only on API success.
-Free=5 постов/0 AI/только minimal. Basic=10/10/10/все стили/отложенный. Pro=∞/30/30/контент-план/приоритет. Сброс 1-го числа.
+Published posts CAN be re-edited and re-published; status updates only on API success.
 
 ## Memories
 - [Project Overview](mem://project/overview) — High-level goals, SaaS for automated AI-driven cross-posting
@@ -19,4 +18,3 @@ Free=5 постов/0 AI/только minimal. Basic=10/10/10/все стили/
 - [Edge Functions](mem://architecture/edge-functions) — JWT-protected backend logic for AI, publishing, webhooks
 - [Security & RLS](mem://architecture/security) — Row Level Security policies, data integrity, user_id isolation
 - [YooKassa Payments](mem://integrations/payments-yookassa) — Free/Basic/Pro plans, webhook endpoint for payment statuses
-- [Subscription Plans](mem://features/subscription-plans) — Plan tiers, usage counters, limit enforcement (DB+UI)
