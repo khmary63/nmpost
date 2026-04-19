@@ -684,6 +684,48 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               </div>
               <Switch id="footer-toggle" checked={includeFooter} onCheckedChange={setIncludeFooter} />
             </div>
+
+            {/* Личная страница ВК — полуавтомат через share.php */}
+            <div className="rounded-md border border-dashed p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="space-y-0.5 pr-2">
+                  <Label className="text-sm">Личная страница ВК</Label>
+                  <p className="text-xs text-muted-foreground">
+                    ВК запрещает автопубликацию на личные страницы из сторонних приложений. Откроем окно ВК с готовым текстом и картинкой — опубликуйте в один клик вручную.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!content.trim()}
+                  onClick={() => {
+                    const text = content.trim();
+                    if (!text) {
+                      toast.error("Сначала напишите или сгенерируйте текст поста");
+                      return;
+                    }
+                    const params = new URLSearchParams();
+                    if (imageUrl) params.set("url", imageUrl);
+                    params.set("title", text.slice(0, 4096));
+                    params.set("noparse", "true");
+                    const shareUrl = `https://vk.com/share.php?${params.toString()}`;
+                    // Текст копируем в буфер, чтобы при необходимости вставить вручную
+                    if (navigator.clipboard) {
+                      navigator.clipboard.writeText(text).catch(() => {});
+                    }
+                    window.open(shareUrl, "_blank", "noopener,noreferrer,width=720,height=720");
+                    toast.success("Открыли окно ВК. Текст также скопирован в буфер обмена.");
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Опубликовать на личной странице ВК
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                💡 Картинка подтянется, если она загружена в пост. Если ВК не покажет её в превью — прикрепите вручную в открывшемся окне.
+              </p>
+            </div>
           </CardContent>
         </Card>
 
