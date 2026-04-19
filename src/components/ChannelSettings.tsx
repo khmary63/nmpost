@@ -340,6 +340,21 @@ function VkConnectBlock() {
       </Button>
       <div className="space-y-2">
         <Label className="text-xs">Вставьте ссылку или access_token из VK</Label>
+        <details className="rounded-md border bg-background/60 px-3 py-2 text-xs">
+          <summary className="cursor-pointer font-medium text-foreground">
+            Как получить токен? (пошаговая инструкция)
+          </summary>
+          <ol className="mt-2 space-y-1.5 list-decimal pl-4 text-muted-foreground">
+            <li>Нажмите кнопку <span className="font-medium text-foreground">«Подключить VK»</span> выше — откроется окно авторизации ВКонтакте.</li>
+            <li>Войдите в свой аккаунт ВК (если ещё не вошли) и нажмите <span className="font-medium text-foreground">«Разрешить»</span> — VK запросит доступ к стене, фото и группам.</li>
+            <li>После согласия откроется страница, которая выглядит как пустая или с надписью «Перенаправление». <span className="font-medium text-foreground">Не закрывайте её.</span></li>
+            <li>Скопируйте <span className="font-medium text-foreground">всю ссылку из адресной строки браузера</span> целиком — она начинается с <code className="rounded bg-muted px-1">https://oauth.vk.com/blank.html#access_token=</code> и содержит длинный набор букв и цифр.</li>
+            <li>Вставьте эту ссылку в поле ниже и нажмите <span className="font-medium text-foreground">«Сохранить токен»</span>. Сам access_token извлечётся автоматически.</li>
+          </ol>
+          <p className="mt-2 text-muted-foreground">
+            💡 Если в адресной строке видна только часть <code className="rounded bg-muted px-1">access_token=...</code> — её тоже можно вставить, этого достаточно.
+          </p>
+        </details>
         <Input
           placeholder="https://oauth.vk.com/blank.html#access_token=..."
           value={token}
