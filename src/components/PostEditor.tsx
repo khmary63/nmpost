@@ -705,7 +705,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                       toast.error("Сначала напишите или сгенерируйте текст поста");
                       return;
                     }
-                    // Копируем текст поста в буфер обмена (главное!)
+                    // 1. Копируем текст в буфер
                     let copied = false;
                     try {
                       await navigator.clipboard.writeText(text);
@@ -713,17 +713,32 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                     } catch {
                       copied = false;
                     }
-                    // Если есть картинка — скачиваем её и тоже кладём в буфер как файл,
-                    // плюс открываем новую вкладку с картинкой, чтобы её можно было перетащить в ВК.
+                    // 2. Скачиваем картинку на устройство (без открытия новой вкладки —
+                    //    иначе браузер заблокирует второй window.open)
                     if (imageUrl) {
-                      window.open(imageUrl, "_blank", "noopener,noreferrer");
+                      try {
+                        const resp = await fetch(imageUrl);
+                        const blob = await resp.blob();
+                        const blobUrl = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = blobUrl;
+                        a.download = `post-${Date.now()}.jpg`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                      } catch (err) {
+                        console.error("Не удалось скачать картинку:", err);
+                      }
                     }
-                    // Открываем форму создания записи на личной стене ВК
+                    // 3. Открываем ленту ВК (единственный window.open — не блокируется)
                     window.open("https://vk.com/feed", "_blank", "noopener,noreferrer");
                     toast.success(
                       copied
-                        ? "Текст скопирован в буфер. Откройте свою стену ВК → «Что у вас нового?» → вставьте (Ctrl+V) и прикрепите картинку из соседней вкладки."
-                        : "Открыли ВК. Скопируйте текст поста вручную и вставьте в форму записи."
+                        ? imageUrl
+                          ? "Текст скопирован, картинка скачана. В ленте ВК нажмите «Что у вас нового?», вставьте текст (Ctrl+V) и прикрепите скачанную картинку."
+                          : "Текст скопирован. В ленте ВК нажмите «Что у вас нового?» и вставьте текст (Ctrl+V)."
+                        : "Открыли ВК. Скопируйте текст вручную и вставьте в форму записи."
                     );
                   }}
                 >
@@ -732,7 +747,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                💡 ВК API не позволяет публиковать на личные страницы из сторонних сервисов. Мы скопируем текст в буфер и откроем картинку + ленту ВК — вам останется вставить текст (Ctrl+V) и перетащить картинку в форму «Что у вас нового?».
+                💡 ВК API не разрешает автопубликацию на личные страницы. Мы скопируем текст в буфер, скачаем картинку и откроем ленту ВК — вам останется вставить текст (Ctrl+V) и прикрепить скачанный файл.
               </p>
             </div>
           </CardContent>
