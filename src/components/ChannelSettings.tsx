@@ -7,7 +7,12 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Settings, Save, Loader2, Link2 } from "lucide-react";
+import { Settings, Save, Loader2, Link2, ExternalLink, KeyRound } from "lucide-react";
+
+const VK_CLIENT_ID = "54525496";
+const VK_REDIRECT_URI = "https://oauth.vk.com/blank.html";
+const VK_SCOPE = "photos,wall,groups,offline";
+const VK_OAUTH_URL = `https://oauth.vk.com/authorize?client_id=${VK_CLIENT_ID}&display=page&redirect_uri=${encodeURIComponent(VK_REDIRECT_URI)}&scope=${VK_SCOPE}&response_type=token&v=5.199`;
 
 interface ChannelConfig {
   id?: string;
@@ -195,6 +200,8 @@ export function ChannelSettings() {
                 />
               </div>
 
+              {ch.channel === "vk" && <VkConnectBlock />}
+
               <details className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
                 <summary className="cursor-pointer font-medium text-foreground">
                   ❓ {ch.guide.title}
@@ -238,6 +245,118 @@ export function ChannelSettings() {
           )}
         </Card>
       ))}
+    </div>
+  );
+}
+
+function VkConnectBlock() {
+  const { user } = useAuth();
+  const [token, setToken] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [hasToken, setHasToken] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("channel_settings")
+        .select("channel_chat_id")
+        .eq("user_id", user.id)
+        .eq("channel", "vk_user_token")
+        .maybeSingle();
+      if (data?.channel_chat_id) setHasToken(true);
+    })();
+  }, [user]);
+
+  const parseToken = (input: string): string | null => {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+    const match = trimmed.match(/access_token=([^&\s]+)/);
+    if (match) return match[1];
+    return trimmed;
+  };
+
+  const save = async () => {
+    if (!user) return;
+    const parsed = parseToken(token);
+    if (!parsed) {
+      toast.error("Вставьте access_token или ссылку из адресной строки");
+      return;
+    }
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("channel_settings")
+        .upsert(
+          { user_id: user.id, channel: "vk_user_token", channel_chat_id: parsed, is_active: true },
+          { onConflict: "user_id,channel" }
+        );
+      if (error) throw error;
+      setHasToken(true);
+      setToken("");
+      toast.success("VK подключён — токен сохранён");
+    } catch (e: any) {
+      toast.error(e.message || "Не удалось сохранить токен");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const disconnect = async () => {
+    if (!user) return;
+    await supabase
+      .from("channel_settings")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("channel", "vk_user_token");
+    setHasToken(false);
+    toast.success("VK отключён");
+  };
+
+  return (
+    <div className="rounded-md border p-3 space-y-3 bg-muted/30">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <KeyRound className="h-4 w-4 text-primary" />
+          Подключение VK (для загрузки картинок)
+        </div>
+        {hasToken && (
+          <span className="text-xs rounded-full bg-primary/10 text-primary px-2 py-0.5">
+            ✓ подключено
+          </span>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Без этого токена картинки в ВК не прикрепятся. Нажмите «Подключить VK», авторизуйтесь, скопируйте всю ссылку из адресной строки (она начинается с <code className="rounded bg-muted px-1">https://oauth.vk.com/blank.html#access_token=...</code>) и вставьте ниже.
+      </p>
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={() => window.open(VK_OAUTH_URL, "_blank", "noopener,noreferrer")}
+      >
+        <ExternalLink className="h-4 w-4" />
+        {hasToken ? "Переподключить VK" : "Подключить VK"}
+      </Button>
+      <div className="space-y-2">
+        <Label className="text-xs">Вставьте ссылку или access_token из VK</Label>
+        <Input
+          placeholder="https://oauth.vk.com/blank.html#access_token=..."
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+        />
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" onClick={save} disabled={saving || !token.trim()} className="flex-1 min-w-[140px]">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Сохранить токен
+          </Button>
+          {hasToken && (
+            <Button type="button" variant="ghost" onClick={disconnect}>
+              Отключить
+            </Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
