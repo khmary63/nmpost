@@ -140,7 +140,7 @@ serve(async (req) => {
     if (post.image_url) {
       try {
         if (!VK_USER_TOKEN) {
-          throw new Error("Для загрузки картинок в VK нужен VK_USER_TOKEN (user access token со scope=photos,wall,groups). Добавьте его в секреты.");
+          throw new Error("Для загрузки картинок в VK подключите ваш аккаунт: откройте настройки канала VK и нажмите «Подключить VK».");
         }
         console.log("VK: starting image upload, image_url=", post.image_url);
 
