@@ -45,7 +45,7 @@ serve(async (req) => {
       });
     }
 
-    const CLIENT_ID = "54525496";
+    const CLIENT_ID = "54525610";
     const REDIRECT_URI = "https://oauth.vk.com/blank.html";
 
     const vkUrl = `https://oauth.vk.com/access_token?client_id=${CLIENT_ID}&client_secret=${VK_CLIENT_SECRET}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&code=${code}`;
