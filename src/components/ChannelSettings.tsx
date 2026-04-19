@@ -200,6 +200,8 @@ export function ChannelSettings() {
                 />
               </div>
 
+              {ch.channel === "vk" && <VkConnectBlock />}
+
               <details className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
                 <summary className="cursor-pointer font-medium text-foreground">
                   ❓ {ch.guide.title}
