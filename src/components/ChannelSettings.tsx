@@ -7,7 +7,12 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Settings, Save, Loader2, Link2 } from "lucide-react";
+import { Settings, Save, Loader2, Link2, ExternalLink, KeyRound } from "lucide-react";
+
+const VK_CLIENT_ID = "54525496";
+const VK_REDIRECT_URI = "https://oauth.vk.com/blank.html";
+const VK_SCOPE = "photos,wall,groups,offline";
+const VK_OAUTH_URL = `https://oauth.vk.com/authorize?client_id=${VK_CLIENT_ID}&display=page&redirect_uri=${encodeURIComponent(VK_REDIRECT_URI)}&scope=${VK_SCOPE}&response_type=token&v=5.199`;
 
 interface ChannelConfig {
   id?: string;
