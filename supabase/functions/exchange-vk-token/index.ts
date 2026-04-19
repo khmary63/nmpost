@@ -86,7 +86,7 @@ serve(async (req) => {
       .from("channel_settings")
       .upsert({
         user_id: user.id,
-        channel: "vk_personal",
+        channel: "vk_user_token",
         channel_chat_id: accessToken,
         is_active: true,
       }, { onConflict: "user_id,channel" })
