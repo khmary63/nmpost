@@ -586,8 +586,41 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
             )}
           </CardContent>
         </Card>
+      </div>
 
-        {/* Scheduling - moved to left column */}
+      {/* Sidebar */}
+      <div className="space-y-4">
+        {/* Style picker */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Palette className="h-5 w-5 text-primary" />
+              Стиль оформления
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-2">
+              {POST_STYLES.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setStyle(s.id)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg border p-2 text-left transition-colors",
+                    style === s.id ? "border-primary bg-primary/5" : "hover:bg-muted"
+                  )}
+                >
+                  <span className="text-lg">{s.icon}</span>
+                  <div>
+                    <p className="text-sm font-medium">{s.label}</p>
+                    <p className="text-xs text-muted-foreground">{s.description}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Scheduling */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
