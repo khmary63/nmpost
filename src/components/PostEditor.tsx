@@ -819,13 +819,11 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                         setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
                       } catch (err) { console.error(err); }
                     }
-                    // Студия Дзена — рабочий URL редактора статей.
-                    // Если пользователь не залогинен в Яндексе, Дзен покажет 404 — поэтому
-                    // сначала прогоняем через passport.yandex.ru с retpath на студию.
-                    const dzenUrl = "https://dzen.ru/profile/editor/articles?publisher_create=true";
-                    const loginUrl = `https://passport.yandex.ru/auth?retpath=${encodeURIComponent(dzenUrl)}`;
-                    window.open(loginUrl, "_blank", "noopener,noreferrer");
-                    toast.success(copied ? "Текст скопирован, картинка скачана. Войдите в Яндекс — откроется Студия Дзена. Вставьте текст (Ctrl+V) и загрузите картинку." : "Открыли вход в Яндекс → Студию Дзена.");
+                    // Официальный вход в Студию Дзена по документации.
+                    // Старый deep-link profile/editor/articles у части аккаунтов отдаёт 404.
+                    const dzenStudioUrl = "https://dzen.ru/media/zen/login";
+                    window.open(dzenStudioUrl, "_blank", "noopener,noreferrer");
+                    toast.success(copied ? "Текст скопирован, картинка скачана. Открыли Студию Дзена — нажмите «Написать пост», затем вставьте текст (Ctrl+V) и загрузите картинку." : "Открыли Студию Дзена — нажмите «Написать пост». ");
                   }}
                 >
                   <ExternalLink className="h-4 w-4" />
