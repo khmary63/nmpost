@@ -155,6 +155,8 @@ const channels = [
     accent: "from-rose-500/15 to-rose-500/5",
   },
 ];
+
+export default function Landing() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
