@@ -812,7 +812,17 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                   onClick={async () => {
                     const text = content.trim();
                     if (!text) { toast.error("Сначала напишите или сгенерируйте текст поста"); return; }
-                    const fullText = title.trim() ? `${title.trim()}\n\n${text}` : text;
+                    const stripMd = (s: string) => s
+                      .replace(/\*\*\*(.+?)\*\*\*/g, "$1")
+                      .replace(/\*\*(.+?)\*\*/g, "$1")
+                      .replace(/(?<!\*)\*(?!\s)([^*\n]+?)\*(?!\*)/g, "$1")
+                      .replace(/__(.+?)__/g, "$1")
+                      .replace(/(?<!_)_(?!\s)([^_\n]+?)_(?!_)/g, "$1")
+                      .replace(/`([^`]+)`/g, "$1")
+                      .replace(/^#{1,6}\s+/gm, "");
+                    const cleanTitle = stripMd(title.trim());
+                    const cleanText = stripMd(text);
+                    const fullText = cleanTitle ? `${cleanTitle}\n\n${cleanText}` : cleanText;
                     let copied = false;
                     try { await navigator.clipboard.writeText(fullText); copied = true; } catch { copied = false; }
                     if (imageUrl) {
@@ -863,7 +873,17 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                   onClick={async () => {
                     const text = content.trim();
                     if (!text) { toast.error("Сначала напишите или сгенерируйте текст поста"); return; }
-                    const fullText = title.trim() ? `${title.trim()}\n\n${text}` : text;
+                    const stripMd = (s: string) => s
+                      .replace(/\*\*\*(.+?)\*\*\*/g, "$1")
+                      .replace(/\*\*(.+?)\*\*/g, "$1")
+                      .replace(/(?<!\*)\*(?!\s)([^*\n]+?)\*(?!\*)/g, "$1")
+                      .replace(/__(.+?)__/g, "$1")
+                      .replace(/(?<!_)_(?!\s)([^_\n]+?)_(?!_)/g, "$1")
+                      .replace(/`([^`]+)`/g, "$1")
+                      .replace(/^#{1,6}\s+/gm, "");
+                    const cleanTitle = stripMd(title.trim());
+                    const cleanText = stripMd(text);
+                    const fullText = cleanTitle ? `${cleanTitle}\n\n${cleanText}` : cleanText;
                     let copied = false;
                     try { await navigator.clipboard.writeText(fullText); copied = true; } catch { copied = false; }
                     if (imageUrl) {
