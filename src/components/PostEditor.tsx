@@ -586,6 +586,79 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
             )}
           </CardContent>
         </Card>
+
+        {/* Scheduling — moved to left column for layout balance */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Clock className="h-5 w-5 text-primary" />
+              Отложенный постинг
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="schedule-toggle" className="flex items-center gap-1.5">
+                Запланировать
+                {!subscription.hasFeature("scheduled_posting") && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <Switch
+                id="schedule-toggle"
+                checked={isScheduled}
+                onCheckedChange={(v) => {
+                  if (v && !subscription.hasFeature("scheduled_posting")) {
+                    showUpgrade("Отложенный постинг", "Доступно на тарифах Базовый и Про.");
+                    return;
+                  }
+                  setIsScheduled(v);
+                }}
+              />
+            </div>
+            {isScheduled && (
+              <div className="space-y-3">
+                <div>
+                  <Label>Дата</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !scheduledDate && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {scheduledDate ? format(scheduledDate, "d MMMM yyyy", { locale: ru }) : "Выберите дату"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={scheduledDate}
+                        onSelect={setScheduledDate}
+                        disabled={(date) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          return date < today;
+                        }}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <Label htmlFor="schedule-time">Время</Label>
+                  <Input id="schedule-time" type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} />
+                </div>
+              </div>
+            )}
+            <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+              <p className="mb-1 font-medium text-foreground">Как запланировать несколько постов:</p>
+              <ol className="list-decimal space-y-1 pl-4">
+                <li>Напишите или сгенерируйте текст одного поста.</li>
+                <li>Выберите каналы публикации.</li>
+                <li>Включите переключатель «Запланировать», задайте дату и время.</li>
+                <li>Нажмите <span className="font-medium text-foreground">«Запланировать публикацию»</span> — пост уйдёт в раздел «Мои посты» со статусом «Запланирован».</li>
+                <li>Редактор очистится — повторите шаги 1-4 для следующего поста с другой датой/временем.</li>
+              </ol>
+              <p className="mt-2">Все запланированные посты опубликуются автоматически в указанное время.</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Sidebar */}
