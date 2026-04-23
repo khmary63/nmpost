@@ -809,8 +809,6 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               </div>
             </div>
 
-            {/* Helper для подвала Дзен / VC */}
-            {/* (объявление вынесено выше через IIFE недопустимо в JSX — используем замыкание ниже) */}
             {/* Яндекс Дзен — полуавтомат */}
             <div className="rounded-md border border-dashed p-3 space-y-2">
               <div className="flex items-center justify-between gap-2 flex-wrap">
