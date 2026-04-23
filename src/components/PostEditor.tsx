@@ -865,8 +865,8 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                         setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
                       } catch (err) { console.error(err); }
                     }
-                    window.open("https://vc.ru/write", "_blank", "noopener,noreferrer");
-                    toast.success(copied ? "Текст скопирован, картинка скачана. Вставьте в редакторе VC.ru (Ctrl+V)." : "Открыли редактор VC.ru.");
+                    window.open("https://vc.ru/new", "_blank", "noopener,noreferrer");
+                    toast.success(copied ? "Текст скопирован, картинка скачана. Открыли страницу создания публикации VC.ru — вставьте текст (Ctrl+V)." : "Открыли страницу создания публикации VC.ru.");
                   }}
                 >
                   <ExternalLink className="h-4 w-4" />
