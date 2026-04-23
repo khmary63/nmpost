@@ -33,6 +33,8 @@ const CHANNELS = [
   { id: "telegram", label: "Telegram", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
   { id: "vk", label: "ВК группа", color: "bg-sky-500/10 text-sky-600 border-sky-200" },
   { id: "max", label: "MAX", color: "bg-orange-500/10 text-orange-600 border-orange-200" },
+  { id: "dzen", label: "Яндекс Дзен", color: "bg-yellow-500/10 text-yellow-600 border-yellow-200" },
+  { id: "vcru", label: "VC.ru", color: "bg-purple-500/10 text-purple-600 border-purple-200" },
 ] as const;
 
 interface PostEditorProps {
