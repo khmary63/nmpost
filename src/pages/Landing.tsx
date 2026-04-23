@@ -178,7 +178,6 @@ export default function Landing() {
             </span>
           </div>
           <div className="hidden sm:flex items-center gap-6 text-sm text-muted-foreground">
-          <div className="hidden sm:flex items-center gap-6 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Возможности</a>
             <a href="#channels" className="hover:text-foreground transition-colors">Каналы</a>
             <a href="#pricing" className="hover:text-foreground transition-colors">Тарифы</a>
