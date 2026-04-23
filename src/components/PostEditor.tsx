@@ -98,6 +98,27 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
     setChannels((prev) => prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch]);
   };
 
+  // Подвал «Связаться с менеджером / со мной» для Дзена и VC.ru.
+  // Берём из channel_settings конкретного канала (dzen или vcru).
+  const buildFooter = async (channel: "dzen" | "vcru"): Promise<string> => {
+    if (!includeFooter || !user) return "";
+    try {
+      const { data } = await supabase
+        .from("channel_settings")
+        .select("manager_url, personal_url")
+        .eq("user_id", user.id)
+        .eq("channel", channel)
+        .maybeSingle();
+      const lines: string[] = [];
+      if (data?.manager_url?.trim()) lines.push(`👉 Связаться с менеджером: ${data.manager_url.trim()}`);
+      if (data?.personal_url?.trim()) lines.push(`👉 Связаться со мной: ${data.personal_url.trim()}`);
+      return lines.length ? `\n\n${lines.join("\n")}` : "";
+    } catch {
+      return "";
+    }
+  };
+
+
   const generateContent = async (type: "post" | "content-plan") => {
     if (!aiPrompt.trim()) {
       toast.error("Введите тему или описание для генерации");
@@ -822,7 +843,8 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                       .replace(/^#{1,6}\s+/gm, "");
                     const cleanTitle = stripMd(title.trim());
                     const cleanText = stripMd(text);
-                    const fullText = cleanTitle ? `${cleanTitle}\n\n${cleanText}` : cleanText;
+                    const footer = await buildFooter("dzen");
+                    const fullText = (cleanTitle ? `${cleanTitle}\n\n${cleanText}` : cleanText) + footer;
                     let copied = false;
                     try { await navigator.clipboard.writeText(fullText); copied = true; } catch { copied = false; }
                     if (imageUrl) {
@@ -883,7 +905,8 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                       .replace(/^#{1,6}\s+/gm, "");
                     const cleanTitle = stripMd(title.trim());
                     const cleanText = stripMd(text);
-                    const fullText = cleanTitle ? `${cleanTitle}\n\n${cleanText}` : cleanText;
+                    const footer = await buildFooter("vcru");
+                    const fullText = (cleanTitle ? `${cleanTitle}\n\n${cleanText}` : cleanText) + footer;
                     let copied = false;
                     try { await navigator.clipboard.writeText(fullText); copied = true; } catch { copied = false; }
                     if (imageUrl) {
