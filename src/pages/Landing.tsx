@@ -12,6 +12,10 @@ import {
   CheckCircle2,
   Star,
   MessageSquare,
+  Users,
+  Newspaper,
+  FileText,
+  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
