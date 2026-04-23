@@ -1007,7 +1007,15 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           </Card>
         )}
 
-        {/* Scheduling */}
+        {/* Channels */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              Каналы публикации
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
