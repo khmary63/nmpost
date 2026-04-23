@@ -111,7 +111,50 @@ const reviews = [
   { name: "Мария С.", role: "Контент-маркетолог", text: "Контент-план на месяц за 5 минут. Отложенный постинг работает идеально.", rating: 5 },
 ];
 
-export default function Landing() {
+const channels = [
+  {
+    icon: Send,
+    name: "Telegram",
+    description: "Автопубликация в каналы и чаты через бота. Поддержка картинок и форматирования.",
+    mode: "Авто",
+    accent: "from-sky-500/15 to-sky-500/5",
+  },
+  {
+    icon: Users,
+    name: "ВКонтакте — сообщества",
+    description: "Публикация постов с картинкой в ваши сообщества ВК через токен сообщества.",
+    mode: "Авто",
+    accent: "from-blue-500/15 to-blue-500/5",
+  },
+  {
+    icon: Zap,
+    name: "MAX",
+    description: "Отправка постов в чаты и каналы мессенджера MAX через бота.",
+    mode: "Авто",
+    accent: "from-emerald-500/15 to-emerald-500/5",
+  },
+  {
+    icon: MessageSquare,
+    name: "ВКонтакте — личная страница",
+    description: "ВК запрещает автопостинг на личные страницы — откроем ленту с готовым текстом и картинкой.",
+    mode: "Полуавто",
+    accent: "from-indigo-500/15 to-indigo-500/5",
+  },
+  {
+    icon: Newspaper,
+    name: "Яндекс Дзен",
+    description: "Подготовим текст и обложку, откроем редактор Дзена — опубликуете в пару кликов.",
+    mode: "Полуавто",
+    accent: "from-yellow-500/15 to-yellow-500/5",
+  },
+  {
+    icon: FileText,
+    name: "VC.ru",
+    description: "Скопируем текст в буфер, скачаем картинку и откроем редактор VC.ru — останется вставить.",
+    mode: "Полуавто",
+    accent: "from-rose-500/15 to-rose-500/5",
+  },
+];
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
