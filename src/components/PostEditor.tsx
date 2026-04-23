@@ -586,6 +586,79 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
             )}
           </CardContent>
         </Card>
+
+        {/* Scheduling — moved to left column for layout balance */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Clock className="h-5 w-5 text-primary" />
+              Отложенный постинг
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="schedule-toggle" className="flex items-center gap-1.5">
+                Запланировать
+                {!subscription.hasFeature("scheduled_posting") && <Lock className="h-3 w-3 text-muted-foreground" />}
+              </Label>
+              <Switch
+                id="schedule-toggle"
+                checked={isScheduled}
+                onCheckedChange={(v) => {
+                  if (v && !subscription.hasFeature("scheduled_posting")) {
+                    showUpgrade("Отложенный постинг", "Доступно на тарифах Базовый и Про.");
+                    return;
+                  }
+                  setIsScheduled(v);
+                }}
+              />
+            </div>
+            {isScheduled && (
+              <div className="space-y-3">
+                <div>
+                  <Label>Дата</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !scheduledDate && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {scheduledDate ? format(scheduledDate, "d MMMM yyyy", { locale: ru }) : "Выберите дату"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={scheduledDate}
+                        onSelect={setScheduledDate}
+                        disabled={(date) => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          return date < today;
+                        }}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div>
+                  <Label htmlFor="schedule-time">Время</Label>
+                  <Input id="schedule-time" type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} />
+                </div>
+              </div>
+            )}
+            <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
+              <p className="mb-1 font-medium text-foreground">Как запланировать несколько постов:</p>
+              <ol className="list-decimal space-y-1 pl-4">
+                <li>Напишите или сгенерируйте текст одного поста.</li>
+                <li>Выберите каналы публикации.</li>
+                <li>Включите переключатель «Запланировать», задайте дату и время.</li>
+                <li>Нажмите <span className="font-medium text-foreground">«Запланировать публикацию»</span> — пост уйдёт в раздел «Мои посты» со статусом «Запланирован».</li>
+                <li>Редактор очистится — повторите шаги 1-4 для следующего поста с другой датой/временем.</li>
+              </ol>
+              <p className="mt-2">Все запланированные посты опубликуются автоматически в указанное время.</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Sidebar */}
@@ -638,12 +711,249 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           </CardContent>
         </Card>
 
-        {/* Scheduling */}
+        {/* Channels */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Clock className="h-5 w-5 text-primary" />
-              Отложенный постинг
+              <MessageSquare className="h-5 w-5 text-primary" />
+              Каналы публикации
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Нажмите на нужные каналы, чтобы выделить их — пост опубликуется во всех выбранных. Можно выбрать несколько.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {CHANNELS.map((ch) => (
+                <Badge
+                  key={ch.id}
+                  variant="outline"
+                  className={cn(
+                    "cursor-pointer px-3 py-1.5 text-sm transition-all",
+                    channels.includes(ch.id) ? ch.color + " border-2" : "opacity-50 hover:opacity-80"
+                  )}
+                  onClick={() => toggleChannel(ch.id)}
+                >
+                  {ch.label}
+                </Badge>
+              ))}
+            </div>
+            <div className="flex items-center justify-between rounded-md border p-3">
+              <div className="space-y-0.5 pr-3">
+                <Label htmlFor="footer-toggle" className="text-sm">Прикрепить подвал со ссылками</Label>
+                <p className="text-xs text-muted-foreground">
+                  Ссылки «Связаться с менеджером / со мной» из настроек каналов добавятся в конец поста.
+                </p>
+              </div>
+              <Switch id="footer-toggle" checked={includeFooter} onCheckedChange={setIncludeFooter} />
+            </div>
+
+            {/* Личная страница ВК — полуавтомат */}
+            <div className="rounded-md border border-dashed p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="space-y-0.5 pr-2">
+                  <Label className="text-sm">Личная страница ВК</Label>
+                  <p className="text-xs text-muted-foreground">
+                    ВК запрещает автопубликацию на личные страницы. Откроем ленту ВК с готовым текстом и картинкой — опубликуйте вручную.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!content.trim()}
+                  onClick={async () => {
+                    const text = content.trim();
+                    if (!text) { toast.error("Сначала напишите или сгенерируйте текст поста"); return; }
+                    let copied = false;
+                    try { await navigator.clipboard.writeText(text); copied = true; } catch { copied = false; }
+                    if (imageUrl) {
+                      try {
+                        const resp = await fetch(imageUrl);
+                        const blob = await resp.blob();
+                        const blobUrl = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = blobUrl; a.download = `post-${Date.now()}.jpg`;
+                        document.body.appendChild(a); a.click(); a.remove();
+                        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                      } catch (err) { console.error(err); }
+                    }
+                    window.open("https://vk.com/feed", "_blank", "noopener,noreferrer");
+                    toast.success(copied ? "Текст скопирован, картинка скачана. Вставьте в форму записи ВК (Ctrl+V)." : "Открыли ВК. Скопируйте текст вручную.");
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Подготовить пост для личной страницы ВК
+                </Button>
+              </div>
+            </div>
+
+            {/* Яндекс Дзен — полуавтомат */}
+            <div className="rounded-md border border-dashed p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="space-y-0.5 pr-2">
+                  <Label className="text-sm">Яндекс Дзен</Label>
+                  <p className="text-xs text-muted-foreground">
+                    У Дзена нет публичного API для авторов. Подготовим текст и картинку — опубликуете в редакторе Дзена.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!content.trim()}
+                  onClick={async () => {
+                    const text = content.trim();
+                    if (!text) { toast.error("Сначала напишите или сгенерируйте текст поста"); return; }
+                    const fullText = title.trim() ? `${title.trim()}\n\n${text}` : text;
+                    let copied = false;
+                    try { await navigator.clipboard.writeText(fullText); copied = true; } catch { copied = false; }
+                    if (imageUrl) {
+                      try {
+                        const resp = await fetch(imageUrl);
+                        const blob = await resp.blob();
+                        const blobUrl = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = blobUrl; a.download = `dzen-post-${Date.now()}.jpg`;
+                        document.body.appendChild(a); a.click(); a.remove();
+                        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                      } catch (err) { console.error(err); }
+                    }
+                    window.open("https://dzen.ru/profile/editor", "_blank", "noopener,noreferrer");
+                    toast.success(copied ? "Текст скопирован, картинка скачана. Вставьте в редакторе Дзена (Ctrl+V)." : "Открыли редактор Дзена.");
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Подготовить пост для Дзена
+                </Button>
+              </div>
+            </div>
+
+            {/* VC.ru — полуавтомат */}
+            <div className="rounded-md border border-dashed p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="space-y-0.5 pr-2">
+                  <Label className="text-sm">VC.ru</Label>
+                  <p className="text-xs text-muted-foreground">
+                    У VC.ru нет публичного API. Подготовим текст и картинку — опубликуете в редакторе VC.ru.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!content.trim()}
+                  onClick={async () => {
+                    const text = content.trim();
+                    if (!text) { toast.error("Сначала напишите или сгенерируйте текст поста"); return; }
+                    const fullText = title.trim() ? `${title.trim()}\n\n${text}` : text;
+                    let copied = false;
+                    try { await navigator.clipboard.writeText(fullText); copied = true; } catch { copied = false; }
+                    if (imageUrl) {
+                      try {
+                        const resp = await fetch(imageUrl);
+                        const blob = await resp.blob();
+                        const blobUrl = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = blobUrl; a.download = `vcru-post-${Date.now()}.jpg`;
+                        document.body.appendChild(a); a.click(); a.remove();
+                        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                      } catch (err) { console.error(err); }
+                    }
+                    window.open("https://vc.ru/write", "_blank", "noopener,noreferrer");
+                    toast.success(copied ? "Текст скопирован, картинка скачана. Вставьте в редакторе VC.ru (Ctrl+V)." : "Открыли редактор VC.ru.");
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Подготовить пост для VC.ru
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Preview */}
+        {content && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Превью</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className={cn(
+                "rounded-lg border p-4 text-sm",
+                style === "bold" && "bg-primary/5 font-semibold",
+                style === "elegant" && "bg-accent/30 font-serif italic",
+                style === "creative" && "bg-gradient-to-br from-primary/5 to-accent/10",
+              )}>
+                {title && <p className="mb-2 font-bold">{title}</p>}
+                <p className="whitespace-pre-wrap">{content.slice(0, 300)}{content.length > 300 && "..."}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Actions */}
+        <div className="flex flex-col gap-2">
+          {isScheduled ? (
+            <Button onClick={() => savePost("scheduled")} disabled={isSaving} className="w-full">
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarIcon className="h-4 w-4" />}
+              Запланировать публикацию
+            </Button>
+          ) : (
+            <Button onClick={() => savePost("published")} disabled={isSaving} className="w-full">
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Опубликовать
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => savePost("draft")} disabled={isSaving} className="w-full">
+            <Save className="h-4 w-4" />
+            Сохранить черновик
+          </Button>
+        </div>
+
+        {/* Publish result panel */}
+        {publishResult && (publishResult.errors.length > 0 || publishResult.successes.length > 0) && (
+          <Card className="border-dashed">
+            <CardContent className="p-3 space-y-2">
+              {publishResult.successes.length > 0 && (
+                <div className="space-y-1">
+                  {publishResult.successes.map((s, i) => (
+                    <p key={i} className="text-sm text-green-600 flex items-start gap-1.5">
+                      <span className="shrink-0 mt-0.5">✅</span>
+                      <span className="break-all">{s}</span>
+                    </p>
+                  ))}
+                </div>
+              )}
+              {publishResult.errors.length > 0 && (
+                <div className="space-y-1">
+                  {publishResult.errors.map((e, i) => (
+                    <p key={i} className="text-sm text-destructive flex items-start gap-1.5">
+                      <span className="shrink-0 mt-0.5">❌</span>
+                      <span className="break-all">{e}</span>
+                    </p>
+                  ))}
+                </div>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground"
+                onClick={() => setPublishResult(null)}
+              >
+                Скрыть
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+      <UpgradeModal
+        open={upgradeModal.open}
+        onOpenChange={(o) => setUpgradeModal((s) => ({ ...s, open: o }))}
+        feature={upgradeModal.feature}
+        currentPlan={subscription.plan}
+        reason={upgradeModal.reason}
+      />
+    </div>
+  );
+}
