@@ -819,8 +819,13 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                         setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
                       } catch (err) { console.error(err); }
                     }
-                    window.open("https://dzen.ru/profile/editor", "_blank", "noopener,noreferrer");
-                    toast.success(copied ? "Текст скопирован, картинка скачана. Вставьте в редакторе Дзена (Ctrl+V)." : "Открыли редактор Дзена.");
+                    // Студия Дзена — рабочий URL редактора статей.
+                    // Если пользователь не залогинен в Яндексе, Дзен покажет 404 — поэтому
+                    // сначала прогоняем через passport.yandex.ru с retpath на студию.
+                    const dzenUrl = "https://dzen.ru/profile/editor/articles?publisher_create=true";
+                    const loginUrl = `https://passport.yandex.ru/auth?retpath=${encodeURIComponent(dzenUrl)}`;
+                    window.open(loginUrl, "_blank", "noopener,noreferrer");
+                    toast.success(copied ? "Текст скопирован, картинка скачана. Войдите в Яндекс — откроется Студия Дзена. Вставьте текст (Ctrl+V) и загрузите картинку." : "Открыли вход в Яндекс → Студию Дзена.");
                   }}
                 >
                   <ExternalLink className="h-4 w-4" />
