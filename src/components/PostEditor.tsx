@@ -845,7 +845,8 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                       .replace(/^#{1,6}\s+/gm, "");
                     const cleanTitle = stripMd(title.trim());
                     const cleanText = stripMd(text);
-                    const fullText = cleanTitle ? `${cleanTitle}\n\n${cleanText}` : cleanText;
+                    const footer = await buildFooter("dzen");
+                    const fullText = (cleanTitle ? `${cleanTitle}\n\n${cleanText}` : cleanText) + footer;
                     let copied = false;
                     try { await navigator.clipboard.writeText(fullText); copied = true; } catch { copied = false; }
                     if (imageUrl) {
