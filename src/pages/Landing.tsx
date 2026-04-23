@@ -259,6 +259,68 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Channels */}
+      <section id="channels" className="bg-muted/30 py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-sm text-muted-foreground">
+              <Send className="h-3.5 w-3.5 text-primary" />
+              Каналы публикации
+            </div>
+            <h2 className="font-display text-3xl font-bold text-foreground sm:text-4xl">
+              Размещайте посты в 6 каналах
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Один пост — много площадок. Авто-публикация там, где это разрешено API,
+              и удобный полуавтомат для остальных.
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {channels.map((ch) => (
+              <div
+                key={ch.name}
+                className={`group relative overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5`}
+              >
+                <div
+                  className={`pointer-events-none absolute inset-0 -z-10 bg-gradient-to-br ${ch.accent} opacity-60`}
+                />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-background/80 text-primary ring-1 ring-border">
+                    <ch.icon className="h-5 w-5" />
+                  </div>
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                      ch.mode === "Авто"
+                        ? "bg-primary/10 text-primary"
+                        : "bg-foreground/5 text-muted-foreground"
+                    }`}
+                  >
+                    {ch.mode}
+                  </span>
+                </div>
+                <h3 className="mt-4 font-display text-lg font-semibold text-foreground">
+                  {ch.name}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  {ch.description}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+            <Button size="lg" className="h-12 px-8 text-base w-full sm:w-auto" onClick={() => navigate("/signup")}>
+              Подключить каналы
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Авто — Telegram, ВК-сообщества, MAX. Полуавто — личная страница ВК, Дзен, VC.ru.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* Features */}
       <section id="features" className="py-24">
         <div className="mx-auto max-w-6xl px-6">
