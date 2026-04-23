@@ -794,8 +794,15 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 <div className="space-y-0.5 pr-2">
                   <Label className="text-sm">Яндекс Дзен</Label>
                   <p className="text-xs text-muted-foreground">
-                    У Дзена нет публичного API для авторов. Подготовим текст и картинку — опубликуете в редакторе Дзена.
+                    У Дзена нет публичного API для авторов. Мы скопируем текст в буфер и скачаем картинку — публикация делается вручную.
                   </p>
+                  <ol className="text-xs text-muted-foreground list-decimal pl-4 space-y-0.5 pt-1">
+                    <li>Нажмите кнопку — откроется Студия Дзена (войдите в свой Яндекс-аккаунт).</li>
+                    <li>В Студии нажмите «Написать» → «Статья» (или «Пост»).</li>
+                    <li>Вставьте заголовок и текст из буфера (Ctrl+V / Cmd+V).</li>
+                    <li>Загрузите скачанную картинку как обложку.</li>
+                    <li>Нажмите «Опубликовать» — пост появится на канале после модерации Дзена.</li>
+                  </ol>
                 </div>
                 <Button
                   type="button"
@@ -838,8 +845,15 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 <div className="space-y-0.5 pr-2">
                   <Label className="text-sm">VC.ru</Label>
                   <p className="text-xs text-muted-foreground">
-                    У VC.ru нет публичного API. Подготовим текст и картинку — опубликуете в редакторе VC.ru.
+                    У VC.ru нет публичного API. Мы скопируем текст в буфер и скачаем картинку — публикация делается вручную.
                   </p>
+                  <ol className="text-xs text-muted-foreground list-decimal pl-4 space-y-0.5 pt-1">
+                    <li>Нажмите кнопку — откроется страница создания публикации VC.ru (войдите в аккаунт).</li>
+                    <li>Выберите подсайт (личный блог или сообщество, где публикуете).</li>
+                    <li>Вставьте заголовок и текст из буфера (Ctrl+V / Cmd+V).</li>
+                    <li>Перетащите скачанную картинку в тело публикации или в обложку.</li>
+                    <li>Нажмите «Опубликовать» — материал появится в ленте подсайта.</li>
+                  </ol>
                 </div>
                 <Button
                   type="button"
