@@ -750,6 +750,69 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 💡 ВК API не разрешает автопубликацию на личные страницы. Мы скопируем текст в буфер, скачаем картинку и откроем ленту ВК — вам останется вставить текст (Ctrl+V) и прикрепить скачанный файл.
               </p>
             </div>
+
+            {/* Яндекс Дзен — полуавтомат */}
+            <div className="rounded-md border border-dashed p-3 space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="space-y-0.5 pr-2">
+                  <Label className="text-sm">Яндекс Дзен</Label>
+                  <p className="text-xs text-muted-foreground">
+                    У Дзена нет публичного API для автопостинга обычным авторам. Подготовим текст и картинку — опубликуете в редакторе Дзена в пару кликов.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={!content.trim()}
+                  onClick={async () => {
+                    const text = content.trim();
+                    if (!text) {
+                      toast.error("Сначала напишите или сгенерируйте текст поста");
+                      return;
+                    }
+                    const fullText = title.trim() ? `${title.trim()}\n\n${text}` : text;
+                    let copied = false;
+                    try {
+                      await navigator.clipboard.writeText(fullText);
+                      copied = true;
+                    } catch {
+                      copied = false;
+                    }
+                    if (imageUrl) {
+                      try {
+                        const resp = await fetch(imageUrl);
+                        const blob = await resp.blob();
+                        const blobUrl = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = blobUrl;
+                        a.download = `dzen-post-${Date.now()}.jpg`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+                      } catch (err) {
+                        console.error("Не удалось скачать картинку:", err);
+                      }
+                    }
+                    window.open("https://dzen.ru/profile/editor", "_blank", "noopener,noreferrer");
+                    toast.success(
+                      copied
+                        ? imageUrl
+                          ? "Текст скопирован, картинка скачана. В редакторе Дзена вставьте текст (Ctrl+V) и загрузите картинку как обложку."
+                          : "Текст скопирован. В редакторе Дзена вставьте текст (Ctrl+V)."
+                        : "Открыли редактор Дзена. Скопируйте текст вручную."
+                    );
+                  }}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Подготовить пост для Дзена
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                💡 Откроем редактор Дзена, скопируем текст в буфер и скачаем картинку — вам останется вставить текст (Ctrl+V) и прикрепить файл как обложку статьи.
+              </p>
+            </div>
           </CardContent>
         </Card>
 
