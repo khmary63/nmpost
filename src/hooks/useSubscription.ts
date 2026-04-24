@@ -48,7 +48,7 @@ export const PLAN_LABELS: Record<PlanTier, string> = {
 export type FeatureKey = "posts" | "ai_text" | "ai_image" | "content_plan" | "scheduled_posting" | "all_styles";
 
 export function useSubscription() {
-  const { user, role } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
   const isAdmin = role === "admin";
   const [plan, setPlan] = useState<PlanTier>("free");
   const [usage, setUsage] = useState<UsageCounts>({
@@ -60,8 +60,12 @@ export function useSubscription() {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
+    if (authLoading) return;
+
     if (!user) {
       setPlan("free");
+      setUsage({ posts_count: 0, ai_text_count: 0, ai_image_count: 0, content_plan_count: 0 });
+      setDetails({ auto_renew: false, current_period_end: null, cancelled_at: null, has_rebill: false });
       setLoading(false);
       return;
     }
@@ -98,11 +102,13 @@ export function useSubscription() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [authLoading, user]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    if (!authLoading) {
+      void refresh();
+    }
+  }, [authLoading, refresh]);
 
   const limits = isAdmin ? ADMIN_LIMITS : PLAN_LIMITS[plan];
 
