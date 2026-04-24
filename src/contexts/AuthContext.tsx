@@ -28,50 +28,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [roleLoading, setRoleLoading] = useState(false);
   const authSyncId = useRef(0);
+  const currentUserIdRef = useRef<string | null>(null);
 
   const loadUserMeta = async (uid: string): Promise<AppRole | null> => {
     const { data: roles, error } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", uid)
-      .limit(1);
+      .eq("user_id", uid);
     if (error) {
       console.error("[auth] loadUserMeta error", error);
-      setRole(null);
       return null;
     }
-    if (roles && roles.length > 0) {
-      return roles[0].role as AppRole;
-    }
+    const availableRoles = (roles ?? []).map((entry) => entry.role as AppRole);
+    if (availableRoles.includes("admin")) return "admin";
+    if (availableRoles.includes("manager")) return "manager";
+    if (availableRoles.includes("agent")) return "agent";
     return null;
   };
 
   useEffect(() => {
-    let lastUserId: string | null = null;
-
     const applySession = (nextSession: Session | null) => {
+      currentUserIdRef.current = nextSession?.user?.id ?? null;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
     };
 
-    const fetchRole = async (uid: string) => {
-      const syncId = ++authSyncId.current;
-      setRoleLoading(true);
-      const nextRole = await loadUserMeta(uid);
-      if (syncId !== authSyncId.current) return;
-      setRole(nextRole);
-      setRoleLoading(false);
-    };
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      const nextUserId = nextSession?.user?.id ?? null;
+      const userChanged = nextUserId !== currentUserIdRef.current;
       applySession(nextSession);
-      const uid = nextSession?.user?.id ?? null;
-      // Загружаем роль только когда сменился пользователь, а не на каждый refresh токена
-      if (uid && uid !== lastUserId) {
-        lastUserId = uid;
-        void fetchRole(uid);
-      } else if (!uid) {
-        lastUserId = null;
+      if (nextUserId) {
+        authSyncId.current += 1;
+        if (userChanged) setRole(null);
+        setRoleLoading(true);
+      } else {
         authSyncId.current += 1;
         setRole(null);
         setRoleLoading(false);
@@ -81,12 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void supabase.auth.getSession().then(({ data: { session } }) => {
       applySession(session);
       if (session?.user) {
-        const uid = session.user.id;
-        if (uid !== lastUserId) {
-          lastUserId = uid;
-          void fetchRole(uid);
-        }
+        setRoleLoading(true);
       } else {
+        setRole(null);
         setRoleLoading(false);
       }
       setLoading(false);
@@ -94,6 +81,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (!user?.id) {
+      authSyncId.current += 1;
+      setRole(null);
+      setRoleLoading(false);
+      return;
+    }
+
+    const syncId = ++authSyncId.current;
+    setRoleLoading(true);
+
+    void loadUserMeta(user.id)
+      .then((nextRole) => {
+        if (syncId !== authSyncId.current) return;
+        setRole(nextRole);
+      })
+      .finally(() => {
+        if (syncId !== authSyncId.current) return;
+        setRoleLoading(false);
+      });
+  }, [loading, user?.id, session?.access_token]);
 
   const signUp = async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({
