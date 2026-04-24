@@ -27,13 +27,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
 
   const loadUserMeta = async (uid: string) => {
-    const { data: roles } = await supabase
+    const { data: roles, error } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", uid)
       .limit(1);
+    if (error) {
+      console.error("[auth] loadUserMeta error", error);
+      return;
+    }
     if (roles && roles.length > 0) {
       setRole(roles[0].role as AppRole);
+    } else {
+      setRole(null);
     }
   };
 
