@@ -47,64 +47,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    const triggerRoleLoad = (uid: string | null) => {
+      const syncId = ++authSyncId.current;
+      if (!uid) {
+        setRole(null);
+        setRoleLoading(false);
+        return;
+      }
+      setRoleLoading(true);
+      void loadUserMeta(uid)
+        .then((nextRole) => {
+          if (syncId !== authSyncId.current) return;
+          setRole(nextRole);
+        })
+        .finally(() => {
+          if (syncId !== authSyncId.current) return;
+          setRoleLoading(false);
+        });
+    };
+
     const applySession = (nextSession: Session | null) => {
-      currentUserIdRef.current = nextSession?.user?.id ?? null;
+      const nextUserId = nextSession?.user?.id ?? null;
+      const userChanged = nextUserId !== currentUserIdRef.current;
+      currentUserIdRef.current = nextUserId;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+      // Перезапрашиваем роль только если реально сменился пользователь
+      // или если её ещё нет — это убирает гонку на custom-домене,
+      // когда onAuthStateChange срабатывает несколько раз подряд при refresh-токене.
+      if (userChanged) {
+        setRole(null);
+        triggerRoleLoad(nextUserId);
+      } else if (nextUserId && role === null && !roleLoading) {
+        triggerRoleLoad(nextUserId);
+      }
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      const nextUserId = nextSession?.user?.id ?? null;
-      const userChanged = nextUserId !== currentUserIdRef.current;
       applySession(nextSession);
-      if (nextUserId) {
-        authSyncId.current += 1;
-        if (userChanged) setRole(null);
-        setRoleLoading(true);
-      } else {
-        authSyncId.current += 1;
-        setRole(null);
-        setRoleLoading(false);
-      }
     });
 
     void supabase.auth.getSession().then(({ data: { session } }) => {
       applySession(session);
-      if (session?.user) {
-        setRoleLoading(true);
-      } else {
-        setRole(null);
-        setRoleLoading(false);
-      }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  useEffect(() => {
-    if (loading) return;
-
-    if (!user?.id) {
-      authSyncId.current += 1;
-      setRole(null);
-      setRoleLoading(false);
-      return;
-    }
-
-    const syncId = ++authSyncId.current;
-    setRoleLoading(true);
-
-    void loadUserMeta(user.id)
-      .then((nextRole) => {
-        if (syncId !== authSyncId.current) return;
-        setRole(nextRole);
-      })
-      .finally(() => {
-        if (syncId !== authSyncId.current) return;
-        setRoleLoading(false);
-      });
-  }, [loading, user?.id, session?.access_token]);
 
   const signUp = async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({
@@ -128,20 +118,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     authSyncId.current += 1;
+    currentUserIdRef.current = null;
     setSession(null);
     setUser(null);
     setRole(null);
     setRoleLoading(false);
     setLoading(false);
+    // ВАЖНО: глобальный signOut, чтобы инвалидировать refresh-токен на сервере.
+    // Иначе при следующем входе через Google сохраняется «зомби»-сессия,
+    // и SDK тратит лишние секунды на обновление токена на custom-домене.
     try {
-      void supabase.auth.signOut({ scope: "local" } as any).catch((e) => {
-        console.error("[auth] signOut error", e);
-      });
+      await supabase.auth.signOut();
     } catch (e) {
       console.error("[auth] signOut error", e);
     }
-    // Принудительно чистим всё локальное состояние и storage,
-    // даже если refresh-токен уже невалидный на сервере.
     try {
       Object.keys(localStorage)
         .filter((k) => k.startsWith("sb-") || k.includes("supabase"))
