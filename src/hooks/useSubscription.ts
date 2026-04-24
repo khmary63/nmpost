@@ -48,7 +48,7 @@ export const PLAN_LABELS: Record<PlanTier, string> = {
 export type FeatureKey = "posts" | "ai_text" | "ai_image" | "content_plan" | "scheduled_posting" | "all_styles";
 
 export function useSubscription() {
-  const { user, role, loading: authLoading } = useAuth();
+  const { user, role, session, loading: authLoading } = useAuth();
   const isAdmin = role === "admin";
   const [plan, setPlan] = useState<PlanTier>("free");
   const [usage, setUsage] = useState<UsageCounts>({
@@ -69,6 +69,9 @@ export function useSubscription() {
       setLoading(false);
       return;
     }
+
+    if (!session?.access_token) return;
+
     setLoading(true);
     try {
       const [{ data: planData }, { data: usageData }, { data: subRow }] = await Promise.all([
@@ -102,13 +105,13 @@ export function useSubscription() {
     } finally {
       setLoading(false);
     }
-  }, [authLoading, user]);
+  }, [authLoading, user, session?.access_token]);
 
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && session?.access_token) {
       void refresh();
     }
-  }, [authLoading, refresh]);
+  }, [authLoading, session?.access_token, refresh]);
 
   const limits = isAdmin ? ADMIN_LIMITS : PLAN_LIMITS[plan];
 
