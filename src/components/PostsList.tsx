@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Trash2, FileEdit } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 import type { EditingPost } from "@/pages/Dashboard";
 
 interface Post {
@@ -37,6 +38,7 @@ interface PostsListProps {
 }
 
 export function PostsList({ onEdit }: PostsListProps) {
+  const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,7 +52,11 @@ export function PostsList({ onEdit }: PostsListProps) {
     setLoading(false);
   };
 
-  useEffect(() => { fetchPosts(); }, []);
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+    fetchPosts();
+  }, [user?.id]);
 
   const deletePost = async (id: string) => {
     const { error } = await supabase.from("posts").delete().eq("id", id);
