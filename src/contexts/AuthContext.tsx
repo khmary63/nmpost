@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
@@ -25,8 +25,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<AppRole | null>(null);
+  const authSyncId = useRef(0);
 
-  const loadUserMeta = async (uid: string) => {
+  const loadUserMeta = async (uid: string): Promise<AppRole | null> => {
     const { data: roles, error } = await supabase
       .from("user_roles")
       .select("role")
@@ -34,35 +35,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .limit(1);
     if (error) {
       console.error("[auth] loadUserMeta error", error);
-      return;
+      setRole(null);
+      return null;
     }
     if (roles && roles.length > 0) {
-      setRole(roles[0].role as AppRole);
-    } else {
-      setRole(null);
+      return roles[0].role as AppRole;
     }
+    return null;
   };
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        setTimeout(() => loadUserMeta(session.user.id), 0);
-      } else {
+    const syncAuthState = async (nextSession: Session | null) => {
+      const syncId = ++authSyncId.current;
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (!nextSession?.user) {
         setRole(null);
+        setLoading(false);
+        return;
       }
+
+      const nextRole = await loadUserMeta(nextSession.user.id);
+      if (syncId !== authSyncId.current) return;
+
+      setRole(nextRole);
       setLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      void syncAuthState(nextSession);
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadUserMeta(session.user.id);
-      }
-      setLoading(false);
-    });
+    void supabase.auth.getSession().then(({ data: { session } }) => syncAuthState(session));
 
     return () => subscription.unsubscribe();
   }, []);
