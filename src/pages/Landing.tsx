@@ -157,12 +157,17 @@ const channels = [
 ];
 
 export default function Landing() {
-  const { user, loading } = useAuth();
+  const { user, session, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user) navigate("/dashboard", { replace: true });
-  }, [user, loading, navigate]);
+    // Редиректим только когда сессия полностью готова (есть access_token).
+    // На custom-домене после OAuth user может появиться раньше токена —
+    // тогда переход в /dashboard ловит RLS-запросы без авторизации.
+    if (!loading && user && session?.access_token) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, session?.access_token, loading, navigate]);
 
   return (
     <div className="flex min-h-screen flex-col bg-background">

@@ -12,12 +12,12 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const { user, loading: authLoading, signIn, signInWithGoogle } = useAuth();
+  const { user, session, loading: authLoading, signIn, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!authLoading && user) navigate("/dashboard", { replace: true });
-  }, [user, authLoading, navigate]);
+    if (!authLoading && user && session?.access_token) navigate("/dashboard", { replace: true });
+  }, [user, session?.access_token, authLoading, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
