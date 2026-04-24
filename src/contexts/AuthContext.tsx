@@ -27,13 +27,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
 
   const loadUserMeta = async (uid: string) => {
-    const { data: roles } = await supabase
+    const { data: roles, error } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", uid)
       .limit(1);
+    if (error) {
+      console.error("[auth] loadUserMeta error", error);
+      return;
+    }
     if (roles && roles.length > 0) {
       setRole(roles[0].role as AppRole);
+    } else {
+      setRole(null);
     }
   };
 
@@ -82,7 +88,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut({ scope: "local" } as any);
+    } catch (e) {
+      console.error("[auth] signOut error", e);
+    }
+    // Принудительно чистим всё локальное состояние и storage,
+    // даже если refresh-токен уже невалидный на сервере.
+    try {
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith("sb-") || k.includes("supabase"))
+        .forEach((k) => localStorage.removeItem(k));
+    } catch {}
+    setSession(null);
+    setUser(null);
     setRole(null);
   };
 
