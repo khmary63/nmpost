@@ -135,13 +135,18 @@ const DEFAULT_CHANNELS: ChannelConfig[] = [
 ];
 
 export function ChannelSettings() {
-  const { user } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const [channels, setChannels] = useState<ChannelConfig[]>(DEFAULT_CHANNELS);
   const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) return;
+    if (authLoading) return;
+    if (!user || !session?.access_token) {
+      setChannels(DEFAULT_CHANNELS);
+      setLoading(false);
+      return;
+    }
     (async () => {
       const { data } = await supabase
         .from("channel_settings")
@@ -168,7 +173,7 @@ export function ChannelSettings() {
       }
       setLoading(false);
     })();
-  }, [user]);
+  }, [user?.id, session?.access_token, authLoading]);
 
   const updateChannel = (channel: string, field: keyof ChannelConfig, value: any) => {
     setChannels((prev) => prev.map((ch) => ch.channel === channel ? { ...ch, [field]: value } : ch));
@@ -292,13 +297,13 @@ export function ChannelSettings() {
 }
 
 function VkConnectBlock() {
-  const { user } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const [code, setCode] = useState("");
   const [saving, setSaving] = useState(false);
   const [hasToken, setHasToken] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (authLoading || !user || !session?.access_token) return;
     (async () => {
       const { data } = await supabase
         .from("channel_settings")
@@ -308,7 +313,7 @@ function VkConnectBlock() {
         .maybeSingle();
       if (data?.channel_chat_id) setHasToken(true);
     })();
-  }, [user]);
+  }, [user?.id, session?.access_token, authLoading]);
 
   const parseCode = (input: string): string | null => {
     const trimmed = input.trim();

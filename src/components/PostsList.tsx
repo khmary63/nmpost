@@ -38,7 +38,7 @@ interface PostsListProps {
 }
 
 export function PostsList({ onEdit }: PostsListProps) {
-  const { user } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,6 +46,7 @@ export function PostsList({ onEdit }: PostsListProps) {
     const { data, error } = await supabase
       .from("posts")
       .select("*")
+      .eq("user_id", user!.id)
       .order("created_at", { ascending: false })
       .limit(50);
     if (!error && data) setPosts(data as Post[]);
@@ -53,10 +54,15 @@ export function PostsList({ onEdit }: PostsListProps) {
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (authLoading) return;
+    if (!user || !session?.access_token) {
+      setPosts([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     fetchPosts();
-  }, [user?.id]);
+  }, [user?.id, session?.access_token, authLoading]);
 
   const deletePost = async (id: string) => {
     const { error } = await supabase.from("posts").delete().eq("id", id);
