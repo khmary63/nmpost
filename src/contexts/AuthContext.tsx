@@ -32,6 +32,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const didInitRef = useRef(false);
   const roleRef = useRef<AppRole | null>(null);
   const roleLoadingRef = useRef(false);
+  const sessionRecoveryRef = useRef<string | null>(null);
+
+  const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
 
   const setRoleState = (nextRole: AppRole | null) => {
     roleRef.current = nextRole;
@@ -65,6 +68,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    const recoverSession = async (expectedUserId: string | null) => {
+      if (!expectedUserId || sessionRecoveryRef.current === expectedUserId) return;
+
+      sessionRecoveryRef.current = expectedUserId;
+      const retryDelays = [250, 500, 1000, 1500, 2500];
+
+      try {
+        for (let attempt = 0; attempt < retryDelays.length; attempt += 1) {
+          if (currentUserIdRef.current !== expectedUserId) return;
+
+          const sessionResult = attempt === 0
+            ? await supabase.auth.getSession()
+            : await supabase.auth.refreshSession();
+
+          const recoveredSession = sessionResult.data.session;
+          if (recoveredSession?.access_token && recoveredSession.user?.id === expectedUserId) {
+            setSession(recoveredSession);
+            setUser(recoveredSession.user);
+            setLoading(true);
+            setRoleState(null);
+            setRoleLoadingState(true);
+            const nextRole = await loadUserMeta(expectedUserId);
+            if (currentUserIdRef.current !== expectedUserId) return;
+            setRoleState(nextRole);
+            setRoleLoadingState(false);
+            setLoading(false);
+            return;
+          }
+
+          await wait(retryDelays[attempt]);
+        }
+
+        if (currentUserIdRef.current === expectedUserId) {
+          setSession(null);
+          setUser(null);
+          setRoleState(null);
+          setRoleLoadingState(false);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("[auth] session recovery error", error);
+        if (currentUserIdRef.current === expectedUserId) {
+          setRoleLoadingState(false);
+          setLoading(false);
+        }
+      } finally {
+        if (sessionRecoveryRef.current === expectedUserId) {
+          sessionRecoveryRef.current = null;
+        }
+      }
+    };
+
     const triggerRoleLoad = async (uid: string | null) => {
       const syncId = ++authSyncId.current;
       if (!uid) {
@@ -96,6 +151,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!nextSession?.access_token) {
         setRoleState(null);
         setRoleLoadingState(false);
+        if (nextUserId) {
+          setLoading(true);
+          void recoverSession(nextUserId);
+          return;
+        }
         if (didInitRef.current) {
           setLoading(false);
         }
