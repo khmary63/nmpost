@@ -45,29 +45,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const syncAuthState = async (nextSession: Session | null) => {
-      const syncId = ++authSyncId.current;
+    let lastUserId: string | null = null;
+
+    const applySession = (nextSession: Session | null) => {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+    };
 
-      if (!nextSession?.user) {
-        setRole(null);
-        setLoading(false);
-        return;
-      }
-
-      const nextRole = await loadUserMeta(nextSession.user.id);
+    const fetchRole = async (uid: string) => {
+      const syncId = ++authSyncId.current;
+      const nextRole = await loadUserMeta(uid);
       if (syncId !== authSyncId.current) return;
-
       setRole(nextRole);
-      setLoading(false);
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      void syncAuthState(nextSession);
+      applySession(nextSession);
+      const uid = nextSession?.user?.id ?? null;
+      // Загружаем роль только когда сменился пользователь, а не на каждый refresh токена
+      if (uid && uid !== lastUserId) {
+        lastUserId = uid;
+        void fetchRole(uid);
+      } else if (!uid) {
+        lastUserId = null;
+        setRole(null);
+      }
     });
 
-    void supabase.auth.getSession().then(({ data: { session } }) => syncAuthState(session));
+    void supabase.auth.getSession().then(async ({ data: { session } }) => {
+      applySession(session);
+      if (session?.user) {
+        lastUserId = session.user.id;
+        await fetchRole(session.user.id);
+      }
+      setLoading(false);
+    });
 
     return () => subscription.unsubscribe();
   }, []);
