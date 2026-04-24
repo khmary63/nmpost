@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roleLoading, setRoleLoading] = useState(false);
   const authSyncId = useRef(0);
   const currentUserIdRef = useRef<string | null>(null);
+  const didInitRef = useRef(false);
 
   const loadUserMeta = async (uid: string): Promise<AppRole | null> => {
     const { data: roles, error } = await supabase
@@ -47,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    const triggerRoleLoad = (uid: string | null) => {
+    const triggerRoleLoad = async (uid: string | null) => {
       const syncId = ++authSyncId.current;
       if (!uid) {
         setRole(null);
@@ -55,15 +56,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       setRoleLoading(true);
-      void loadUserMeta(uid)
-        .then((nextRole) => {
-          if (syncId !== authSyncId.current) return;
-          setRole(nextRole);
-        })
-        .finally(() => {
-          if (syncId !== authSyncId.current) return;
-          setRoleLoading(false);
-        });
+      try {
+        const nextRole = await loadUserMeta(uid);
+        if (syncId !== authSyncId.current) return;
+        setRole(nextRole);
+      } finally {
+        if (syncId !== authSyncId.current) return;
+        setRoleLoading(false);
+        if (didInitRef.current) {
+          setLoading(false);
+        }
+      }
     };
 
     const applySession = (nextSession: Session | null) => {
@@ -72,14 +75,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       currentUserIdRef.current = nextUserId;
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
+      if (!nextSession?.access_token) {
+        setRole(null);
+        setRoleLoading(false);
+        if (didInitRef.current) {
+          setLoading(false);
+        }
+        return;
+      }
       // Перезапрашиваем роль только если реально сменился пользователь
       // или если её ещё нет — это убирает гонку на custom-домене,
       // когда onAuthStateChange срабатывает несколько раз подряд при refresh-токене.
       if (userChanged) {
         setRole(null);
-        triggerRoleLoad(nextUserId);
+        void triggerRoleLoad(nextUserId);
       } else if (nextUserId && role === null && !roleLoading) {
-        triggerRoleLoad(nextUserId);
+        void triggerRoleLoad(nextUserId);
+      } else if (didInitRef.current) {
+        setLoading(false);
       }
     };
 
@@ -88,8 +101,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     void supabase.auth.getSession().then(({ data: { session } }) => {
+      didInitRef.current = true;
       applySession(session);
-      setLoading(false);
+      if (!session?.access_token) {
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -117,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    didInitRef.current = true;
     authSyncId.current += 1;
     currentUserIdRef.current = null;
     setSession(null);
