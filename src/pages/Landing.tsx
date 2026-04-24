@@ -160,6 +160,15 @@ export default function Landing() {
   const { user, session, loading } = useAuth();
   const navigate = useNavigate();
 
+  // Обнаруживаем возврат с OAuth-редиректа: в URL есть либо hash-токены
+  // (#access_token=...), либо ?code=... от PKCE-потока. В этом случае
+  // нельзя показывать лендинг — SDK ещё обменивает код на сессию.
+  const hasOAuthReturn =
+    typeof window !== "undefined" &&
+    (window.location.hash.includes("access_token") ||
+      window.location.hash.includes("refresh_token") ||
+      new URLSearchParams(window.location.search).has("code"));
+
   useEffect(() => {
     // Редиректим только когда сессия полностью готова (есть access_token).
     // На custom-домене после OAuth user может появиться раньше токена —
@@ -168,6 +177,16 @@ export default function Landing() {
       navigate("/dashboard", { replace: true });
     }
   }, [user, session?.access_token, loading, navigate]);
+
+  // Пока AuthContext восстанавливает сессию (или мы вернулись с OAuth),
+  // показываем спиннер вместо мигания лендинга.
+  if (loading || hasOAuthReturn || (user && session?.access_token)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
