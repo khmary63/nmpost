@@ -10,6 +10,7 @@ type AuthContextType = {
   session: Session | null;
   loading: boolean;
   role: AppRole | null;
+  roleLoading: boolean;
   signUp: (email: string, password: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<void>;
@@ -25,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [roleLoading, setRoleLoading] = useState(false);
   const authSyncId = useRef(0);
 
   const loadUserMeta = async (uid: string): Promise<AppRole | null> => {
@@ -54,9 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const fetchRole = async (uid: string) => {
       const syncId = ++authSyncId.current;
+      setRoleLoading(true);
       const nextRole = await loadUserMeta(uid);
       if (syncId !== authSyncId.current) return;
       setRole(nextRole);
+      setRoleLoading(false);
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
@@ -68,15 +72,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         void fetchRole(uid);
       } else if (!uid) {
         lastUserId = null;
+        authSyncId.current += 1;
         setRole(null);
+        setRoleLoading(false);
       }
     });
 
-    void supabase.auth.getSession().then(async ({ data: { session } }) => {
+    void supabase.auth.getSession().then(({ data: { session } }) => {
       applySession(session);
       if (session?.user) {
-        lastUserId = session.user.id;
-        await fetchRole(session.user.id);
+        const uid = session.user.id;
+        if (uid !== lastUserId) {
+          lastUserId = uid;
+          void fetchRole(uid);
+        }
+      } else {
+        setRoleLoading(false);
       }
       setLoading(false);
     });
@@ -105,8 +116,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    authSyncId.current += 1;
+    setSession(null);
+    setUser(null);
+    setRole(null);
+    setRoleLoading(false);
+    setLoading(false);
     try {
-      await supabase.auth.signOut({ scope: "local" } as any);
+      void supabase.auth.signOut({ scope: "local" } as any).catch((e) => {
+        console.error("[auth] signOut error", e);
+      });
     } catch (e) {
       console.error("[auth] signOut error", e);
     }
@@ -117,9 +136,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .filter((k) => k.startsWith("sb-") || k.includes("supabase"))
         .forEach((k) => localStorage.removeItem(k));
     } catch {}
-    setSession(null);
-    setUser(null);
-    setRole(null);
   };
 
   const resetPassword = async (email: string) => {
@@ -135,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, role, signUp, signIn, signInWithGoogle, signOut, resetPassword, updatePassword }}>
+    <AuthContext.Provider value={{ user, session, loading, role, roleLoading, signUp, signIn, signInWithGoogle, signOut, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );

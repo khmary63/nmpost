@@ -55,18 +55,18 @@ const SETTINGS: { key: SettingKey; title: string; description: string; icon: Rea
 ];
 
 export default function AdminAIModels() {
-  const { role, loading: authLoading } = useAuth();
+  const { role, loading: authLoading, roleLoading } = useAuth();
   const navigate = useNavigate();
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && role !== "admin") {
+    if (!authLoading && !roleLoading && role !== "admin") {
       toast.error("Доступ только для администраторов");
       navigate("/dashboard");
     }
-  }, [role, authLoading, navigate]);
+  }, [role, authLoading, roleLoading, navigate]);
 
   const load = async () => {
     setLoading(true);
@@ -100,7 +100,7 @@ export default function AdminAIModels() {
     toast.success("Модель обновлена");
   };
 
-  if (authLoading || role !== "admin") {
+  if (authLoading || roleLoading || role !== "admin") {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center py-20">

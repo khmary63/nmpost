@@ -36,18 +36,18 @@ const PLAN_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
 };
 
 export default function AdminUsers() {
-  const { role, loading: authLoading } = useAuth();
+  const { role, loading: authLoading, roleLoading } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    if (!authLoading && role !== "admin") {
+    if (!authLoading && !roleLoading && role !== "admin") {
       toast.error("Доступ только для администраторов");
       navigate("/dashboard");
     }
-  }, [role, authLoading, navigate]);
+  }, [role, authLoading, roleLoading, navigate]);
 
   const load = async () => {
     setLoading(true);
@@ -104,7 +104,7 @@ export default function AdminUsers() {
     toast.success("Excel-файл выгружен");
   };
 
-  if (authLoading || role !== "admin") {
+  if (authLoading || roleLoading || role !== "admin") {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center py-20">
