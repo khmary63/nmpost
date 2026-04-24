@@ -366,6 +366,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: undefined
       }
+      ensure_current_user_initialized: { Args: never; Returns: Json }
       get_ai_model: {
         Args: { _default: string; _key: string }
         Returns: string

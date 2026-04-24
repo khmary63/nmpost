@@ -30,8 +30,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const authSyncId = useRef(0);
   const currentUserIdRef = useRef<string | null>(null);
   const didInitRef = useRef(false);
+  const roleRef = useRef<AppRole | null>(null);
+  const roleLoadingRef = useRef(false);
+
+  const setRoleState = (nextRole: AppRole | null) => {
+    roleRef.current = nextRole;
+    setRole(nextRole);
+  };
+
+  const setRoleLoadingState = (nextValue: boolean) => {
+    roleLoadingRef.current = nextValue;
+    setRoleLoading(nextValue);
+  };
 
   const loadUserMeta = async (uid: string): Promise<AppRole | null> => {
+    const { error: ensureError } = await supabase.rpc("ensure_current_user_initialized");
+    if (ensureError) {
+      console.error("[auth] ensure_current_user_initialized error", ensureError);
+    }
+
     const { data: roles, error } = await supabase
       .from("user_roles")
       .select("role")
@@ -51,18 +68,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const triggerRoleLoad = async (uid: string | null) => {
       const syncId = ++authSyncId.current;
       if (!uid) {
-        setRole(null);
-        setRoleLoading(false);
+        setRoleState(null);
+        setRoleLoadingState(false);
         return;
       }
-      setRoleLoading(true);
+      setLoading(true);
+      setRoleLoadingState(true);
       try {
         const nextRole = await loadUserMeta(uid);
         if (syncId !== authSyncId.current) return;
-        setRole(nextRole);
+        setRoleState(nextRole);
       } finally {
         if (syncId !== authSyncId.current) return;
-        setRoleLoading(false);
+        setRoleLoadingState(false);
         if (didInitRef.current) {
           setLoading(false);
         }
@@ -76,8 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(nextSession);
       setUser(nextSession?.user ?? null);
       if (!nextSession?.access_token) {
-        setRole(null);
-        setRoleLoading(false);
+        setRoleState(null);
+        setRoleLoadingState(false);
         if (didInitRef.current) {
           setLoading(false);
         }
@@ -87,9 +105,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // или если её ещё нет — это убирает гонку на custom-домене,
       // когда onAuthStateChange срабатывает несколько раз подряд при refresh-токене.
       if (userChanged) {
-        setRole(null);
+        setLoading(true);
+        setRoleState(null);
         void triggerRoleLoad(nextUserId);
-      } else if (nextUserId && role === null && !roleLoading) {
+      } else if (nextUserId && roleRef.current === null && !roleLoadingRef.current) {
+        setLoading(true);
         void triggerRoleLoad(nextUserId);
       } else if (didInitRef.current) {
         setLoading(false);
@@ -138,8 +158,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     currentUserIdRef.current = null;
     setSession(null);
     setUser(null);
-    setRole(null);
-    setRoleLoading(false);
+    setRoleState(null);
+    setRoleLoadingState(false);
     setLoading(false);
     // ВАЖНО: глобальный signOut, чтобы инвалидировать refresh-токен на сервере.
     // Иначе при следующем входе через Google сохраняется «зомби»-сессия,
