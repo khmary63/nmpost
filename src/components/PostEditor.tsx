@@ -374,6 +374,9 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
             publishErrors.push(`ВК группа: ${vkResult?.error || vkError?.message || "Неизвестная ошибка"}`);
           } else {
             publishSuccesses.push(vkResult?.post_url ? `ВК группа ✓ ${vkResult.post_url}` : "ВК группа ✓");
+            if (vkResult?.image_warning) {
+              publishErrors.push(`ВК картинка: ${vkResult.image_warning}`);
+            }
             toast.success("Пост опубликован в группу ВК!");
           }
         }
