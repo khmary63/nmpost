@@ -203,7 +203,10 @@ serve(async (req) => {
           throw new Error("saveWallPhoto не вернул фото");
         }
       } catch (imgErr) {
-        const msg = imgErr instanceof Error ? imgErr.message : String(imgErr);
+        const rawMessage = imgErr instanceof Error ? imgErr.message : String(imgErr);
+        const msg = /access_token has expired/i.test(rawMessage)
+          ? "Срок действия VK-токена для загрузки фото истёк. Откройте настройки канала VK и нажмите «Переподключить VK»."
+          : rawMessage;
         console.error("VK image upload failed:", msg);
         imageWarning = msg;
       }

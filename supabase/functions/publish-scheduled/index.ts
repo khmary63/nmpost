@@ -95,9 +95,19 @@ async function publishTelegram(post: any, ch: ChannelSetting): Promise<{ ok: boo
   return { ok: true };
 }
 
-async function publishVk(post: any, ch: ChannelSetting): Promise<{ ok: boolean; error?: string }> {
+async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<{ ok: boolean; error?: string }> {
   const VK_TOKEN = Deno.env.get("VK_COMMUNITY_TOKEN")?.replace(/^access_token=/, "").split("&")[0].trim();
-  const VK_USER_TOKEN = Deno.env.get("VK_USER_TOKEN")?.replace(/^access_token=/, "").split("&")[0].trim();
+  const { data: vkUserTokenRow } = await supabase
+    .from("channel_settings")
+    .select("channel_chat_id")
+    .eq("user_id", post.user_id)
+    .eq("channel", "vk_user_token")
+    .eq("is_active", true)
+    .maybeSingle();
+  const VK_USER_TOKEN = (vkUserTokenRow?.channel_chat_id || Deno.env.get("VK_USER_TOKEN") || "")
+    .replace(/^access_token=/, "")
+    .split("&")[0]
+    .trim();
   if (!VK_TOKEN) return { ok: false, error: "VK_COMMUNITY_TOKEN missing" };
 
   let message = "";
@@ -155,7 +165,12 @@ async function publishVk(post: any, ch: ChannelSetting): Promise<{ ok: boolean; 
       const photo = saveData.response?.[0];
       if (photo) attachments = `photo${photo.owner_id}_${photo.id}`;
     } catch (e) {
-      console.error("vk image upload failed:", e);
+      const rawMessage = e instanceof Error ? e.message : String(e);
+      const errorMessage = /access_token has expired/i.test(rawMessage)
+        ? "vk image: срок действия VK-токена для загрузки фото истёк, нужно переподключить VK"
+        : `vk image: ${rawMessage}`;
+      console.error("vk image upload failed:", errorMessage);
+      return { ok: false, error: errorMessage };
     }
   }
 
@@ -204,8 +219,11 @@ async function publishMax(post: any, ch: ChannelSetting): Promise<{ ok: boolean;
       const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
       const fd = new FormData();
       fd.append("data", new Blob([await imgResp.arrayBuffer()], { type: ct }), `photo.${ext}`);
-      const upJson = await (await fetch(uploadUrl, { method: "POST", body: fd })).json();
-      const token = upJson.token || upJson.photos?.photo?.token || Object.values(upJson.photos || {})[0]?.token;
+      const upJson = await (await fetch(uploadUrl, { method: "POST", body: fd })).json() as Record<string, any>;
+      const photoEntries = upJson.photos && typeof upJson.photos === "object"
+        ? Object.values(upJson.photos as Record<string, any>)
+        : [];
+      const token = upJson.token || upJson.photos?.photo?.token || photoEntries[0]?.token;
       if (!token) throw new Error("no token");
       body.attachments = [{ type: "image", payload: { token } }];
     } catch (e) {
@@ -290,7 +308,7 @@ serve(async (req) => {
       try {
         let r: { ok: boolean; error?: string };
         if (channel === "telegram") r = await publishTelegram(post, ch);
-        else if (channel === "vk") r = await publishVk(post, ch);
+        else if (channel === "vk") r = await publishVk(supabase, post, ch);
         else if (channel === "max") r = await publishMax(post, ch);
         else r = { ok: false, error: `unknown channel ${channel}` };
         channelResults[channel] = r;
