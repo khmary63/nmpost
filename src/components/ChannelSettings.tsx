@@ -375,7 +375,7 @@ function VkConnectBlock() {
         )}
       </div>
       <p className="text-xs text-muted-foreground">
-        Используется Authorization Code Flow с <span className="font-medium text-foreground">offline</span>-доступом. Если VK отзовёт доступ или токен протухнет на своей стороне, просто нажмите «Переподключить VK».
+        Используется Authorization Code Flow с обменом через server-side. Если VK отзовёт доступ или токен протухнет, просто нажмите «Переподключить VK».
       </p>
       <Button
         type="button"
