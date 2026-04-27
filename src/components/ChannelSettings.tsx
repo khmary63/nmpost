@@ -11,7 +11,7 @@ import { Settings, Save, Loader2, Link2, ExternalLink, KeyRound } from "lucide-r
 
 const VK_CLIENT_ID = "54525610";
 const VK_REDIRECT_URI = "https://oauth.vk.com/blank.html";
-const VK_SCOPE = "wall,photos,groups,offline";
+const VK_SCOPE = "wall,photos,groups";
 const VK_OAUTH_URL = `https://oauth.vk.com/authorize?client_id=${VK_CLIENT_ID}&display=page&redirect_uri=${encodeURIComponent(VK_REDIRECT_URI)}&scope=${VK_SCOPE}&response_type=code&v=5.199`;
 
 interface ChannelConfig {
@@ -375,7 +375,7 @@ function VkConnectBlock() {
         )}
       </div>
       <p className="text-xs text-muted-foreground">
-        Используется Authorization Code Flow с <span className="font-medium text-foreground">offline</span>-доступом. Если VK отзовёт доступ или токен протухнет на своей стороне, просто нажмите «Переподключить VK».
+        Используется Authorization Code Flow с обменом через server-side. Если VK отзовёт доступ или токен протухнет, просто нажмите «Переподключить VK».
       </p>
       <Button
         type="button"
