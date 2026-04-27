@@ -945,7 +945,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               <div className={cn(
                 "rounded-lg border p-4 text-sm",
                 style === "bold" && "bg-primary/5 font-semibold",
-                style === "elegant" && "bg-accent/30 font-serif italic",
+                style === "elegant" && "bg-accent/30 font-serif",
                 style === "creative" && "bg-gradient-to-br from-primary/5 to-accent/10",
               )}>
                 {title && <p className="mb-2 font-bold">{title}</p>}
