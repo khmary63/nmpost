@@ -105,15 +105,17 @@ serve(async (req) => {
       .filter((c: any) => typeof c?.peer?.id === "number" && c.peer.id >= 2_000_000_000)
       .map((c: any) => {
         const peerType = c?.peer?.type;
+        const membersCount = c?.chat_settings?.members_count ?? null;
         const isChannel = peerType === "channel" || c?.chat_settings?.is_channel === true;
         return {
           peer_id: c.peer.id,
           title: c.chat_settings?.title || `Диалог ${c.peer.id}`,
-          members_count: c.chat_settings?.members_count ?? null,
+          members_count: membersCount,
           is_channel: isChannel,
           peer_type: peerType ?? null,
         };
-      });
+      })
+      .filter((c: any) => c.members_count === null || c.members_count > 1);
 
     return new Response(JSON.stringify({ ok: true, channels }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

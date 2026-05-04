@@ -23,7 +23,7 @@ type ChannelSetting = {
   vk_duplicate_to_channel?: boolean | null;
 };
 
-async function inspectVkPeer(accessToken: string, groupId: number, peerId: number): Promise<void> {
+async function inspectVkPeer(accessToken: string, groupId: number, peerId: number): Promise<any | null> {
   try {
     const url = new URL("https://api.vk.com/method/messages.getConversationsById");
     url.search = new URLSearchParams({
@@ -34,8 +34,10 @@ async function inspectVkPeer(accessToken: string, groupId: number, peerId: numbe
     }).toString();
     const data = await (await fetch(url.toString())).json();
     console.log("VK peer inspect:", JSON.stringify(data).slice(0, 1500));
+    return data;
   } catch (e) {
     console.warn("VK peer inspect failed:", e);
+    return null;
   }
 }
 
@@ -208,7 +210,11 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
       if (!/^\d+$/.test(rawPeerId) || peerId < 2_000_000_000) {
         throw new Error("Указан не канал сообщества VK, а обычный чат. Загрузите список каналов заново и выберите настоящий канал сообщества.");
       }
-      await inspectVkPeer(VK_TOKEN, groupId, peerId);
+      const peerInfo = await inspectVkPeer(VK_TOKEN, groupId, peerId);
+      const membersCount = peerInfo?.response?.items?.[0]?.chat_settings?.members_count;
+      if (typeof membersCount === "number" && membersCount <= 1) {
+        throw new Error("Выбрана служебная беседа VK без участников. Выберите беседу, где есть минимум 2 участника.");
+      }
 
       let channelAttachment = "";
       if (post.image_url) {
