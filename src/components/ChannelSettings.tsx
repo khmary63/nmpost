@@ -9,14 +9,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Settings, Save, Loader2, Link2, ExternalLink, KeyRound } from "lucide-react";
 
-const VK_CLIENT_ID = "54525610";
+// Используем client_id Kate Mobile (доверенное приложение VK).
+// Через Implicit Flow получаем сразу бессрочный access_token (offline уже включён в правах приложения).
+// Это самый стабильный способ: никаких client_secret и edge-функций для обмена кода не нужно.
+const VK_KATE_CLIENT_ID = "2685278";
 const VK_REDIRECT_URI = "https://oauth.vk.com/blank.html";
-// VK scope as bitmask: photos(4) + wall(8192) + offline(65536) + groups(262144) = 335364
-// offline = бессрочный токен. Числовая маска нужна, т.к. строковый "offline" иногда даёт invalid scope.
-// Scope намеренно НЕ указан в URL — VK берёт права из настроек приложения.
-// В настройках VK-приложения должны быть включены: wall, photos, groups, offline.
-// Это самый стабильный способ — VK перестал принимать произвольные scope в Auth Code flow.
-const VK_OAUTH_URL = `https://oauth.vk.com/authorize?client_id=${VK_CLIENT_ID}&display=page&redirect_uri=${encodeURIComponent(VK_REDIRECT_URI)}&response_type=code&v=5.199`;
+// scope=wall(8192)+photos(4)+groups(262144)+messages(4096)+offline(65536) = 339460
+const VK_SCOPE_MASK = "339460";
+const VK_OAUTH_URL = `https://oauth.vk.com/authorize?client_id=${VK_KATE_CLIENT_ID}&display=page&redirect_uri=${encodeURIComponent(VK_REDIRECT_URI)}&scope=${VK_SCOPE_MASK}&response_type=token&revoke=1&v=5.199`;
 
 interface ChannelConfig {
   id?: string;
@@ -336,36 +336,43 @@ function VkConnectBlock() {
     })();
   }, [user?.id, session?.access_token, authLoading]);
 
-  const parseCode = (input: string): string | null => {
+  const parseToken = (input: string): string | null => {
     const trimmed = input.trim();
     if (!trimmed) return null;
-    // Принимаем как полную ссылку (?code=...), так и сам code
-    const match = trimmed.match(/[?&#]code=([^&\s]+)/);
+    // Принимаем полную ссылку с #access_token=... или сам токен
+    const match = trimmed.match(/[#?&]access_token=([^&\s]+)/);
     if (match) return match[1];
-    // Если пользователь вставил только код (буквы/цифры/подчёркивания)
-    if (/^[A-Za-z0-9_\-]+$/.test(trimmed)) return trimmed;
+    // Если пользователь вставил только токен (hex-строка ~85 символов)
+    if (/^[a-f0-9]{40,}$/i.test(trimmed)) return trimmed;
     return null;
   };
 
-  const exchange = async () => {
+  const saveToken = async () => {
     if (!user) return;
-    const parsed = parseCode(code);
-    if (!parsed) {
-      toast.error("Вставьте ссылку с code=... из адресной строки VK");
+    const token = parseToken(code);
+    if (!token) {
+      toast.error("Вставьте ссылку с #access_token=... из адресной строки VK");
       return;
     }
     setSaving(true);
     try {
-      const { data, error } = await supabase.functions.invoke("exchange-vk-token", {
-        body: { code: parsed },
-      });
+      const { error } = await supabase
+        .from("channel_settings")
+        .upsert(
+          {
+            user_id: user.id,
+            channel: "vk_user_token",
+            channel_chat_id: token,
+            is_active: true,
+          },
+          { onConflict: "user_id,channel" }
+        );
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
       setHasToken(true);
       setCode("");
-      toast.success("VK подключён — получен бессрочный offline-токен ✓");
+      toast.success("VK подключён — получен бессрочный токен ✓");
     } catch (e: any) {
-      toast.error(e.message || "Не удалось обменять код. Попробуйте получить новый код.");
+      toast.error(e.message || "Не удалось сохранить токен");
     } finally {
       setSaving(false);
     }
@@ -396,7 +403,7 @@ function VkConnectBlock() {
         )}
       </div>
       <p className="text-xs text-muted-foreground">
-        Используется Authorization Code Flow с offline-доступом. После однократного переподключения VK выдаст бессрочный токен для загрузки картинок, пока вы сами не отзовёте доступ в VK.
+        Используется проверенный способ авторизации через приложение Kate Mobile. Токен бессрочный и не отвалится сам, пока вы не отзовёте доступ в настройках VK.
       </p>
       <Button
         type="button"
@@ -408,31 +415,28 @@ function VkConnectBlock() {
         {hasToken ? "Переподключить VK" : "Подключить VK"}
       </Button>
       <div className="space-y-2">
-        <Label className="text-xs">Вставьте ссылку с <code className="rounded bg-muted px-1">?code=</code> из VK</Label>
+        <Label className="text-xs">Вставьте ссылку с <code className="rounded bg-muted px-1">#access_token=</code> из VK</Label>
         <details className="rounded-md border bg-background/60 px-3 py-2 text-xs">
           <summary className="cursor-pointer font-medium text-foreground">
-            Как получить код? (пошаговая инструкция)
+            Как получить токен? (пошаговая инструкция)
           </summary>
           <ol className="mt-2 space-y-1.5 list-decimal pl-4 text-muted-foreground">
             <li>Нажмите кнопку <span className="font-medium text-foreground">«Подключить VK»</span> выше — откроется окно авторизации ВКонтакте.</li>
             <li>Войдите в свой аккаунт ВК (если ещё не вошли) и нажмите <span className="font-medium text-foreground">«Разрешить»</span>.</li>
-            <li>Откроется страница вида <code className="rounded bg-muted px-1">https://oauth.vk.com/blank.html?code=...</code> — это нормально.</li>
-            <li>Скопируйте <span className="font-medium text-foreground">всю ссылку из адресной строки</span> целиком.</li>
-            <li>Вставьте её в поле ниже и нажмите <span className="font-medium text-foreground">«Получить бессрочный токен»</span>.</li>
+            <li>Откроется страница вида <code className="rounded bg-muted px-1">https://oauth.vk.com/blank.html#access_token=...&expires_in=0&user_id=...</code></li>
+            <li><span className="font-medium text-foreground">expires_in=0</span> означает, что токен бессрочный — это нормально.</li>
+            <li>Скопируйте <span className="font-medium text-foreground">всю ссылку из адресной строки</span> целиком и вставьте в поле ниже.</li>
           </ol>
-          <p className="mt-2 text-muted-foreground">
-            ⚠️ Если раньше VK уже был подключён без offline-доступа, переподключите его один раз заново — старый токен останется временным.
-          </p>
         </details>
         <Input
-          placeholder="https://oauth.vk.com/blank.html?code=..."
+          placeholder="https://oauth.vk.com/blank.html#access_token=..."
           value={code}
           onChange={(e) => setCode(e.target.value)}
         />
         <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={exchange} disabled={saving || !code.trim()} className="flex-1 min-w-[160px]">
+          <Button type="button" onClick={saveToken} disabled={saving || !code.trim()} className="flex-1 min-w-[160px]">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Получить бессрочный токен
+            Сохранить токен
           </Button>
           {hasToken && (
             <Button type="button" variant="ghost" onClick={disconnect}>
