@@ -21,6 +21,8 @@ interface ChannelConfig {
   manager_url: string;
   personal_url: string;
   is_active: boolean;
+  vk_channel_id?: string;
+  vk_duplicate_to_channel?: boolean;
   label: string;
   placeholder: string;
   hint: string;
