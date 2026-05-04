@@ -68,6 +68,21 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string; reason?: string }>({
     open: false, feature: "",
   });
+  const [toneSample, setToneSample] = useState<string>("");
+  const [useToneOfVoice, setUseToneOfVoice] = useState(false);
+
+  // Подгружаем образец «Мой стиль письма» из профиля
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("tone_of_voice_sample")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setToneSample(((data as any)?.tone_of_voice_sample || "").trim());
+      });
+  }, [user]);
 
   const showUpgrade = (feature: string, reason?: string) =>
     setUpgradeModal({ open: true, feature, reason });
