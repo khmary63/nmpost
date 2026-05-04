@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { User, Lock, Mail, Shield, CreditCard, RotateCw, XCircle } from "lucide-react";
+import { User, Lock, Mail, Shield, CreditCard, RotateCw, XCircle, Mic } from "lucide-react";
 import { useSubscription, PLAN_LABELS } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
@@ -24,6 +25,38 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const [renewLoading, setRenewLoading] = useState(false);
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
+  const [toneSample, setToneSample] = useState("");
+  const [toneLoading, setToneLoading] = useState(false);
+  const [toneSaving, setToneSaving] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    setToneLoading(true);
+    supabase
+      .from("profiles")
+      .select("tone_of_voice_sample")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setToneSample((data as any)?.tone_of_voice_sample || "");
+        setToneLoading(false);
+      });
+  }, [user]);
+
+  const handleSaveTone = async () => {
+    if (!user) return;
+    setToneSaving(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ tone_of_voice_sample: toneSample.trim() || null } as any)
+      .eq("user_id", user.id);
+    setToneSaving(false);
+    if (error) {
+      toast({ title: "Ошибка", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Сохранено", description: "Образец вашего стиля письма обновлён" });
+    }
+  };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -200,6 +233,39 @@ export default function Profile() {
                 </Button>
               </Link>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Mic className="h-5 w-5" /> Мой стиль письма (Tone of Voice)
+            </CardTitle>
+            <CardDescription>
+              Вставьте пример своего поста, написанного лично вами. AI будет использовать
+              его как ориентир для лексики, интонации и манеры подачи при генерации.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="tone-sample">Пример вашего поста</Label>
+              <Textarea
+                id="tone-sample"
+                placeholder="Например: «Сегодня хочу рассказать про одну штуку, которая меня недавно зацепила. Знаете, бывает такое — листаешь ленту, и вдруг…»"
+                className="min-h-[180px] resize-y"
+                maxLength={4000}
+                value={toneSample}
+                onChange={(e) => setToneSample(e.target.value)}
+                disabled={toneLoading}
+              />
+              <p className="text-xs text-muted-foreground">
+                {toneSample.length} / 4000 символов. Чем длиннее и характернее текст — тем точнее AI поймает ваш стиль.
+                Применение включается переключателем в редакторе поста.
+              </p>
+            </div>
+            <Button onClick={handleSaveTone} disabled={toneSaving || toneLoading} className="w-full sm:w-auto">
+              {toneSaving ? "Сохранение…" : "Сохранить образец"}
+            </Button>
           </CardContent>
         </Card>
 

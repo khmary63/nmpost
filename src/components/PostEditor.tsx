@@ -68,6 +68,21 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string; reason?: string }>({
     open: false, feature: "",
   });
+  const [toneSample, setToneSample] = useState<string>("");
+  const [useToneOfVoice, setUseToneOfVoice] = useState(false);
+
+  // Подгружаем образец «Мой стиль письма» из профиля
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("profiles")
+      .select("tone_of_voice_sample")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setToneSample(((data as any)?.tone_of_voice_sample || "").trim());
+      });
+  }, [user]);
 
   const showUpgrade = (feature: string, reason?: string) =>
     setUpgradeModal({ open: true, feature, reason });
@@ -147,6 +162,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           prompt: aiPrompt,
           style,
           type,
+          ...(useToneOfVoice && toneSample ? { toneSample } : {}),
           ...(type === "content-plan" && { postsCount: planPostsCount, periodDays }),
         },
       });
@@ -723,6 +739,31 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               Оформить текст в этом стиле
             </Button>
+
+            {/* Tone of Voice toggle */}
+            <div className="mt-3 rounded-md border p-3 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="space-y-0.5 pr-2">
+                  <Label htmlFor="tov-toggle" className="text-sm">Использовать мой стиль письма</Label>
+                  <p className="text-xs text-muted-foreground">
+                    AI подстроится под лексику и интонацию из вашего образца в профиле.
+                  </p>
+                </div>
+                <Switch
+                  id="tov-toggle"
+                  checked={useToneOfVoice}
+                  disabled={!toneSample}
+                  onCheckedChange={setUseToneOfVoice}
+                />
+              </div>
+              {!toneSample && (
+                <p className="text-xs text-muted-foreground">
+                  Образец не задан. Добавьте его в{" "}
+                  <a href="/profile" className="text-primary underline underline-offset-2">личном кабинете</a>.
+                </p>
+              )}
+            </div>
+
             <div className="mt-3 rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
               <p className="mb-1 font-medium text-foreground">Как это работает:</p>
               <p className="mb-1">
