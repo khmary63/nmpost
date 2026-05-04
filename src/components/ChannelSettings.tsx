@@ -257,6 +257,15 @@ export function ChannelSettings() {
 
               {ch.channel === "vk" && <VkConnectBlock />}
 
+              {ch.channel === "vk" && (
+                <VkChannelBlock
+                  channelId={ch.vk_channel_id || ""}
+                  duplicate={!!ch.vk_duplicate_to_channel}
+                  onChannelIdChange={(v) => updateChannel(ch.channel, "vk_channel_id", v)}
+                  onDuplicateChange={(v) => updateChannel(ch.channel, "vk_duplicate_to_channel", v)}
+                />
+              )}
+
               <details className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
                 <summary className="cursor-pointer font-medium text-foreground">
                   ❓ {ch.guide.title}
