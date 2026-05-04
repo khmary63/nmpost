@@ -252,7 +252,101 @@ serve(async (req) => {
 
     console.log("VK post published:", { postId, vk_post_id: postIdFromVk, postUrl, ownerId });
 
-    return new Response(JSON.stringify({ ok: true, post_id: postIdFromVk, post_url: postUrl, image_warning: imageWarning }), {
+    // ===== Duplicate to community channel (VK Messenger Channels) =====
+    let channelWarning: string | null = null;
+    let channelMessageId: number | null = null;
+    if (channelSetting.vk_duplicate_to_channel && channelSetting.vk_channel_id) {
+      try {
+        const peerId = Number.parseInt(String(channelSetting.vk_channel_id).replace(/[^\d-]/g, ""), 10);
+        if (!Number.isFinite(peerId) || peerId === 0) {
+          throw new Error("Некорректный ID канала ВК");
+        }
+
+        // Build channel attachments — re-upload photo via messages upload server (different endpoint than wall)
+        let channelAttachments = "";
+        if (post.image_url) {
+          try {
+            // photos.getMessagesUploadServer accepts community token (no user token needed for community-as-sender)
+            const upUrl = new URL("https://api.vk.com/method/photos.getMessagesUploadServer");
+            upUrl.search = new URLSearchParams({
+              peer_id: String(peerId),
+              access_token: VK_TOKEN,
+              v: "5.199",
+            }).toString();
+            const upResp = await fetch(upUrl.toString());
+            const upData = await upResp.json();
+            if (upData.error) throw new Error(`getMessagesUploadServer: ${upData.error.error_msg}`);
+            const uploadUrl = upData.response?.upload_url as string;
+            if (!uploadUrl) throw new Error("VK не вернул upload_url для канала");
+
+            const imgResp = await fetch(post.image_url, {
+              headers: { "User-Agent": "Mozilla/5.0 (compatible; LovableBot/1.0)" },
+            });
+            if (!imgResp.ok) throw new Error(`HTTP ${imgResp.status} при скачивании картинки`);
+            const ct = imgResp.headers.get("content-type") || "image/jpeg";
+            const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
+            const buf = await imgResp.arrayBuffer();
+            const fd = new FormData();
+            fd.append("photo", new Blob([buf], { type: ct }), `photo.${ext}`);
+            const upPhotoResp = await fetch(uploadUrl, { method: "POST", body: fd });
+            const upPhotoData = await upPhotoResp.json();
+            if (!upPhotoData.photo) throw new Error("VK не принял фото для канала");
+
+            const saveBody = new URLSearchParams({
+              photo: upPhotoData.photo,
+              server: String(upPhotoData.server),
+              hash: upPhotoData.hash,
+              access_token: VK_TOKEN,
+              v: "5.199",
+            });
+            const saveResp = await fetch("https://api.vk.com/method/photos.saveMessagesPhoto", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: saveBody.toString(),
+            });
+            const saveData = await saveResp.json();
+            if (saveData.error) throw new Error(`saveMessagesPhoto: ${saveData.error.error_msg}`);
+            const ph = saveData.response?.[0];
+            if (ph) channelAttachments = `photo${ph.owner_id}_${ph.id}`;
+          } catch (chImgErr) {
+            console.error("VK channel image upload failed:", chImgErr);
+            // Continue without image
+          }
+        }
+
+        const sendBody = new URLSearchParams({
+          peer_id: String(peerId),
+          message,
+          random_id: String(Date.now()),
+          access_token: VK_TOKEN,
+          v: "5.199",
+        });
+        if (channelAttachments) sendBody.set("attachment", channelAttachments);
+
+        const sendResp = await fetch("https://api.vk.com/method/messages.send", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: sendBody.toString(),
+        });
+        const sendData = await sendResp.json();
+        if (sendData.error) throw new Error(`messages.send: ${sendData.error.error_msg} (code ${sendData.error.error_code})`);
+        channelMessageId = Number(sendData.response) || null;
+        console.log("VK channel duplicate ok:", { peerId, channelMessageId });
+      } catch (chErr) {
+        const msg = chErr instanceof Error ? chErr.message : String(chErr);
+        console.error("VK channel duplicate failed:", msg);
+        channelWarning = `Пост опубликован на стене, но не удалось продублировать в канал: ${msg}`;
+      }
+    }
+
+    return new Response(JSON.stringify({
+      ok: true,
+      post_id: postIdFromVk,
+      post_url: postUrl,
+      image_warning: imageWarning,
+      channel_warning: channelWarning,
+      channel_message_id: channelMessageId,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
