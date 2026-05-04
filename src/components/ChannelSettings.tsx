@@ -469,12 +469,12 @@ function VkChannelBlock({ channelId, duplicate, onChannelIdChange, onDuplicateCh
       const items = (data?.channels || []) as Array<{ peer_id: number; title: string }>;
       setList(items);
       if (items.length === 0) {
-        toast.info("Каналы сообщества не найдены. Сначала создайте канал в VK Мессенджере вашей группы.");
+        toast.info("Беседы сообщества не найдены. Создайте беседу в VK Мессенджере вашей группы и добавьте туда участников.");
       } else {
-        toast.success(`Найдено каналов: ${items.length}`);
+        toast.success(`Найдено бесед: ${items.length}`);
       }
     } catch (e: any) {
-      toast.error(e.message || "Не удалось получить список каналов");
+      toast.error(e.message || "Не удалось получить список бесед");
     } finally {
       setLoading(false);
     }
@@ -485,7 +485,7 @@ function VkChannelBlock({ channelId, duplicate, onChannelIdChange, onDuplicateCh
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Link2 className="h-4 w-4 text-primary" />
-          Дублировать в канал сообщества (VK Мессенджер)
+          Дублировать в беседу сообщества (VK Мессенджер)
         </div>
         <Switch checked={duplicate} onCheckedChange={onDuplicateChange} />
       </div>
@@ -493,11 +493,11 @@ function VkChannelBlock({ channelId, duplicate, onChannelIdChange, onDuplicateCh
       {duplicate && (
         <>
           <p className="text-xs text-muted-foreground">
-            После публикации на стену пост автоматически отправится в выбранный канал сообщества с тем же текстом и картинкой.
+            После публикации на стену пост автоматически отправится в выбранную беседу сообщества с тем же текстом и картинкой.
           </p>
 
           <div className="space-y-2">
-            <Label className="text-xs">peer_id канала</Label>
+            <Label className="text-xs">peer_id беседы</Label>
             <div className="flex flex-wrap gap-2">
               <Input
                 placeholder="Например, 2000000001"
@@ -519,7 +519,7 @@ function VkChannelBlock({ channelId, duplicate, onChannelIdChange, onDuplicateCh
 
           {list.length > 0 && (
             <div className="space-y-1">
-              <Label className="text-xs">Выберите канал</Label>
+              <Label className="text-xs">Выберите беседу</Label>
               <div className="grid gap-1">
                 {list.map((c) => (
                   <button
@@ -540,17 +540,16 @@ function VkChannelBlock({ channelId, duplicate, onChannelIdChange, onDuplicateCh
 
           <details className="rounded-md bg-background/60 px-3 py-2 text-xs">
             <summary className="cursor-pointer font-medium text-foreground">
-              Что такое канал сообщества и какие требования?
+              Что это и какие требования?
             </summary>
             <ol className="mt-2 list-decimal space-y-1 pl-4 text-muted-foreground">
-              <li>В вашей группе ВК должен быть создан канал в VK Мессенджере (Управление сообществом → Каналы).</li>
+              <li>У ВКонтакте нет публичного API для постинга в «Каналы сообщества» — туда умеет писать только официальное приложение VK.</li>
+              <li>Зато можно отправлять сообщения в <b>беседы сообщества</b> (групповые чаты) от имени группы.</li>
+              <li>Создайте беседу в группе (Управление → Сообщения → Беседы) и пригласите туда подписчиков.</li>
               <li>Сначала укажите ID группы и сохраните настройки выше.</li>
-              <li>Нажмите «Загрузить список» — мы получим каналы по токену сообщества.</li>
-              <li>Выберите нужный канал из списка или вставьте peer_id вручную.</li>
+              <li>Нажмите «Загрузить список» — получим беседы по токену сообщества.</li>
+              <li>Выберите нужную беседу или вставьте peer_id вручную.</li>
             </ol>
-            <p className="mt-2 text-muted-foreground">
-              Сообщения отправляются от имени сообщества через токен, настроенный в системе.
-            </p>
           </details>
         </>
       )}
