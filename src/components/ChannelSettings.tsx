@@ -167,6 +167,8 @@ export function ChannelSettings() {
                 manager_url: saved.manager_url || "",
                 personal_url: saved.personal_url || "",
                 is_active: saved.is_active,
+                vk_channel_id: saved.vk_channel_id || "",
+                vk_duplicate_to_channel: !!saved.vk_duplicate_to_channel,
               };
             }
             return ch;
