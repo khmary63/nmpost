@@ -469,12 +469,12 @@ function VkChannelBlock({ channelId, duplicate, onChannelIdChange, onDuplicateCh
       const items = (data?.channels || []) as Array<{ peer_id: number; title: string }>;
       setList(items);
       if (items.length === 0) {
-        toast.info("Каналы сообщества не найдены. Сначала создайте канал в VK Мессенджере вашей группы.");
+        toast.info("Беседы сообщества не найдены. Создайте беседу в VK Мессенджере вашей группы и добавьте туда участников.");
       } else {
-        toast.success(`Найдено каналов: ${items.length}`);
+        toast.success(`Найдено бесед: ${items.length}`);
       }
     } catch (e: any) {
-      toast.error(e.message || "Не удалось получить список каналов");
+      toast.error(e.message || "Не удалось получить список бесед");
     } finally {
       setLoading(false);
     }
