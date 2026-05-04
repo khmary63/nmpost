@@ -188,12 +188,16 @@ export function ChannelSettings() {
     setIsSaving(true);
     try {
       for (const ch of channels) {
-        const payload = {
+        const payload: any = {
           channel_chat_id: ch.channel_chat_id,
           manager_url: ch.manager_url.trim(),
           personal_url: ch.personal_url.trim(),
           is_active: ch.is_active,
         };
+        if (ch.channel === "vk") {
+          payload.vk_channel_id = (ch.vk_channel_id || "").trim();
+          payload.vk_duplicate_to_channel = !!ch.vk_duplicate_to_channel;
+        }
         if (ch.id) {
           await supabase.from("channel_settings").update(payload).eq("id", ch.id);
         } else if (ch.channel_chat_id || ch.is_active || ch.manager_url || ch.personal_url) {
