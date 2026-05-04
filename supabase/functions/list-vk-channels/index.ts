@@ -102,10 +102,9 @@ serve(async (req) => {
       .map((it: any) => it.conversation)
       .filter((c: any) => {
         const peerType = c?.peer?.type;
-        // Channel detection: peer.type === "channel" (new), is_channel flag, or peer_id >= 2e9 (channel id range)
-        return peerType === "channel"
-          || c?.chat_settings?.is_channel === true
-          || (typeof c?.peer?.id === "number" && c.peer.id >= 2_000_000_000);
+        // Не считаем обычные беседы каналами: peer_id >= 2e9 встречается и у group chats.
+        // Оставляем только явные признаки настоящего VK-канала сообщества.
+        return peerType === "channel" || c?.chat_settings?.is_channel === true;
       })
       .map((c: any) => ({
         peer_id: c.peer.id,
