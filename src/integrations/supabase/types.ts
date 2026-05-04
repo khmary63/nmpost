@@ -49,6 +49,8 @@ export type Database = {
           personal_url: string
           updated_at: string
           user_id: string
+          vk_channel_id: string
+          vk_duplicate_to_channel: boolean
         }
         Insert: {
           channel: string
@@ -60,6 +62,8 @@ export type Database = {
           personal_url?: string
           updated_at?: string
           user_id: string
+          vk_channel_id?: string
+          vk_duplicate_to_channel?: boolean
         }
         Update: {
           channel?: string
@@ -71,6 +75,8 @@ export type Database = {
           personal_url?: string
           updated_at?: string
           user_id?: string
+          vk_channel_id?: string
+          vk_duplicate_to_channel?: boolean
         }
         Relationships: []
       }

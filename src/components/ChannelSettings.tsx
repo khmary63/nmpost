@@ -21,6 +21,8 @@ interface ChannelConfig {
   manager_url: string;
   personal_url: string;
   is_active: boolean;
+  vk_channel_id?: string;
+  vk_duplicate_to_channel?: boolean;
   label: string;
   placeholder: string;
   hint: string;
@@ -165,6 +167,8 @@ export function ChannelSettings() {
                 manager_url: saved.manager_url || "",
                 personal_url: saved.personal_url || "",
                 is_active: saved.is_active,
+                vk_channel_id: saved.vk_channel_id || "",
+                vk_duplicate_to_channel: !!saved.vk_duplicate_to_channel,
               };
             }
             return ch;
@@ -184,12 +188,16 @@ export function ChannelSettings() {
     setIsSaving(true);
     try {
       for (const ch of channels) {
-        const payload = {
+        const payload: any = {
           channel_chat_id: ch.channel_chat_id,
           manager_url: ch.manager_url.trim(),
           personal_url: ch.personal_url.trim(),
           is_active: ch.is_active,
         };
+        if (ch.channel === "vk") {
+          payload.vk_channel_id = (ch.vk_channel_id || "").trim();
+          payload.vk_duplicate_to_channel = !!ch.vk_duplicate_to_channel;
+        }
         if (ch.id) {
           await supabase.from("channel_settings").update(payload).eq("id", ch.id);
         } else if (ch.channel_chat_id || ch.is_active || ch.manager_url || ch.personal_url) {
@@ -248,6 +256,15 @@ export function ChannelSettings() {
               </div>
 
               {ch.channel === "vk" && <VkConnectBlock />}
+
+              {ch.channel === "vk" && (
+                <VkChannelBlock
+                  channelId={ch.vk_channel_id || ""}
+                  duplicate={!!ch.vk_duplicate_to_channel}
+                  onChannelIdChange={(v) => updateChannel(ch.channel, "vk_channel_id", v)}
+                  onDuplicateChange={(v) => updateChannel(ch.channel, "vk_duplicate_to_channel", v)}
+                />
+              )}
 
               <details className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground">
                 <summary className="cursor-pointer font-medium text-foreground">
@@ -420,6 +437,115 @@ function VkConnectBlock() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+interface VkChannelBlockProps {
+  channelId: string;
+  duplicate: boolean;
+  onChannelIdChange: (v: string) => void;
+  onDuplicateChange: (v: boolean) => void;
+}
+
+function VkChannelBlock({ channelId, duplicate, onChannelIdChange, onDuplicateChange }: VkChannelBlockProps) {
+  const [loading, setLoading] = useState(false);
+  const [list, setList] = useState<Array<{ peer_id: number; title: string }>>([]);
+
+  const loadChannels = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("list-vk-channels", { body: {} });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const items = (data?.channels || []) as Array<{ peer_id: number; title: string }>;
+      setList(items);
+      if (items.length === 0) {
+        toast.info("Каналы сообщества не найдены. Сначала создайте канал в VK Мессенджере вашей группы.");
+      } else {
+        toast.success(`Найдено каналов: ${items.length}`);
+      }
+    } catch (e: any) {
+      toast.error(e.message || "Не удалось получить список каналов");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="rounded-md border p-3 space-y-3 bg-muted/30">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Link2 className="h-4 w-4 text-primary" />
+          Дублировать в канал сообщества (VK Мессенджер)
+        </div>
+        <Switch checked={duplicate} onCheckedChange={onDuplicateChange} />
+      </div>
+
+      {duplicate && (
+        <>
+          <p className="text-xs text-muted-foreground">
+            После публикации на стену пост автоматически отправится в выбранный канал сообщества с тем же текстом и картинкой.
+          </p>
+
+          <div className="space-y-2">
+            <Label className="text-xs">peer_id канала</Label>
+            <div className="flex flex-wrap gap-2">
+              <Input
+                placeholder="Например, 2000000001"
+                value={channelId}
+                onChange={(e) => onChannelIdChange(e.target.value)}
+                className="flex-1 min-w-[160px]"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={loadChannels}
+                disabled={loading}
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />}
+                Загрузить список
+              </Button>
+            </div>
+          </div>
+
+          {list.length > 0 && (
+            <div className="space-y-1">
+              <Label className="text-xs">Выберите канал</Label>
+              <div className="grid gap-1">
+                {list.map((c) => (
+                  <button
+                    key={c.peer_id}
+                    type="button"
+                    onClick={() => onChannelIdChange(String(c.peer_id))}
+                    className={`text-left text-sm rounded-md border px-3 py-2 transition-colors hover:bg-accent ${
+                      String(c.peer_id) === channelId ? "border-primary bg-accent" : ""
+                    }`}
+                  >
+                    <div className="font-medium">{c.title}</div>
+                    <div className="text-xs text-muted-foreground">peer_id: {c.peer_id}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <details className="rounded-md bg-background/60 px-3 py-2 text-xs">
+            <summary className="cursor-pointer font-medium text-foreground">
+              Что такое канал сообщества и какие требования?
+            </summary>
+            <ol className="mt-2 list-decimal space-y-1 pl-4 text-muted-foreground">
+              <li>В вашей группе ВК должен быть создан канал в VK Мессенджере (Управление сообществом → Каналы).</li>
+              <li>Сначала укажите ID группы и сохраните настройки выше.</li>
+              <li>Нажмите «Загрузить список» — мы получим каналы по токену сообщества.</li>
+              <li>Выберите нужный канал из списка или вставьте peer_id вручную.</li>
+            </ol>
+            <p className="mt-2 text-muted-foreground">
+              Сообщения отправляются от имени сообщества через токен, настроенный в системе.
+            </p>
+          </details>
+        </>
+      )}
     </div>
   );
 }
