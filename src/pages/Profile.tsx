@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { DashboardLayout } from "@/components/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { User, Lock, Mail, Shield, CreditCard, RotateCw, XCircle } from "lucide-react";
+import { User, Lock, Mail, Shield, CreditCard, RotateCw, XCircle, Mic } from "lucide-react";
 import { useSubscription, PLAN_LABELS } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
