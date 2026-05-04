@@ -98,19 +98,22 @@ serve(async (req) => {
     }));
     console.log("list-vk-channels detected items:", JSON.stringify(allTypes));
 
+    // VK API часто не выставляет peer.type === "channel" даже для настоящих каналов сообщества.
+    // Возвращаем все диалоги с peer_id >= 2e9 (диапазон каналов/чатов сообщества) и помечаем явные каналы.
     const channels = allConversations
       .map((it: any) => it.conversation)
-      .filter((c: any) => {
+      .filter((c: any) => typeof c?.peer?.id === "number" && c.peer.id >= 2_000_000_000)
+      .map((c: any) => {
         const peerType = c?.peer?.type;
-        // Не считаем обычные беседы каналами: peer_id >= 2e9 встречается и у group chats.
-        // Оставляем только явные признаки настоящего VK-канала сообщества.
-        return peerType === "channel" || c?.chat_settings?.is_channel === true;
-      })
-      .map((c: any) => ({
-        peer_id: c.peer.id,
-        title: c.chat_settings?.title || `Канал ${c.peer.id}`,
-        members_count: c.chat_settings?.members_count ?? null,
-      }));
+        const isChannel = peerType === "channel" || c?.chat_settings?.is_channel === true;
+        return {
+          peer_id: c.peer.id,
+          title: c.chat_settings?.title || `Диалог ${c.peer.id}`,
+          members_count: c.chat_settings?.members_count ?? null,
+          is_channel: isChannel,
+          peer_type: peerType ?? null,
+        };
+      });
 
     return new Response(JSON.stringify({ ok: true, channels }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
