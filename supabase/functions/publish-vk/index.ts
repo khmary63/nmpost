@@ -281,12 +281,9 @@ serve(async (req) => {
         if (!/^\d+$/.test(rawPeerId) || peerId < 2_000_000_000) {
           throw new Error("Указан не канал сообщества VK, а обычный чат. Загрузите список каналов заново и выберите настоящий канал сообщества.");
         }
-        const channelCheck = await verifyVkChannelPeer(VK_TOKEN, groupId, peerId);
-        if (!channelCheck.ok) {
-          throw new Error(channelCheck.title
-            ? `${channelCheck.reason}: «${channelCheck.title}». Выберите именно канал сообщества VK, не беседу.`
-            : `${channelCheck.reason}. Выберите именно канал сообщества VK, не беседу.`);
-        }
+        // Diagnostic only — VK API не всегда корректно сообщает is_channel/peer.type для каналов сообществ,
+        // поэтому полагаемся на реальный ответ messages.send, а не на предварительную валидацию.
+        await inspectVkPeer(VK_TOKEN, groupId, peerId);
 
         // Build channel attachments — re-upload photo via messages upload server (different endpoint than wall)
         let channelAttachments = "";
