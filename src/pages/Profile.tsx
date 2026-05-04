@@ -25,6 +25,38 @@ export default function Profile() {
   const [loading, setLoading] = useState(false);
   const [renewLoading, setRenewLoading] = useState(false);
   const [confirmCancelOpen, setConfirmCancelOpen] = useState(false);
+  const [toneSample, setToneSample] = useState("");
+  const [toneLoading, setToneLoading] = useState(false);
+  const [toneSaving, setToneSaving] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    setToneLoading(true);
+    supabase
+      .from("profiles")
+      .select("tone_of_voice_sample")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setToneSample((data as any)?.tone_of_voice_sample || "");
+        setToneLoading(false);
+      });
+  }, [user]);
+
+  const handleSaveTone = async () => {
+    if (!user) return;
+    setToneSaving(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ tone_of_voice_sample: toneSample.trim() || null } as any)
+      .eq("user_id", user.id);
+    setToneSaving(false);
+    if (error) {
+      toast({ title: "Ошибка", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Сохранено", description: "Образец вашего стиля письма обновлён" });
+    }
+  };
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
