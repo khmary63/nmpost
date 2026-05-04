@@ -19,12 +19,14 @@ type ChannelSetting = {
   channel_chat_id: string;
   manager_url: string;
   personal_url: string;
+  vk_channel_id?: string | null;
+  vk_duplicate_to_channel?: boolean | null;
 };
 
 async function getChannel(supabase: any, userId: string, channel: string): Promise<ChannelSetting | null> {
   const { data } = await supabase
     .from("channel_settings")
-    .select("channel_chat_id, manager_url, personal_url")
+    .select("channel_chat_id, manager_url, personal_url, vk_channel_id, vk_duplicate_to_channel")
     .eq("user_id", userId)
     .eq("channel", channel)
     .eq("is_active", true)
@@ -181,6 +183,74 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
   const vkResp = await (await fetch(`https://api.vk.com/method/wall.post?${params.toString()}`, { method: "POST" })).json();
   if (vkResp.error) return { ok: false, error: `vk: ${vkResp.error.error_msg}` };
   if (!vkResp.response?.post_id) return { ok: false, error: "vk: no post_id" };
+
+  if (ch.vk_duplicate_to_channel && ch.vk_channel_id) {
+    try {
+      const peerId = Number.parseInt(String(ch.vk_channel_id).replace(/[^\d-]/g, ""), 10);
+      if (!Number.isFinite(peerId) || peerId === 0) throw new Error("Некорректный ID канала ВК");
+
+      let channelAttachment = "";
+      if (post.image_url) {
+        const upUrl = new URL("https://api.vk.com/method/photos.getMessagesUploadServer");
+        upUrl.search = new URLSearchParams({
+          peer_id: String(peerId),
+          access_token: VK_TOKEN,
+          v: "5.199",
+        }).toString();
+        const upData = await (await fetch(upUrl.toString())).json();
+        if (upData.error) throw new Error(`getMessagesUploadServer: ${upData.error.error_msg}`);
+        const uploadUrl = upData.response?.upload_url;
+        if (!uploadUrl) throw new Error("VK не вернул upload_url для канала");
+
+        const imgResp = await fetch(post.image_url, { headers: { "User-Agent": "Mozilla/5.0" } });
+        if (!imgResp.ok) throw new Error(`HTTP ${imgResp.status} при скачивании картинки`);
+        const ct = imgResp.headers.get("content-type") || "image/jpeg";
+        const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
+        const fd = new FormData();
+        fd.append("photo", new Blob([await imgResp.arrayBuffer()], { type: ct }), `photo.${ext}`);
+        const upPhotoData = await (await fetch(uploadUrl, { method: "POST", body: fd })).json();
+        if (!upPhotoData.photo) throw new Error("VK не принял фото для канала");
+
+        const saveBody = new URLSearchParams({
+          photo: upPhotoData.photo,
+          server: String(upPhotoData.server),
+          hash: upPhotoData.hash,
+          access_token: VK_TOKEN,
+          v: "5.199",
+        });
+        const saveData = await (await fetch("https://api.vk.com/method/photos.saveMessagesPhoto", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: saveBody.toString(),
+        })).json();
+        if (saveData.error) throw new Error(`saveMessagesPhoto: ${saveData.error.error_msg}`);
+        const photo = saveData.response?.[0];
+        if (photo) channelAttachment = `photo${photo.owner_id}_${photo.id}`;
+      }
+
+      const sendBody = new URLSearchParams({
+        peer_id: String(peerId),
+        message,
+        random_id: String(Date.now()),
+        access_token: VK_TOKEN,
+        v: "5.199",
+      });
+      if (channelAttachment) sendBody.set("attachment", channelAttachment);
+
+      const sendData = await (await fetch("https://api.vk.com/method/messages.send", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: sendBody.toString(),
+      })).json();
+      if (sendData.error) throw new Error(`messages.send: ${sendData.error.error_msg} (code ${sendData.error.error_code})`);
+      console.log("vk scheduled channel duplicate ok:", { postId: post.id, peerId, messageId: sendData.response ?? null });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("vk scheduled channel duplicate failed:", msg);
+      return { ok: true, error: `vk channel: ${msg}` };
+    }
+  }
+
   return { ok: true };
 }
 

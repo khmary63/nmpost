@@ -393,6 +393,9 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
             if (vkResult?.image_warning) {
               publishErrors.push(`ВК картинка: ${vkResult.image_warning}`);
             }
+            if (vkResult?.channel_warning) {
+              publishErrors.push(`ВК канал: ${vkResult.channel_warning}`);
+            }
             toast.success("Пост опубликован в группу ВК!");
           }
         }
