@@ -449,6 +449,12 @@ function VkConnectBlock() {
   );
 }
 
+interface VkConversationItem {
+  peer_id: number;
+  title: string;
+  members_count?: number | null;
+}
+
 interface VkChannelBlockProps {
   channelId: string;
   duplicate: boolean;
@@ -458,7 +464,7 @@ interface VkChannelBlockProps {
 
 function VkChannelBlock({ channelId, duplicate, onChannelIdChange, onDuplicateChange }: VkChannelBlockProps) {
   const [loading, setLoading] = useState(false);
-  const [list, setList] = useState<Array<{ peer_id: number; title: string }>>([]);
+  const [list, setList] = useState<VkConversationItem[]>([]);
 
   const loadChannels = async () => {
     setLoading(true);
@@ -466,7 +472,7 @@ function VkChannelBlock({ channelId, duplicate, onChannelIdChange, onDuplicateCh
       const { data, error } = await supabase.functions.invoke("list-vk-channels", { body: {} });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      const items = (data?.channels || []) as Array<{ peer_id: number; title: string }>;
+      const items = (data?.channels || []) as VkConversationItem[];
       setList(items);
       if (items.length === 0) {
         toast.info("Беседы сообщества не найдены. Создайте беседу в VK Мессенджере вашей группы и добавьте туда участников.");
@@ -531,7 +537,9 @@ function VkChannelBlock({ channelId, duplicate, onChannelIdChange, onDuplicateCh
                     }`}
                   >
                     <div className="font-medium">{c.title}</div>
-                    <div className="text-xs text-muted-foreground">peer_id: {c.peer_id}</div>
+                     <div className="text-xs text-muted-foreground">
+                       peer_id: {c.peer_id}{typeof c.members_count === "number" ? ` · участников: ${c.members_count}` : ""}
+                     </div>
                   </button>
                 ))}
               </div>
@@ -548,7 +556,7 @@ function VkChannelBlock({ channelId, duplicate, onChannelIdChange, onDuplicateCh
               <li>Создайте беседу в группе (Управление → Сообщения → Беседы) и пригласите туда подписчиков.</li>
               <li>Сначала укажите ID группы и сохраните настройки выше.</li>
               <li>Нажмите «Загрузить список» — получим беседы по токену сообщества.</li>
-              <li>Выберите нужную беседу или вставьте peer_id вручную.</li>
+              <li>Выберите беседу, где есть хотя бы 2 участника. Служебные пустые чаты VK не подходят.</li>
             </ol>
           </details>
         </>
