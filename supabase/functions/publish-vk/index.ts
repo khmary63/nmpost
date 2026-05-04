@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function inspectVkPeer(accessToken: string, groupId: number, peerId: number): Promise<void> {
+async function inspectVkPeer(accessToken: string, groupId: number, peerId: number): Promise<any | null> {
   try {
     const url = new URL("https://api.vk.com/method/messages.getConversationsById");
     url.search = new URLSearchParams({
@@ -18,8 +18,10 @@ async function inspectVkPeer(accessToken: string, groupId: number, peerId: numbe
     }).toString();
     const data = await (await fetch(url.toString())).json();
     console.log("VK peer inspect:", JSON.stringify(data).slice(0, 1500));
+    return data;
   } catch (e) {
     console.warn("VK peer inspect failed:", e);
+    return null;
   }
 }
 
@@ -283,7 +285,11 @@ serve(async (req) => {
         }
         // Diagnostic only — VK API не всегда корректно сообщает is_channel/peer.type для каналов сообществ,
         // поэтому полагаемся на реальный ответ messages.send, а не на предварительную валидацию.
-        await inspectVkPeer(VK_TOKEN, groupId, peerId);
+        const peerInfo = await inspectVkPeer(VK_TOKEN, groupId, peerId);
+        const membersCount = peerInfo?.response?.items?.[0]?.chat_settings?.members_count;
+        if (typeof membersCount === "number" && membersCount <= 1) {
+          throw new Error("Выбрана служебная беседа VK без участников. Откройте «Загрузить список» и выберите беседу, где есть минимум 2 участника.");
+        }
 
         // Build channel attachments — re-upload photo via messages upload server (different endpoint than wall)
         let channelAttachments = "";
@@ -358,7 +364,7 @@ serve(async (req) => {
       } catch (chErr) {
         const msg = chErr instanceof Error ? chErr.message : String(chErr);
         console.error("VK channel duplicate failed:", msg);
-        channelWarning = `Пост опубликован на стене, но не удалось продублировать в канал: ${msg}`;
+        channelWarning = `Пост опубликован на стене, но не удалось продублировать в беседу: ${msg}`;
       }
     }
 
