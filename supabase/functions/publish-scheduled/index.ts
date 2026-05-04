@@ -23,28 +23,20 @@ type ChannelSetting = {
   vk_duplicate_to_channel?: boolean | null;
 };
 
-async function verifyVkChannelPeer(accessToken: string, groupId: number, peerId: number): Promise<{ ok: boolean; title?: string; reason?: string }> {
-  const url = new URL("https://api.vk.com/method/messages.getConversationsById");
-  url.search = new URLSearchParams({
-    peer_ids: String(peerId),
-    group_id: String(groupId),
-    access_token: accessToken,
-    v: "5.199",
-  }).toString();
-  const data = await (await fetch(url.toString())).json();
-  if (data.error) return { ok: false, reason: data.error.error_msg };
-
-  const conversation = data.response?.items?.[0]?.conversation;
-  const peerType = conversation?.peer?.type;
-  const isChannel = peerType === "channel" || conversation?.chat_settings?.is_channel === true;
-  if (!conversation || !isChannel) {
-    return {
-      ok: false,
-      title: conversation?.chat_settings?.title,
-      reason: "Указанный peer_id не является каналом сообщества VK",
-    };
+async function inspectVkPeer(accessToken: string, groupId: number, peerId: number): Promise<void> {
+  try {
+    const url = new URL("https://api.vk.com/method/messages.getConversationsById");
+    url.search = new URLSearchParams({
+      peer_ids: String(peerId),
+      group_id: String(groupId),
+      access_token: accessToken,
+      v: "5.199",
+    }).toString();
+    const data = await (await fetch(url.toString())).json();
+    console.log("VK peer inspect:", JSON.stringify(data).slice(0, 1500));
+  } catch (e) {
+    console.warn("VK peer inspect failed:", e);
   }
-  return { ok: true, title: conversation?.chat_settings?.title };
 }
 
 async function getChannel(supabase: any, userId: string, channel: string): Promise<ChannelSetting | null> {
@@ -216,12 +208,7 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
       if (!/^\d+$/.test(rawPeerId) || peerId < 2_000_000_000) {
         throw new Error("Указан не канал сообщества VK, а обычный чат. Загрузите список каналов заново и выберите настоящий канал сообщества.");
       }
-      const channelCheck = await verifyVkChannelPeer(VK_TOKEN, groupId, peerId);
-      if (!channelCheck.ok) {
-        throw new Error(channelCheck.title
-          ? `${channelCheck.reason}: «${channelCheck.title}». Выберите именно канал сообщества VK, не беседу.`
-          : `${channelCheck.reason}. Выберите именно канал сообщества VK, не беседу.`);
-      }
+      await inspectVkPeer(VK_TOKEN, groupId, peerId);
 
       let channelAttachment = "";
       if (post.image_url) {
