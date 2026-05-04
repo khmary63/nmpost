@@ -57,7 +57,7 @@ serve(async (req) => {
     // Get user's VK channel setting
     const { data: channelSetting } = await supabase
       .from("channel_settings")
-      .select("channel_chat_id, manager_url, personal_url")
+      .select("channel_chat_id, manager_url, personal_url, vk_channel_id, vk_duplicate_to_channel")
       .eq("user_id", userId)
       .eq("channel", "vk")
       .eq("is_active", true)
