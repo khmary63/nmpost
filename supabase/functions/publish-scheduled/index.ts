@@ -186,8 +186,12 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
 
   if (ch.vk_duplicate_to_channel && ch.vk_channel_id) {
     try {
-      const peerId = Number.parseInt(String(ch.vk_channel_id).replace(/[^\d-]/g, ""), 10);
+      const rawPeerId = String(ch.vk_channel_id).trim();
+      const peerId = Number.parseInt(rawPeerId.replace(/[^\d-]/g, ""), 10);
       if (!Number.isFinite(peerId) || peerId === 0) throw new Error("Некорректный ID канала ВК");
+      if (!/^\d+$/.test(rawPeerId) || peerId < 2_000_000_000) {
+        throw new Error("Указан не канал сообщества VK, а обычный чат. Загрузите список каналов заново и выберите настоящий канал сообщества.");
+      }
 
       let channelAttachment = "";
       if (post.image_url) {
