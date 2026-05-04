@@ -162,6 +162,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           prompt: aiPrompt,
           style,
           type,
+          ...(useToneOfVoice && toneSample ? { toneSample } : {}),
           ...(type === "content-plan" && { postsCount: planPostsCount, periodDays }),
         },
       });
