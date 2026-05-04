@@ -11,7 +11,7 @@ import { Settings, Save, Loader2, Link2, ExternalLink, KeyRound } from "lucide-r
 
 const VK_CLIENT_ID = "54525610";
 const VK_REDIRECT_URI = "https://oauth.vk.com/blank.html";
-const VK_SCOPE = "wall,photos,groups";
+const VK_SCOPE = "wall,photos,groups,offline";
 const VK_OAUTH_URL = `https://oauth.vk.com/authorize?client_id=${VK_CLIENT_ID}&display=page&redirect_uri=${encodeURIComponent(VK_REDIRECT_URI)}&scope=${VK_SCOPE}&response_type=code&v=5.199`;
 
 interface ChannelConfig {
@@ -359,7 +359,7 @@ function VkConnectBlock() {
       if (data?.error) throw new Error(data.error);
       setHasToken(true);
       setCode("");
-      toast.success("VK подключён — получен бессрочный токен ✓");
+      toast.success("VK подключён — получен бессрочный offline-токен ✓");
     } catch (e: any) {
       toast.error(e.message || "Не удалось обменять код. Попробуйте получить новый код.");
     } finally {
@@ -392,7 +392,7 @@ function VkConnectBlock() {
         )}
       </div>
       <p className="text-xs text-muted-foreground">
-        Используется Authorization Code Flow с обменом через server-side. Если VK отзовёт доступ или токен протухнет, просто нажмите «Переподключить VK».
+        Используется Authorization Code Flow с offline-доступом. После однократного переподключения VK выдаст бессрочный токен для загрузки картинок, пока вы сами не отзовёте доступ в VK.
       </p>
       <Button
         type="button"
@@ -417,7 +417,7 @@ function VkConnectBlock() {
             <li>Вставьте её в поле ниже и нажмите <span className="font-medium text-foreground">«Получить бессрочный токен»</span>.</li>
           </ol>
           <p className="mt-2 text-muted-foreground">
-            ⚠️ Код одноразовый и живёт ~1 минуту — обменяйте его сразу после получения.
+            ⚠️ Если раньше VK уже был подключён без offline-доступа, переподключите его один раз заново — старый токен останется временным.
           </p>
         </details>
         <Input
