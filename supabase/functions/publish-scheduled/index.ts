@@ -208,12 +208,7 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
       if (!/^\d+$/.test(rawPeerId) || peerId < 2_000_000_000) {
         throw new Error("Указан не канал сообщества VK, а обычный чат. Загрузите список каналов заново и выберите настоящий канал сообщества.");
       }
-      const channelCheck = await verifyVkChannelPeer(VK_TOKEN, groupId, peerId);
-      if (!channelCheck.ok) {
-        throw new Error(channelCheck.title
-          ? `${channelCheck.reason}: «${channelCheck.title}». Выберите именно канал сообщества VK, не беседу.`
-          : `${channelCheck.reason}. Выберите именно канал сообщества VK, не беседу.`);
-      }
+      await inspectVkPeer(VK_TOKEN, groupId, peerId);
 
       let channelAttachment = "";
       if (post.image_url) {
