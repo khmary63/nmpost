@@ -9,14 +9,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Settings, Save, Loader2, Link2, ExternalLink, KeyRound } from "lucide-react";
 
-const VK_CLIENT_ID = "54525610";
+// Используем client_id Kate Mobile (доверенное приложение VK).
+// Через Implicit Flow получаем сразу бессрочный access_token (offline уже включён в правах приложения).
+// Это самый стабильный способ: никаких client_secret и edge-функций для обмена кода не нужно.
+const VK_KATE_CLIENT_ID = "2685278";
 const VK_REDIRECT_URI = "https://oauth.vk.com/blank.html";
-// VK scope as bitmask: photos(4) + wall(8192) + offline(65536) + groups(262144) = 335364
-// offline = бессрочный токен. Числовая маска нужна, т.к. строковый "offline" иногда даёт invalid scope.
-// Scope намеренно НЕ указан в URL — VK берёт права из настроек приложения.
-// В настройках VK-приложения должны быть включены: wall, photos, groups, offline.
-// Это самый стабильный способ — VK перестал принимать произвольные scope в Auth Code flow.
-const VK_OAUTH_URL = `https://oauth.vk.com/authorize?client_id=${VK_CLIENT_ID}&display=page&redirect_uri=${encodeURIComponent(VK_REDIRECT_URI)}&response_type=code&v=5.199`;
+// scope=wall(8192)+photos(4)+groups(262144)+messages(4096)+offline(65536) = 339460
+const VK_SCOPE_MASK = "339460";
+const VK_OAUTH_URL = `https://oauth.vk.com/authorize?client_id=${VK_KATE_CLIENT_ID}&display=page&redirect_uri=${encodeURIComponent(VK_REDIRECT_URI)}&scope=${VK_SCOPE_MASK}&response_type=token&revoke=1&v=5.199`;
 
 interface ChannelConfig {
   id?: string;
