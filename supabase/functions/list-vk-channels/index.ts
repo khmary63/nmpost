@@ -56,35 +56,56 @@ serve(async (req) => {
       });
     }
 
-    // Fetch channels of the community via messages.getConversations + filter=channels
-    // VK API: messages.getConversations supports `filter=channels` for community channels
-    const url = new URL("https://api.vk.com/method/messages.getConversations");
-    url.search = new URLSearchParams({
-      filter: "all",
-      group_id: groupId,
-      count: "200",
-      access_token: VK_TOKEN,
-      v: "5.199",
-    }).toString();
+    // Try multiple strategies to find community channels.
+    // VK API for community channels is poorly documented; different accounts return them
+    // via different filters. We try `channels` first, then fall back to scanning all conversations.
+    const tryFetch = async (params: Record<string, string>) => {
+      const u = new URL("https://api.vk.com/method/messages.getConversations");
+      u.search = new URLSearchParams({ ...params, access_token: VK_TOKEN, v: "5.199" }).toString();
+      const r = await fetch(u.toString());
+      return await r.json();
+    };
 
-    const resp = await fetch(url.toString());
-    const data = await resp.json();
-    console.log("list-vk-channels response:", JSON.stringify(data).slice(0, 1000));
+    const allConversations: any[] = [];
+    const errors: string[] = [];
 
-    if (data.error) {
+    // Strategy 1: filter=channels (newer API)
+    const r1 = await tryFetch({ filter: "channels", group_id: groupId, count: "200", extended: "1" });
+    console.log("list-vk-channels [channels]:", JSON.stringify(r1).slice(0, 800));
+    if (r1.error) errors.push(`channels: ${r1.error.error_msg}`);
+    else if (r1.response?.items) allConversations.push(...r1.response.items);
+
+    // Strategy 2: all conversations (we'll filter client-side)
+    if (allConversations.length === 0) {
+      const r2 = await tryFetch({ filter: "all", group_id: groupId, count: "200", extended: "1" });
+      console.log("list-vk-channels [all]:", JSON.stringify(r2).slice(0, 800));
+      if (r2.error) errors.push(`all: ${r2.error.error_msg}`);
+      else if (r2.response?.items) allConversations.push(...r2.response.items);
+    }
+
+    if (allConversations.length === 0 && errors.length) {
       return new Response(JSON.stringify({
-        error: `VK: ${data.error.error_msg} (code ${data.error.error_code})`,
+        error: `VK: ${errors.join("; ")}`,
       }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const items = (data.response?.items || []) as Array<{ conversation: any }>;
-    // Channels in VK community messenger have peer.type = "channel" or are marked as channel
-    const channels = items
+    // Detect channels — log everything for debugging
+    const allTypes = allConversations.map((it: any) => ({
+      peer_type: it?.conversation?.peer?.type,
+      peer_id: it?.conversation?.peer?.id,
+      is_channel: it?.conversation?.chat_settings?.is_channel,
+      title: it?.conversation?.chat_settings?.title,
+    }));
+    console.log("list-vk-channels detected items:", JSON.stringify(allTypes));
+
+    const channels = allConversations
       .map((it: any) => it.conversation)
       .filter((c: any) => {
-        // Try to detect channel-type conversations
         const peerType = c?.peer?.type;
-        return peerType === "channel" || c?.chat_settings?.is_channel === true;
+        // Channel detection: peer.type === "channel" (new), is_channel flag, or peer_id >= 2e9 (channel id range)
+        return peerType === "channel"
+          || c?.chat_settings?.is_channel === true
+          || (typeof c?.peer?.id === "number" && c.peer.id >= 2_000_000_000);
       })
       .map((c: any) => ({
         peer_id: c.peer.id,
