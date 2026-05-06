@@ -79,17 +79,27 @@ async function publishTelegram(post: any, ch: ChannelSetting): Promise<{ ok: boo
       body: JSON.stringify(body),
     });
 
+  const images: string[] = Array.isArray(post.image_urls) && post.image_urls.length > 0
+    ? post.image_urls
+    : (post.image_url ? [post.image_url] : []);
+
   let resp: Response;
-  if (post.image_url) {
+  if (images.length === 0) {
+    resp = await send("sendMessage", {
+      chat_id: ch.channel_chat_id,
+      text: fullText,
+      parse_mode: "HTML",
+    });
+  } else if (images.length === 1) {
     if (fullText.length <= 1024) {
       resp = await send("sendPhoto", {
         chat_id: ch.channel_chat_id,
-        photo: post.image_url,
+        photo: images[0],
         caption: fullText,
         parse_mode: "HTML",
       });
     } else {
-      const photoResp = await send("sendPhoto", { chat_id: ch.channel_chat_id, photo: post.image_url });
+      const photoResp = await send("sendPhoto", { chat_id: ch.channel_chat_id, photo: images[0] });
       if (!photoResp.ok) {
         const d = await photoResp.json().catch(() => ({}));
         return { ok: false, error: `tg photo: ${d.description || photoResp.status}` };
@@ -101,11 +111,27 @@ async function publishTelegram(post: any, ch: ChannelSetting): Promise<{ ok: boo
       });
     }
   } else {
-    resp = await send("sendMessage", {
-      chat_id: ch.channel_chat_id,
-      text: fullText,
-      parse_mode: "HTML",
-    });
+    const groupImages = images.slice(0, 10);
+    const useCaptionInGroup = fullText.length <= 1024;
+    const media = groupImages.map((url, idx) => ({
+      type: "photo",
+      media: url,
+      ...(idx === 0 && useCaptionInGroup ? { caption: fullText, parse_mode: "HTML" } : {}),
+    }));
+    const mgResp = await send("sendMediaGroup", { chat_id: ch.channel_chat_id, media });
+    if (!mgResp.ok) {
+      const d = await mgResp.json().catch(() => ({}));
+      return { ok: false, error: `tg media group: ${d.description || mgResp.status}` };
+    }
+    if (useCaptionInGroup) {
+      resp = mgResp;
+    } else {
+      resp = await send("sendMessage", {
+        chat_id: ch.channel_chat_id,
+        text: fullText,
+        parse_mode: "HTML",
+      });
+    }
   }
 
   if (!resp.ok) {
