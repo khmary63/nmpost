@@ -132,6 +132,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string | null
+          image_urls: string[]
           include_footer: boolean
           published_at: string | null
           scheduled_at: string | null
@@ -147,6 +148,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          image_urls?: string[]
           include_footer?: boolean
           published_at?: string | null
           scheduled_at?: string | null
@@ -162,6 +164,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string | null
+          image_urls?: string[]
           include_footer?: boolean
           published_at?: string | null
           scheduled_at?: string | null
