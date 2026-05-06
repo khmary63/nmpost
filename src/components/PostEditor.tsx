@@ -60,7 +60,9 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [imagePrompt, setImagePrompt] = useState("");
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const imageUrl = imageUrls[0] ?? null;
+  const setImageUrl = (u: string | null) => setImageUrls(u ? [u] : []);
   const [includeFooter, setIncludeFooter] = useState(true);
   const [planPostsCount, setPlanPostsCount] = useState(7);
   const [planPeriod, setPlanPeriod] = useState<"week" | "month" | "custom">("week");
