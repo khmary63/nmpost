@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   Sparkles, Send, Save, CalendarIcon, Type, Palette,
-  MessageSquare, Loader2, Wand2, FileText, Clock, ImageIcon, X, Paperclip, Lock, ExternalLink,
+  MessageSquare, Loader2, Wand2, FileText, Clock, ImageIcon, X, Paperclip, Lock, ExternalLink, Smile,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { EditingPost } from "@/pages/Dashboard";
@@ -72,6 +72,24 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   });
   const [toneSample, setToneSample] = useState<string>("");
   const [useToneOfVoice, setUseToneOfVoice] = useState(false);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertEmoji = (emoji: string) => {
+    const ta = contentRef.current;
+    if (!ta) {
+      setContent((prev) => prev + emoji);
+      return;
+    }
+    const start = ta.selectionStart ?? content.length;
+    const end = ta.selectionEnd ?? content.length;
+    const next = content.slice(0, start) + emoji + content.slice(end);
+    setContent(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + emoji.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  };
 
   // Подгружаем образец «Мой стиль письма» из профиля
   useEffect(() => {
@@ -489,8 +507,22 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               />
             </div>
             <div>
-              <Label htmlFor="content">Текст поста</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label htmlFor="content">Текст поста</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="ghost" size="sm" className="h-8 gap-1">
+                      <Smile className="h-4 w-4" />
+                      Эмодзи
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-2" align="end">
+                    <EmojiPicker onSelect={(emoji) => insertEmoji(emoji)} />
+                  </PopoverContent>
+                </Popover>
+              </div>
               <Textarea
+                ref={contentRef}
                 id="content"
                 placeholder="Напишите текст поста или сгенерируйте с помощью AI..."
                 className="min-h-[200px] resize-y"
@@ -1088,6 +1120,37 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
         currentPlan={subscription.plan}
         reason={upgradeModal.reason}
       />
+    </div>
+  );
+}
+const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
+  { label: "Смайлы", emojis: ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","🙂","😉","😍","🥰","😘","😎","🤩","🤔","😐","😏","😴","😜","🤗","🤭","🤫","🙃","😇","😢","😭","😡","😱","🥳","🤝","👋","👍","👎","👏","🙌","🙏","💪","✌️","🤟","👌","✋","🤚","☝️","👉","👈","👇","👆"] },
+  { label: "Сердца", emojis: ["❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💖","💗","💕","💞","💝","💘","💓","💟","♥️","💔"] },
+  { label: "Объекты", emojis: ["🔥","✨","⭐","🌟","💫","💥","🎉","🎊","🎁","🏆","🥇","💎","💰","💵","🎯","🚀","✅","❌","⚡","☀️","🌈","🎨","📌","📍","📢","📣","🔔","💡","📝","📚","📊","📈","📉","🛒","🛍️","💼","🔑","🔒","🔓"] },
+  { label: "Стрелки", emojis: ["⬆️","⬇️","⬅️","➡️","↗️","↘️","↙️","↖️","🔼","🔽","◀️","▶️","🔝","🔙","🔚","🔛","🔜","➕","➖","✖️","➗","♻️","✔️","☑️"] },
+];
+
+function EmojiPicker({ onSelect }: { onSelect: (e: string) => void }) {
+  return (
+    <div className="max-h-72 overflow-y-auto space-y-3">
+      {EMOJI_GROUPS.map((g) => (
+        <div key={g.label}>
+          <p className="text-xs font-medium text-muted-foreground mb-1 px-1">{g.label}</p>
+          <div className="grid grid-cols-8 gap-1">
+            {g.emojis.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => onSelect(e)}
+                className="text-xl h-8 w-8 flex items-center justify-center rounded hover:bg-accent transition-colors"
+                aria-label={`Вставить ${e}`}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
