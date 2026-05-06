@@ -43,6 +43,12 @@ export function markdownToTelegramHtml(src: string): string {
   text = text.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, "$1<i>$2</i>");
   text = text.replace(/(^|[^_])_([^_\n]+?)_(?!_)/g, "$1<i>$2</i>");
 
+  // 5b. Strikethrough: ~~text~~
+  text = text.replace(/~~([^~\n]+?)~~/g, "<s>$1</s>");
+
+  // 5c. Spoiler: ||text||
+  text = text.replace(/\|\|([^|\n]+?)\|\|/g, "<tg-spoiler>$1</tg-spoiler>");
+
   // 6. Links: [text](url)
   text = text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, label, url) => {
     return `<a href="${escapeAttr(url)}">${label}</a>`;
