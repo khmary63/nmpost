@@ -489,8 +489,22 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               />
             </div>
             <div>
-              <Label htmlFor="content">Текст поста</Label>
+              <div className="flex items-center justify-between mb-1">
+                <Label htmlFor="content">Текст поста</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button type="button" variant="ghost" size="sm" className="h-8 gap-1">
+                      <Smile className="h-4 w-4" />
+                      Эмодзи
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-2" align="end">
+                    <EmojiPicker onSelect={(emoji) => insertEmoji(emoji)} />
+                  </PopoverContent>
+                </Popover>
+              </div>
               <Textarea
+                ref={contentRef}
                 id="content"
                 placeholder="Напишите текст поста или сгенерируйте с помощью AI..."
                 className="min-h-[200px] resize-y"
