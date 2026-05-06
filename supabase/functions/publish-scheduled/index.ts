@@ -252,7 +252,7 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
       }
 
       let channelAttachment = "";
-      if (post.image_url) {
+      if (vkImages.length > 0) {
         const upUrl = new URL("https://api.vk.com/method/photos.getMessagesUploadServer");
         upUrl.search = new URLSearchParams({
           peer_id: String(peerId),
@@ -264,30 +264,34 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
         const uploadUrl = upData.response?.upload_url;
         if (!uploadUrl) throw new Error("VK не вернул upload_url для канала");
 
-        const imgResp = await fetch(post.image_url, { headers: { "User-Agent": "Mozilla/5.0" } });
-        if (!imgResp.ok) throw new Error(`HTTP ${imgResp.status} при скачивании картинки`);
-        const ct = imgResp.headers.get("content-type") || "image/jpeg";
-        const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
-        const fd = new FormData();
-        fd.append("photo", new Blob([await imgResp.arrayBuffer()], { type: ct }), `photo.${ext}`);
-        const upPhotoData = await (await fetch(uploadUrl, { method: "POST", body: fd })).json();
-        if (!upPhotoData.photo) throw new Error("VK не принял фото для канала");
+        const builtCh: string[] = [];
+        for (const imgUrl of vkImages.slice(0, 10)) {
+          const imgResp = await fetch(imgUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
+          if (!imgResp.ok) throw new Error(`HTTP ${imgResp.status} при скачивании картинки`);
+          const ct = imgResp.headers.get("content-type") || "image/jpeg";
+          const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
+          const fd = new FormData();
+          fd.append("photo", new Blob([await imgResp.arrayBuffer()], { type: ct }), `photo.${ext}`);
+          const upPhotoData = await (await fetch(uploadUrl, { method: "POST", body: fd })).json();
+          if (!upPhotoData.photo) throw new Error("VK не принял фото для канала");
 
-        const saveBody = new URLSearchParams({
-          photo: upPhotoData.photo,
-          server: String(upPhotoData.server),
-          hash: upPhotoData.hash,
-          access_token: VK_TOKEN,
-          v: "5.199",
-        });
-        const saveData = await (await fetch("https://api.vk.com/method/photos.saveMessagesPhoto", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: saveBody.toString(),
-        })).json();
-        if (saveData.error) throw new Error(`saveMessagesPhoto: ${saveData.error.error_msg}`);
-        const photo = saveData.response?.[0];
-        if (photo) channelAttachment = `photo${photo.owner_id}_${photo.id}`;
+          const saveBody = new URLSearchParams({
+            photo: upPhotoData.photo,
+            server: String(upPhotoData.server),
+            hash: upPhotoData.hash,
+            access_token: VK_TOKEN,
+            v: "5.199",
+          });
+          const saveData = await (await fetch("https://api.vk.com/method/photos.saveMessagesPhoto", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: saveBody.toString(),
+          })).json();
+          if (saveData.error) throw new Error(`saveMessagesPhoto: ${saveData.error.error_msg}`);
+          const photo = saveData.response?.[0];
+          if (photo) builtCh.push(`photo${photo.owner_id}_${photo.id}`);
+        }
+        channelAttachment = builtCh.join(",");
       }
 
       const sendBody = new URLSearchParams({
