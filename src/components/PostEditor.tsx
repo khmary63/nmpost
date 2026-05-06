@@ -349,6 +349,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           scheduled_at: scheduledAt,
           published_at: null,
           image_url: imageUrl,
+          image_urls: imageUrls,
           include_footer: includeFooter,
         }).eq("id", postId).select().single();
         if (error) throw error;
@@ -364,6 +365,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           scheduled_at: scheduledAt,
           published_at: null,
           image_url: imageUrl,
+          image_urls: imageUrls,
           include_footer: includeFooter,
         }).select().single();
         if (error) throw error;
