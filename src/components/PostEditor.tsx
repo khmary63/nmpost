@@ -97,7 +97,10 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       setContent(editingPost.content);
       setStyle(editingPost.style);
       setChannels(editingPost.channels);
-      setImageUrl(editingPost.image_url || null);
+      const initialImages = (editingPost as any).image_urls && Array.isArray((editingPost as any).image_urls) && (editingPost as any).image_urls.length > 0
+        ? (editingPost as any).image_urls as string[]
+        : (editingPost.image_url ? [editingPost.image_url] : []);
+      setImageUrls(initialImages);
       setIncludeFooter(editingPost.include_footer ?? true);
       if (editingPost.scheduled_at) {
         setIsScheduled(true);
