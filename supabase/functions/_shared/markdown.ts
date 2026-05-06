@@ -89,6 +89,9 @@ export function stripMarkdown(src: string): string {
   text = text.replace(/__([^_\n]+?)__/g, "$1");
   text = text.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, "$1$2");
   text = text.replace(/(^|[^_])_([^_\n]+?)_(?!_)/g, "$1$2");
+  // Strikethrough and spoiler markers
+  text = text.replace(/~~([^~\n]+?)~~/g, "$1");
+  text = text.replace(/\|\|([^|\n]+?)\|\|/g, "$1");
   // Links: [text](url) → "text (url)" if different, else url
   text = text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, label, url) => {
     return label.trim() === url.trim() ? url : `${label} (${url})`;
