@@ -1123,3 +1123,34 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
     </div>
   );
 }
+const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
+  { label: "Смайлы", emojis: ["😀","😃","😄","😁","😆","😅","😂","🤣","😊","🙂","😉","😍","🥰","😘","😎","🤩","🤔","😐","😏","😴","😜","🤗","🤭","🤫","🙃","😇","😢","😭","😡","😱","🥳","🤝","👋","👍","👎","👏","🙌","🙏","💪","✌️","🤟","👌","✋","🤚","☝️","👉","👈","👇","👆"] },
+  { label: "Сердца", emojis: ["❤️","🧡","💛","💚","💙","💜","🖤","🤍","🤎","💖","💗","💕","💞","💝","💘","💓","💟","♥️","💔"] },
+  { label: "Объекты", emojis: ["🔥","✨","⭐","🌟","💫","💥","🎉","🎊","🎁","🏆","🥇","💎","💰","💵","🎯","🚀","✅","❌","⚡","☀️","🌈","🎨","📌","📍","📢","📣","🔔","💡","📝","📚","📊","📈","📉","🛒","🛍️","💼","🔑","🔒","🔓"] },
+  { label: "Стрелки", emojis: ["⬆️","⬇️","⬅️","➡️","↗️","↘️","↙️","↖️","🔼","🔽","◀️","▶️","🔝","🔙","🔚","🔛","🔜","➕","➖","✖️","➗","♻️","✔️","☑️"] },
+];
+
+function EmojiPicker({ onSelect }: { onSelect: (e: string) => void }) {
+  return (
+    <div className="max-h-72 overflow-y-auto space-y-3">
+      {EMOJI_GROUPS.map((g) => (
+        <div key={g.label}>
+          <p className="text-xs font-medium text-muted-foreground mb-1 px-1">{g.label}</p>
+          <div className="grid grid-cols-8 gap-1">
+            {g.emojis.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => onSelect(e)}
+                className="text-xl h-8 w-8 flex items-center justify-center rounded hover:bg-accent transition-colors"
+                aria-label={`Вставить ${e}`}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
