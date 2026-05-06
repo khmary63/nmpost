@@ -179,8 +179,12 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
   const ownerId = -Math.abs(numeric);
   const groupId = Math.abs(numeric);
 
+  const vkImages: string[] = Array.isArray(post.image_urls) && post.image_urls.length > 0
+    ? post.image_urls
+    : (post.image_url ? [post.image_url] : []);
+
   let attachments = "";
-  if (post.image_url && VK_USER_TOKEN) {
+  if (vkImages.length > 0 && VK_USER_TOKEN) {
     try {
       const usUrl = new URL("https://api.vk.com/method/photos.getWallUploadServer");
       usUrl.search = new URLSearchParams({ group_id: String(groupId), access_token: VK_USER_TOKEN, v: "5.199" }).toString();
@@ -188,28 +192,33 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
       if (us.error) throw new Error(us.error.error_msg);
       const uploadUrl = us.response?.upload_url;
       if (!uploadUrl) throw new Error("no upload_url");
-      const imgResp = await fetch(post.image_url, { headers: { "User-Agent": "Mozilla/5.0" } });
-      if (!imgResp.ok) throw new Error(`download HTTP ${imgResp.status}`);
-      const ct = imgResp.headers.get("content-type") || "image/jpeg";
-      const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
-      const fd = new FormData();
-      fd.append("photo", new Blob([await imgResp.arrayBuffer()], { type: ct }), `photo.${ext}`);
-      const upData = await (await fetch(uploadUrl, { method: "POST", body: fd })).json();
-      if (!upData.photo) throw new Error("vk upload empty");
-      const saveBody = new URLSearchParams({
-        group_id: String(groupId),
-        photo: upData.photo,
-        server: String(upData.server),
-        hash: upData.hash,
-        access_token: VK_USER_TOKEN,
-        v: "5.199",
-      });
-      const saveData = await (await fetch("https://api.vk.com/method/photos.saveWallPhoto", {
-        method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: saveBody.toString(),
-      })).json();
-      if (saveData.error) throw new Error(saveData.error.error_msg);
-      const photo = saveData.response?.[0];
-      if (photo) attachments = `photo${photo.owner_id}_${photo.id}`;
+
+      const built: string[] = [];
+      for (const imgUrl of vkImages.slice(0, 10)) {
+        const imgResp = await fetch(imgUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
+        if (!imgResp.ok) throw new Error(`download HTTP ${imgResp.status}`);
+        const ct = imgResp.headers.get("content-type") || "image/jpeg";
+        const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
+        const fd = new FormData();
+        fd.append("photo", new Blob([await imgResp.arrayBuffer()], { type: ct }), `photo.${ext}`);
+        const upData = await (await fetch(uploadUrl, { method: "POST", body: fd })).json();
+        if (!upData.photo) throw new Error("vk upload empty");
+        const saveBody = new URLSearchParams({
+          group_id: String(groupId),
+          photo: upData.photo,
+          server: String(upData.server),
+          hash: upData.hash,
+          access_token: VK_USER_TOKEN,
+          v: "5.199",
+        });
+        const saveData = await (await fetch("https://api.vk.com/method/photos.saveWallPhoto", {
+          method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: saveBody.toString(),
+        })).json();
+        if (saveData.error) throw new Error(saveData.error.error_msg);
+        const photo = saveData.response?.[0];
+        if (photo) built.push(`photo${photo.owner_id}_${photo.id}`);
+      }
+      attachments = built.join(",");
     } catch (e) {
       const rawMessage = e instanceof Error ? e.message : String(e);
       const errorMessage = /access_token has expired/i.test(rawMessage)
