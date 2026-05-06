@@ -340,28 +340,36 @@ async function publishMax(post: any, ch: ChannelSetting): Promise<{ ok: boolean;
   const body: Record<string, unknown> = { text };
   if (useMd) body.format = "markdown";
 
-  if (post.image_url) {
+  const maxImages: string[] = Array.isArray(post.image_urls) && post.image_urls.length > 0
+    ? post.image_urls
+    : (post.image_url ? [post.image_url] : []);
+
+  if (maxImages.length > 0) {
     try {
-      const ui = await fetch("https://platform-api.max.ru/uploads?type=image", {
-        method: "POST", headers: { Authorization: MAX_BOT_TOKEN },
-      });
-      if (!ui.ok) throw new Error(`/uploads ${ui.status}`);
-      const uiJson = await ui.json();
-      const uploadUrl = uiJson.url;
-      if (!uploadUrl) throw new Error("no upload url");
-      const imgResp = await fetch(post.image_url, { headers: { "User-Agent": "Mozilla/5.0" } });
-      if (!imgResp.ok) throw new Error(`download HTTP ${imgResp.status}`);
-      const ct = imgResp.headers.get("content-type") || "image/png";
-      const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
-      const fd = new FormData();
-      fd.append("data", new Blob([await imgResp.arrayBuffer()], { type: ct }), `photo.${ext}`);
-      const upJson = await (await fetch(uploadUrl, { method: "POST", body: fd })).json() as Record<string, any>;
-      const photoEntries = upJson.photos && typeof upJson.photos === "object"
-        ? Object.values(upJson.photos as Record<string, any>)
-        : [];
-      const token = upJson.token || upJson.photos?.photo?.token || photoEntries[0]?.token;
-      if (!token) throw new Error("no token");
-      body.attachments = [{ type: "image", payload: { token } }];
+      const builtAttachments: any[] = [];
+      for (const imgUrl of maxImages) {
+        const ui = await fetch("https://platform-api.max.ru/uploads?type=image", {
+          method: "POST", headers: { Authorization: MAX_BOT_TOKEN },
+        });
+        if (!ui.ok) throw new Error(`/uploads ${ui.status}`);
+        const uiJson = await ui.json();
+        const uploadUrl = uiJson.url;
+        if (!uploadUrl) throw new Error("no upload url");
+        const imgResp = await fetch(imgUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
+        if (!imgResp.ok) throw new Error(`download HTTP ${imgResp.status}`);
+        const ct = imgResp.headers.get("content-type") || "image/png";
+        const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
+        const fd = new FormData();
+        fd.append("data", new Blob([await imgResp.arrayBuffer()], { type: ct }), `photo.${ext}`);
+        const upJson = await (await fetch(uploadUrl, { method: "POST", body: fd })).json() as Record<string, any>;
+        const photoEntries = upJson.photos && typeof upJson.photos === "object"
+          ? Object.values(upJson.photos as Record<string, any>)
+          : [];
+        const token = upJson.token || upJson.photos?.photo?.token || photoEntries[0]?.token;
+        if (!token) throw new Error("no token");
+        builtAttachments.push({ type: "image", payload: { token } });
+      }
+      body.attachments = builtAttachments;
     } catch (e) {
       console.error("max image upload failed:", e);
     }
