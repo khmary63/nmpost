@@ -247,7 +247,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
         toast.error(data.error);
         return;
       }
-      setImageUrl(data.image_url);
+      setImageUrls((prev) => [...prev, data.image_url]);
       toast.success("Картинка сгенерирована!");
       subscription.refresh();
     } catch (e: any) {
@@ -276,12 +276,20 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
         .upload(path, file, { contentType: file.type, upsert: false });
       if (upErr) throw upErr;
       const { data } = supabase.storage.from("post-images").getPublicUrl(path);
-      setImageUrl(data.publicUrl);
+      setImageUrls((prev) => [...prev, data.publicUrl]);
       toast.success("Картинка загружена!");
     } catch (e: any) {
       toast.error(e.message || "Ошибка загрузки картинки");
     } finally {
       setIsUploadingImage(false);
+    }
+  };
+
+  const uploadImageFiles = async (files: File[]) => {
+    for (const f of files) {
+      // sequentially to keep order
+      // eslint-disable-next-line no-await-in-loop
+      await uploadImageFile(f);
     }
   };
 
