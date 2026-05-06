@@ -97,30 +97,46 @@ serve(async (req) => {
 
     const fullText = text + footer;
 
-    // Send to Telegram. If image present and full text fits in caption (1024), send sendPhoto.
-    // Otherwise send photo with no caption, then sendMessage with full HTML text (so footer links survive).
+    // Determine list of images
+    const images: string[] = Array.isArray(post.image_urls) && post.image_urls.length > 0
+      ? post.image_urls
+      : (post.image_url ? [post.image_url] : []);
+
+    // Send to Telegram. Logic:
+    //  - 0 images: sendMessage
+    //  - 1 image, caption fits: sendPhoto with caption
+    //  - 1 image, caption too long: sendPhoto + sendMessage
+    //  - >1 images: sendMediaGroup (max 10), then optionally sendMessage with text if caption too long
     let tgResponse: Response;
-    let messageId: number | undefined;
-    if (post.image_url) {
+    if (images.length === 0) {
+      tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: channelSetting.channel_chat_id,
+          text: fullText,
+          parse_mode: "HTML",
+        }),
+      });
+    } else if (images.length === 1) {
       if (fullText.length <= 1024) {
         tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             chat_id: channelSetting.channel_chat_id,
-            photo: post.image_url,
+            photo: images[0],
             caption: fullText,
             parse_mode: "HTML",
           }),
         });
       } else {
-        // Send photo without caption, then text separately to preserve all links
         const photoResp = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             chat_id: channelSetting.channel_chat_id,
-            photo: post.image_url,
+            photo: images[0],
           }),
         });
         const photoData = await photoResp.json();
@@ -141,15 +157,39 @@ serve(async (req) => {
         });
       }
     } else {
-      tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      // Media group: max 10 images
+      const groupImages = images.slice(0, 10);
+      const useCaptionInGroup = fullText.length <= 1024;
+      const media = groupImages.map((url, idx) => ({
+        type: "photo",
+        media: url,
+        ...(idx === 0 && useCaptionInGroup ? { caption: fullText, parse_mode: "HTML" } : {}),
+      }));
+      const mgResp = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chat_id: channelSetting.channel_chat_id,
-          text: fullText,
-          parse_mode: "HTML",
-        }),
+        body: JSON.stringify({ chat_id: channelSetting.channel_chat_id, media }),
       });
+      if (!mgResp.ok) {
+        const d = await mgResp.json().catch(() => ({}));
+        console.error("Telegram sendMediaGroup error:", d);
+        return new Response(JSON.stringify({ error: `Ошибка Telegram (галерея): ${d.description || "Unknown"}` }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (useCaptionInGroup) {
+        tgResponse = mgResp;
+      } else {
+        tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: channelSetting.channel_chat_id,
+            text: fullText,
+            parse_mode: "HTML",
+          }),
+        });
+      }
     }
 
     const tgData = await tgResponse.json();
