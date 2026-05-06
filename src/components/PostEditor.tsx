@@ -72,6 +72,24 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   });
   const [toneSample, setToneSample] = useState<string>("");
   const [useToneOfVoice, setUseToneOfVoice] = useState(false);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  const insertEmoji = (emoji: string) => {
+    const ta = contentRef.current;
+    if (!ta) {
+      setContent((prev) => prev + emoji);
+      return;
+    }
+    const start = ta.selectionStart ?? content.length;
+    const end = ta.selectionEnd ?? content.length;
+    const next = content.slice(0, start) + emoji + content.slice(end);
+    setContent(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + emoji.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  };
 
   // Подгружаем образец «Мой стиль письма» из профиля
   useEffect(() => {
