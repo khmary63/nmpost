@@ -110,43 +110,47 @@ serve(async (req) => {
     const body: Record<string, unknown> = { text };
     if (useMarkdown) body.format = "markdown";
 
-    // Upload image to MAX (two-step): /uploads -> upload binary -> token in attachment
+    // Upload images to MAX (two-step per image): /uploads -> upload binary -> token in attachment
     let imageWarning: string | null = null;
-    if (post.image_url) {
+    const imagesList: string[] = Array.isArray(post.image_urls) && post.image_urls.length > 0
+      ? post.image_urls
+      : (post.image_url ? [post.image_url] : []);
+
+    if (imagesList.length > 0) {
       try {
-        console.log("MAX: requesting upload URL");
-        const uploadInfoResp = await fetch(
-          "https://platform-api.max.ru/uploads?type=image",
-          { method: "POST", headers: { "Authorization": MAX_BOT_TOKEN } },
-        );
-        const uploadInfoText = await uploadInfoResp.text();
-        console.log("MAX /uploads:", uploadInfoResp.status, uploadInfoText.slice(0, 300));
-        if (!uploadInfoResp.ok) throw new Error(`/uploads ${uploadInfoResp.status}: ${uploadInfoText.slice(0, 200)}`);
-        const uploadInfo = JSON.parse(uploadInfoText);
-        const uploadUrl = uploadInfo.url as string;
-        if (!uploadUrl) throw new Error("MAX не вернул upload url");
+        const builtAttachments: any[] = [];
+        for (const imgUrl of imagesList) {
+          console.log("MAX: requesting upload URL for", imgUrl);
+          const uploadInfoResp = await fetch(
+            "https://platform-api.max.ru/uploads?type=image",
+            { method: "POST", headers: { "Authorization": MAX_BOT_TOKEN } },
+          );
+          const uploadInfoText = await uploadInfoResp.text();
+          if (!uploadInfoResp.ok) throw new Error(`/uploads ${uploadInfoResp.status}: ${uploadInfoText.slice(0, 200)}`);
+          const uploadInfo = JSON.parse(uploadInfoText);
+          const uploadUrl = uploadInfo.url as string;
+          if (!uploadUrl) throw new Error("MAX не вернул upload url");
 
-        console.log("MAX: downloading image from", post.image_url);
-        const imgResp = await fetch(post.image_url, {
-          headers: { "User-Agent": "Mozilla/5.0 (compatible; LovableBot/1.0)" },
-        });
-        if (!imgResp.ok) throw new Error(`download image: HTTP ${imgResp.status}`);
-        const contentType = imgResp.headers.get("content-type") || "image/png";
-        const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
-        const imgBuffer = await imgResp.arrayBuffer();
-        console.log("MAX: image bytes=", imgBuffer.byteLength);
+          const imgResp = await fetch(imgUrl, {
+            headers: { "User-Agent": "Mozilla/5.0 (compatible; LovableBot/1.0)" },
+          });
+          if (!imgResp.ok) throw new Error(`download image: HTTP ${imgResp.status}`);
+          const contentType = imgResp.headers.get("content-type") || "image/png";
+          const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
+          const imgBuffer = await imgResp.arrayBuffer();
 
-        const formData = new FormData();
-        formData.append("data", new Blob([imgBuffer], { type: contentType }), `photo.${ext}`);
-        const upResp = await fetch(uploadUrl, { method: "POST", body: formData });
-        const upText = await upResp.text();
-        console.log("MAX upload response:", upResp.status, upText.slice(0, 300));
-        if (!upResp.ok) throw new Error(`upload ${upResp.status}: ${upText.slice(0, 200)}`);
-        const upJson = JSON.parse(upText);
-        const photoToken = upJson.token || upJson.photos?.photo?.token || Object.values(upJson.photos || {})[0]?.token;
-        if (!photoToken) throw new Error(`MAX не вернул token: ${upText.slice(0, 200)}`);
+          const formData = new FormData();
+          formData.append("data", new Blob([imgBuffer], { type: contentType }), `photo.${ext}`);
+          const upResp = await fetch(uploadUrl, { method: "POST", body: formData });
+          const upText = await upResp.text();
+          if (!upResp.ok) throw new Error(`upload ${upResp.status}: ${upText.slice(0, 200)}`);
+          const upJson = JSON.parse(upText);
+          const photoToken = upJson.token || upJson.photos?.photo?.token || Object.values(upJson.photos || {})[0]?.token;
+          if (!photoToken) throw new Error(`MAX не вернул token: ${upText.slice(0, 200)}`);
 
-        body.attachments = [{ type: "image", payload: { token: photoToken } }];
+          builtAttachments.push({ type: "image", payload: { token: photoToken } });
+        }
+        body.attachments = builtAttachments;
       } catch (imgErr) {
         const msg = imgErr instanceof Error ? imgErr.message : String(imgErr);
         console.error("MAX image upload failed:", msg);

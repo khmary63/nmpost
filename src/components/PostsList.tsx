@@ -18,6 +18,7 @@ interface Post {
   channels: string[];
   scheduled_at: string | null;
   image_url: string | null;
+  image_urls?: string[] | null;
   created_at: string;
 }
 
@@ -124,6 +125,7 @@ export function PostsList({ onEdit }: PostsListProps) {
                         scheduled_at: post.scheduled_at,
                         status: post.status,
                         image_url: post.image_url,
+                        image_urls: (post as any).image_urls ?? null,
                         include_footer: (post as any).include_footer ?? true,
                       })}
                       className="text-primary/60 hover:text-primary"

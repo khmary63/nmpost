@@ -60,7 +60,9 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [imagePrompt, setImagePrompt] = useState("");
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const imageUrl = imageUrls[0] ?? null;
+  const setImageUrl = (u: string | null) => setImageUrls(u ? [u] : []);
   const [includeFooter, setIncludeFooter] = useState(true);
   const [planPostsCount, setPlanPostsCount] = useState(7);
   const [planPeriod, setPlanPeriod] = useState<"week" | "month" | "custom">("week");
@@ -95,7 +97,10 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       setContent(editingPost.content);
       setStyle(editingPost.style);
       setChannels(editingPost.channels);
-      setImageUrl(editingPost.image_url || null);
+      const initialImages = (editingPost as any).image_urls && Array.isArray((editingPost as any).image_urls) && (editingPost as any).image_urls.length > 0
+        ? (editingPost as any).image_urls as string[]
+        : (editingPost.image_url ? [editingPost.image_url] : []);
+      setImageUrls(initialImages);
       setIncludeFooter(editingPost.include_footer ?? true);
       if (editingPost.scheduled_at) {
         setIsScheduled(true);
@@ -242,7 +247,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
         toast.error(data.error);
         return;
       }
-      setImageUrl(data.image_url);
+      setImageUrls((prev) => [...prev, data.image_url]);
       toast.success("Картинка сгенерирована!");
       subscription.refresh();
     } catch (e: any) {
@@ -271,12 +276,20 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
         .upload(path, file, { contentType: file.type, upsert: false });
       if (upErr) throw upErr;
       const { data } = supabase.storage.from("post-images").getPublicUrl(path);
-      setImageUrl(data.publicUrl);
+      setImageUrls((prev) => [...prev, data.publicUrl]);
       toast.success("Картинка загружена!");
     } catch (e: any) {
       toast.error(e.message || "Ошибка загрузки картинки");
     } finally {
       setIsUploadingImage(false);
+    }
+  };
+
+  const uploadImageFiles = async (files: File[]) => {
+    for (const f of files) {
+      // sequentially to keep order
+      // eslint-disable-next-line no-await-in-loop
+      await uploadImageFile(f);
     }
   };
 
@@ -336,6 +349,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           scheduled_at: scheduledAt,
           published_at: null,
           image_url: imageUrl,
+          image_urls: imageUrls,
           include_footer: includeFooter,
         }).eq("id", postId).select().single();
         if (error) throw error;
@@ -351,6 +365,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           scheduled_at: scheduledAt,
           published_at: null,
           image_url: imageUrl,
+          image_urls: imageUrls,
           include_footer: includeFooter,
         }).select().single();
         if (error) throw error;
@@ -432,7 +447,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       }
 
       setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
-      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrl(null); setImagePrompt(""); setIncludeFooter(true);
+      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrls([]); setImagePrompt(""); setIncludeFooter(true);
       onDone?.();
     } catch (e: any) {
       toast.error(e.message || "Ошибка сохранения");
@@ -455,7 +470,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               {postId && (
                 <Button variant="ghost" size="sm" onClick={() => {
                   setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
-                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrl(null); setImagePrompt(""); setIncludeFooter(true);
+                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrls([]); setImagePrompt(""); setIncludeFooter(true);
                   onDone?.();
                 }}>
                   Отменить
@@ -600,31 +615,43 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 onClick={() => document.getElementById("post-image-upload")?.click()}
               >
                 {isUploadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-                Прикрепить файл
+                Прикрепить файлы
               </Button>
               <input
                 id="post-image-upload"
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
                 onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) uploadImageFile(f);
+                  const files = Array.from(e.target.files ?? []);
+                  if (files.length) uploadImageFiles(files);
                   e.target.value = "";
                 }}
               />
             </div>
-            {imageUrl && (
-              <div className="relative">
-                <img src={imageUrl} alt="Сгенерированная картинка" className="w-full rounded-lg border" />
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-2 right-2 h-7 w-7"
-                  onClick={() => setImageUrl(null)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+            <p className="text-xs text-muted-foreground">
+              Можно прикрепить несколько картинок — все они будут опубликованы в одном посте (галереей).
+              В Telegram максимум 10 картинок на пост.
+            </p>
+            {imageUrls.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {imageUrls.map((url, idx) => (
+                  <div key={`${url}-${idx}`} className="relative group">
+                    <img src={url} alt={`Картинка ${idx + 1}`} className="w-full aspect-square object-cover rounded-lg border" />
+                    <span className="absolute top-1 left-1 rounded bg-background/80 px-1.5 py-0.5 text-xs font-medium">
+                      {idx + 1}
+                    </span>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-6 w-6"
+                      onClick={() => setImageUrls((prev) => prev.filter((_, i) => i !== idx))}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

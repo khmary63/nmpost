@@ -79,17 +79,27 @@ async function publishTelegram(post: any, ch: ChannelSetting): Promise<{ ok: boo
       body: JSON.stringify(body),
     });
 
+  const images: string[] = Array.isArray(post.image_urls) && post.image_urls.length > 0
+    ? post.image_urls
+    : (post.image_url ? [post.image_url] : []);
+
   let resp: Response;
-  if (post.image_url) {
+  if (images.length === 0) {
+    resp = await send("sendMessage", {
+      chat_id: ch.channel_chat_id,
+      text: fullText,
+      parse_mode: "HTML",
+    });
+  } else if (images.length === 1) {
     if (fullText.length <= 1024) {
       resp = await send("sendPhoto", {
         chat_id: ch.channel_chat_id,
-        photo: post.image_url,
+        photo: images[0],
         caption: fullText,
         parse_mode: "HTML",
       });
     } else {
-      const photoResp = await send("sendPhoto", { chat_id: ch.channel_chat_id, photo: post.image_url });
+      const photoResp = await send("sendPhoto", { chat_id: ch.channel_chat_id, photo: images[0] });
       if (!photoResp.ok) {
         const d = await photoResp.json().catch(() => ({}));
         return { ok: false, error: `tg photo: ${d.description || photoResp.status}` };
@@ -101,11 +111,27 @@ async function publishTelegram(post: any, ch: ChannelSetting): Promise<{ ok: boo
       });
     }
   } else {
-    resp = await send("sendMessage", {
-      chat_id: ch.channel_chat_id,
-      text: fullText,
-      parse_mode: "HTML",
-    });
+    const groupImages = images.slice(0, 10);
+    const useCaptionInGroup = fullText.length <= 1024;
+    const media = groupImages.map((url, idx) => ({
+      type: "photo",
+      media: url,
+      ...(idx === 0 && useCaptionInGroup ? { caption: fullText, parse_mode: "HTML" } : {}),
+    }));
+    const mgResp = await send("sendMediaGroup", { chat_id: ch.channel_chat_id, media });
+    if (!mgResp.ok) {
+      const d = await mgResp.json().catch(() => ({}));
+      return { ok: false, error: `tg media group: ${d.description || mgResp.status}` };
+    }
+    if (useCaptionInGroup) {
+      resp = mgResp;
+    } else {
+      resp = await send("sendMessage", {
+        chat_id: ch.channel_chat_id,
+        text: fullText,
+        parse_mode: "HTML",
+      });
+    }
   }
 
   if (!resp.ok) {
@@ -153,8 +179,12 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
   const ownerId = -Math.abs(numeric);
   const groupId = Math.abs(numeric);
 
+  const vkImages: string[] = Array.isArray(post.image_urls) && post.image_urls.length > 0
+    ? post.image_urls
+    : (post.image_url ? [post.image_url] : []);
+
   let attachments = "";
-  if (post.image_url && VK_USER_TOKEN) {
+  if (vkImages.length > 0 && VK_USER_TOKEN) {
     try {
       const usUrl = new URL("https://api.vk.com/method/photos.getWallUploadServer");
       usUrl.search = new URLSearchParams({ group_id: String(groupId), access_token: VK_USER_TOKEN, v: "5.199" }).toString();
@@ -162,28 +192,33 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
       if (us.error) throw new Error(us.error.error_msg);
       const uploadUrl = us.response?.upload_url;
       if (!uploadUrl) throw new Error("no upload_url");
-      const imgResp = await fetch(post.image_url, { headers: { "User-Agent": "Mozilla/5.0" } });
-      if (!imgResp.ok) throw new Error(`download HTTP ${imgResp.status}`);
-      const ct = imgResp.headers.get("content-type") || "image/jpeg";
-      const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
-      const fd = new FormData();
-      fd.append("photo", new Blob([await imgResp.arrayBuffer()], { type: ct }), `photo.${ext}`);
-      const upData = await (await fetch(uploadUrl, { method: "POST", body: fd })).json();
-      if (!upData.photo) throw new Error("vk upload empty");
-      const saveBody = new URLSearchParams({
-        group_id: String(groupId),
-        photo: upData.photo,
-        server: String(upData.server),
-        hash: upData.hash,
-        access_token: VK_USER_TOKEN,
-        v: "5.199",
-      });
-      const saveData = await (await fetch("https://api.vk.com/method/photos.saveWallPhoto", {
-        method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: saveBody.toString(),
-      })).json();
-      if (saveData.error) throw new Error(saveData.error.error_msg);
-      const photo = saveData.response?.[0];
-      if (photo) attachments = `photo${photo.owner_id}_${photo.id}`;
+
+      const built: string[] = [];
+      for (const imgUrl of vkImages.slice(0, 10)) {
+        const imgResp = await fetch(imgUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
+        if (!imgResp.ok) throw new Error(`download HTTP ${imgResp.status}`);
+        const ct = imgResp.headers.get("content-type") || "image/jpeg";
+        const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
+        const fd = new FormData();
+        fd.append("photo", new Blob([await imgResp.arrayBuffer()], { type: ct }), `photo.${ext}`);
+        const upData = await (await fetch(uploadUrl, { method: "POST", body: fd })).json();
+        if (!upData.photo) throw new Error("vk upload empty");
+        const saveBody = new URLSearchParams({
+          group_id: String(groupId),
+          photo: upData.photo,
+          server: String(upData.server),
+          hash: upData.hash,
+          access_token: VK_USER_TOKEN,
+          v: "5.199",
+        });
+        const saveData = await (await fetch("https://api.vk.com/method/photos.saveWallPhoto", {
+          method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: saveBody.toString(),
+        })).json();
+        if (saveData.error) throw new Error(saveData.error.error_msg);
+        const photo = saveData.response?.[0];
+        if (photo) built.push(`photo${photo.owner_id}_${photo.id}`);
+      }
+      attachments = built.join(",");
     } catch (e) {
       const rawMessage = e instanceof Error ? e.message : String(e);
       const errorMessage = /access_token has expired/i.test(rawMessage)
@@ -217,7 +252,7 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
       }
 
       let channelAttachment = "";
-      if (post.image_url) {
+      if (vkImages.length > 0) {
         const upUrl = new URL("https://api.vk.com/method/photos.getMessagesUploadServer");
         upUrl.search = new URLSearchParams({
           peer_id: String(peerId),
@@ -229,30 +264,34 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
         const uploadUrl = upData.response?.upload_url;
         if (!uploadUrl) throw new Error("VK не вернул upload_url для канала");
 
-        const imgResp = await fetch(post.image_url, { headers: { "User-Agent": "Mozilla/5.0" } });
-        if (!imgResp.ok) throw new Error(`HTTP ${imgResp.status} при скачивании картинки`);
-        const ct = imgResp.headers.get("content-type") || "image/jpeg";
-        const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
-        const fd = new FormData();
-        fd.append("photo", new Blob([await imgResp.arrayBuffer()], { type: ct }), `photo.${ext}`);
-        const upPhotoData = await (await fetch(uploadUrl, { method: "POST", body: fd })).json();
-        if (!upPhotoData.photo) throw new Error("VK не принял фото для канала");
+        const builtCh: string[] = [];
+        for (const imgUrl of vkImages.slice(0, 10)) {
+          const imgResp = await fetch(imgUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
+          if (!imgResp.ok) throw new Error(`HTTP ${imgResp.status} при скачивании картинки`);
+          const ct = imgResp.headers.get("content-type") || "image/jpeg";
+          const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
+          const fd = new FormData();
+          fd.append("photo", new Blob([await imgResp.arrayBuffer()], { type: ct }), `photo.${ext}`);
+          const upPhotoData = await (await fetch(uploadUrl, { method: "POST", body: fd })).json();
+          if (!upPhotoData.photo) throw new Error("VK не принял фото для канала");
 
-        const saveBody = new URLSearchParams({
-          photo: upPhotoData.photo,
-          server: String(upPhotoData.server),
-          hash: upPhotoData.hash,
-          access_token: VK_TOKEN,
-          v: "5.199",
-        });
-        const saveData = await (await fetch("https://api.vk.com/method/photos.saveMessagesPhoto", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: saveBody.toString(),
-        })).json();
-        if (saveData.error) throw new Error(`saveMessagesPhoto: ${saveData.error.error_msg}`);
-        const photo = saveData.response?.[0];
-        if (photo) channelAttachment = `photo${photo.owner_id}_${photo.id}`;
+          const saveBody = new URLSearchParams({
+            photo: upPhotoData.photo,
+            server: String(upPhotoData.server),
+            hash: upPhotoData.hash,
+            access_token: VK_TOKEN,
+            v: "5.199",
+          });
+          const saveData = await (await fetch("https://api.vk.com/method/photos.saveMessagesPhoto", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: saveBody.toString(),
+          })).json();
+          if (saveData.error) throw new Error(`saveMessagesPhoto: ${saveData.error.error_msg}`);
+          const photo = saveData.response?.[0];
+          if (photo) builtCh.push(`photo${photo.owner_id}_${photo.id}`);
+        }
+        channelAttachment = builtCh.join(",");
       }
 
       const sendBody = new URLSearchParams({
@@ -301,28 +340,36 @@ async function publishMax(post: any, ch: ChannelSetting): Promise<{ ok: boolean;
   const body: Record<string, unknown> = { text };
   if (useMd) body.format = "markdown";
 
-  if (post.image_url) {
+  const maxImages: string[] = Array.isArray(post.image_urls) && post.image_urls.length > 0
+    ? post.image_urls
+    : (post.image_url ? [post.image_url] : []);
+
+  if (maxImages.length > 0) {
     try {
-      const ui = await fetch("https://platform-api.max.ru/uploads?type=image", {
-        method: "POST", headers: { Authorization: MAX_BOT_TOKEN },
-      });
-      if (!ui.ok) throw new Error(`/uploads ${ui.status}`);
-      const uiJson = await ui.json();
-      const uploadUrl = uiJson.url;
-      if (!uploadUrl) throw new Error("no upload url");
-      const imgResp = await fetch(post.image_url, { headers: { "User-Agent": "Mozilla/5.0" } });
-      if (!imgResp.ok) throw new Error(`download HTTP ${imgResp.status}`);
-      const ct = imgResp.headers.get("content-type") || "image/png";
-      const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
-      const fd = new FormData();
-      fd.append("data", new Blob([await imgResp.arrayBuffer()], { type: ct }), `photo.${ext}`);
-      const upJson = await (await fetch(uploadUrl, { method: "POST", body: fd })).json() as Record<string, any>;
-      const photoEntries = upJson.photos && typeof upJson.photos === "object"
-        ? Object.values(upJson.photos as Record<string, any>)
-        : [];
-      const token = upJson.token || upJson.photos?.photo?.token || photoEntries[0]?.token;
-      if (!token) throw new Error("no token");
-      body.attachments = [{ type: "image", payload: { token } }];
+      const builtAttachments: any[] = [];
+      for (const imgUrl of maxImages) {
+        const ui = await fetch("https://platform-api.max.ru/uploads?type=image", {
+          method: "POST", headers: { Authorization: MAX_BOT_TOKEN },
+        });
+        if (!ui.ok) throw new Error(`/uploads ${ui.status}`);
+        const uiJson = await ui.json();
+        const uploadUrl = uiJson.url;
+        if (!uploadUrl) throw new Error("no upload url");
+        const imgResp = await fetch(imgUrl, { headers: { "User-Agent": "Mozilla/5.0" } });
+        if (!imgResp.ok) throw new Error(`download HTTP ${imgResp.status}`);
+        const ct = imgResp.headers.get("content-type") || "image/png";
+        const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
+        const fd = new FormData();
+        fd.append("data", new Blob([await imgResp.arrayBuffer()], { type: ct }), `photo.${ext}`);
+        const upJson = await (await fetch(uploadUrl, { method: "POST", body: fd })).json() as Record<string, any>;
+        const photoEntries = upJson.photos && typeof upJson.photos === "object"
+          ? Object.values(upJson.photos as Record<string, any>)
+          : [];
+        const token = upJson.token || upJson.photos?.photo?.token || photoEntries[0]?.token;
+        if (!token) throw new Error("no token");
+        builtAttachments.push({ type: "image", payload: { token } });
+      }
+      body.attachments = builtAttachments;
     } catch (e) {
       console.error("max image upload failed:", e);
     }
