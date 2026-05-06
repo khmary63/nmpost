@@ -91,6 +91,40 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
     });
   };
 
+  const wrapSelection = (before: string, after: string) => {
+    const ta = contentRef.current;
+    const start = ta?.selectionStart ?? content.length;
+    const end = ta?.selectionEnd ?? content.length;
+    const selected = content.slice(start, end) || "текст";
+    const next = content.slice(0, start) + before + selected + after + content.slice(end);
+    setContent(next);
+    requestAnimationFrame(() => {
+      if (!ta) return;
+      ta.focus();
+      const pos = start + before.length;
+      ta.setSelectionRange(pos, pos + selected.length);
+    });
+  };
+
+  const insertLink = () => {
+    const ta = contentRef.current;
+    const start = ta?.selectionStart ?? content.length;
+    const end = ta?.selectionEnd ?? content.length;
+    const selected = content.slice(start, end);
+    const url = window.prompt("Введите URL:", "https://");
+    if (!url) return;
+    const label = selected || window.prompt("Текст ссылки:", "ссылка") || "ссылка";
+    const md = `[${label}](${url})`;
+    const next = content.slice(0, start) + md + content.slice(end);
+    setContent(next);
+    requestAnimationFrame(() => {
+      if (!ta) return;
+      ta.focus();
+      const pos = start + md.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  };
+
   // Подгружаем образец «Мой стиль письма» из профиля
   useEffect(() => {
     if (!user) return;
