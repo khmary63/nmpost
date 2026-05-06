@@ -507,19 +507,27 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               />
             </div>
             <div>
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
                 <Label htmlFor="content">Текст поста</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button type="button" variant="ghost" size="sm" className="h-8 gap-1">
-                      <Smile className="h-4 w-4" />
-                      Эмодзи
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-72 p-2" align="end">
-                    <EmojiPicker onSelect={(emoji) => insertEmoji(emoji)} />
-                  </PopoverContent>
-                </Popover>
+                <div className="flex items-center gap-1 flex-wrap">
+                  <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 font-bold" title="Жирный" onClick={() => wrapSelection("**", "**")}>Ж</Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 italic" title="Курсив" onClick={() => wrapSelection("*", "*")}>К</Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 w-8 p-0 line-through" title="Зачёркнутый" onClick={() => wrapSelection("~~", "~~")}>З</Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs" title="Спойлер (Telegram)" onClick={() => wrapSelection("||", "||")}>Сп</Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs font-mono" title="Моноширинный" onClick={() => wrapSelection("`", "`")}>{`</>`}</Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-8 px-2 text-xs" title="Ссылка" onClick={insertLink}>Ссылка</Button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button type="button" variant="ghost" size="sm" className="h-8 gap-1">
+                        <Smile className="h-4 w-4" />
+                        Эмодзи
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 p-2" align="end">
+                      <EmojiPicker onSelect={(emoji) => insertEmoji(emoji)} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
               <Textarea
                 ref={contentRef}
@@ -529,7 +537,9 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
               />
-              <p className="mt-1 text-xs text-muted-foreground">{content.length} символов</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {content.length} символов · форматирование работает в Telegram, Дзен и VC.ru. В ВК и MAX публикуется как обычный текст.
+              </p>
             </div>
           </CardContent>
         </Card>
