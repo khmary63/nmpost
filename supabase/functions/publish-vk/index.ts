@@ -292,9 +292,8 @@ serve(async (req) => {
 
         // Build channel attachments — re-upload photo via messages upload server (different endpoint than wall)
         let channelAttachments = "";
-        if (post.image_url) {
+        if (imagesList.length > 0) {
           try {
-            // photos.getMessagesUploadServer accepts community token (no user token needed for community-as-sender)
             const upUrl = new URL("https://api.vk.com/method/photos.getMessagesUploadServer");
             upUrl.search = new URLSearchParams({
               peer_id: String(peerId),
@@ -307,38 +306,42 @@ serve(async (req) => {
             const uploadUrl = upData.response?.upload_url as string;
             if (!uploadUrl) throw new Error("VK не вернул upload_url для канала");
 
-            const imgResp = await fetch(post.image_url, {
-              headers: { "User-Agent": "Mozilla/5.0 (compatible; LovableBot/1.0)" },
-            });
-            if (!imgResp.ok) throw new Error(`HTTP ${imgResp.status} при скачивании картинки`);
-            const ct = imgResp.headers.get("content-type") || "image/jpeg";
-            const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
-            const buf = await imgResp.arrayBuffer();
-            const fd = new FormData();
-            fd.append("photo", new Blob([buf], { type: ct }), `photo.${ext}`);
-            const upPhotoResp = await fetch(uploadUrl, { method: "POST", body: fd });
-            const upPhotoData = await upPhotoResp.json();
-            if (!upPhotoData.photo) throw new Error("VK не принял фото для канала");
+            const built: string[] = [];
+            for (const imgUrl of imagesList.slice(0, 10)) {
+              const imgResp = await fetch(imgUrl, {
+                headers: { "User-Agent": "Mozilla/5.0 (compatible; LovableBot/1.0)" },
+              });
+              if (!imgResp.ok) throw new Error(`HTTP ${imgResp.status} при скачивании картинки`);
+              const ct = imgResp.headers.get("content-type") || "image/jpeg";
+              const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
+              const buf = await imgResp.arrayBuffer();
+              const fd = new FormData();
+              fd.append("photo", new Blob([buf], { type: ct }), `photo.${ext}`);
+              const upPhotoResp = await fetch(uploadUrl, { method: "POST", body: fd });
+              const upPhotoData = await upPhotoResp.json();
+              if (!upPhotoData.photo) throw new Error("VK не принял фото для канала");
 
-            const saveBody = new URLSearchParams({
-              photo: upPhotoData.photo,
-              server: String(upPhotoData.server),
-              hash: upPhotoData.hash,
-              access_token: VK_TOKEN,
-              v: "5.199",
-            });
-            const saveResp = await fetch("https://api.vk.com/method/photos.saveMessagesPhoto", {
-              method: "POST",
-              headers: { "Content-Type": "application/x-www-form-urlencoded" },
-              body: saveBody.toString(),
-            });
-            const saveData = await saveResp.json();
-            if (saveData.error) throw new Error(`saveMessagesPhoto: ${saveData.error.error_msg}`);
-            const ph = saveData.response?.[0];
-            if (ph) channelAttachments = `photo${ph.owner_id}_${ph.id}`;
+              const saveBody = new URLSearchParams({
+                photo: upPhotoData.photo,
+                server: String(upPhotoData.server),
+                hash: upPhotoData.hash,
+                access_token: VK_TOKEN,
+                v: "5.199",
+              });
+              const saveResp = await fetch("https://api.vk.com/method/photos.saveMessagesPhoto", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: saveBody.toString(),
+              });
+              const saveData = await saveResp.json();
+              if (saveData.error) throw new Error(`saveMessagesPhoto: ${saveData.error.error_msg}`);
+              const ph = saveData.response?.[0];
+              if (ph) built.push(`photo${ph.owner_id}_${ph.id}`);
+            }
+            channelAttachments = built.join(",");
           } catch (chImgErr) {
             console.error("VK channel image upload failed:", chImgErr);
-            // Continue without image
+            // Continue without images
           }
         }
 
