@@ -394,20 +394,33 @@ async function publishMax(post: any, ch: ChannelSetting): Promise<{ ok: boolean;
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  // Auth: either CRON_SECRET header (cron) or service_role bearer
-  const cronSecretEnv = Deno.env.get("CRON_SECRET");
-  const headerSecret = req.headers.get("x-cron-secret");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
+
+  // Auth: cron secret from app_settings (preferred), env CRON_SECRET, or service_role bearer
+  const headerSecret = req.headers.get("x-cron-secret") || "";
   const authHeader = req.headers.get("Authorization") || "";
-  const isCron = cronSecretEnv && headerSecret === cronSecretEnv;
   const isService = authHeader === `Bearer ${serviceRoleKey}`;
+
+  let isCron = false;
+  if (headerSecret) {
+    const { data: secretRow } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "cron_secret")
+      .maybeSingle();
+    const dbSecret = secretRow?.value || "";
+    const envSecret = Deno.env.get("CRON_SECRET") || "";
+    if ((dbSecret && headerSecret === dbSecret) || (envSecret && headerSecret === envSecret)) {
+      isCron = true;
+    }
+  }
+
   if (!isCron && !isService) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-
-  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey);
 
   // Optional: process a specific post (for manual catch-up)
   let onlyPostId: string | null = null;
