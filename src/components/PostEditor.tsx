@@ -983,6 +983,11 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                   onClick={async () => {
                     const text = content.trim();
                     if (!text) { toast.error("Сначала напишите или сгенерируйте текст поста"); return; }
+                    // Открываем окно СРАЗУ внутри пользовательского жеста,
+                    // иначе после await браузер блокирует window.open как попап.
+                    const dzenStudioUrl = "https://dzen.ru/media/zen/login";
+                    const dzenWindow = window.open(dzenStudioUrl, "_blank", "noopener,noreferrer");
+
                     const stripMd = (s: string) => s
                       .replace(/\*\*\*(.+?)\*\*\*/g, "$1")
                       .replace(/\*\*(.+?)\*\*/g, "$1")
@@ -1008,10 +1013,10 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                         setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
                       } catch (err) { console.error(err); }
                     }
-                    // Официальный вход в Студию Дзена по документации.
-                    // Старый deep-link profile/editor/articles у части аккаунтов отдаёт 404.
-                    const dzenStudioUrl = "https://dzen.ru/media/zen/login";
-                    window.open(dzenStudioUrl, "_blank", "noopener,noreferrer");
+                    if (!dzenWindow) {
+                      toast.error("Браузер заблокировал открытие вкладки. Разрешите всплывающие окна для этого сайта и нажмите кнопку ещё раз.");
+                      return;
+                    }
                     toast.success(copied ? "Текст скопирован, картинка скачана. Открыли Студию Дзена — нажмите «Написать пост», затем вставьте текст (Ctrl+V) и загрузите картинку." : "Открыли Студию Дзена — нажмите «Написать пост». ");
                   }}
                 >
