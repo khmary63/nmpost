@@ -229,7 +229,8 @@ serve(async (req) => {
       }
     }
 
-    // Call VK API wall.post
+    // Call VK API wall.post — send params in body (POST), not query string,
+    // because long messages cause request to fail when sent in URL.
     const params = new URLSearchParams({
       owner_id: String(ownerId),
       from_group: "1",
@@ -239,8 +240,10 @@ serve(async (req) => {
     });
     if (attachments) params.set("attachments", attachments);
 
-    const vkResponse = await fetch(`https://api.vk.com/method/wall.post?${params.toString()}`, {
+    const vkResponse = await fetch("https://api.vk.com/method/wall.post", {
       method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
     });
 
     const vkData = await vkResponse.json();
