@@ -422,6 +422,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           image_url: imageUrl,
           image_urls: imageUrls,
           include_footer: includeFooter,
+          first_comment: firstComment,
         }).select().single();
         if (error) throw error;
         savedPost = data;
