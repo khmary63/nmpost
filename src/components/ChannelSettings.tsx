@@ -264,6 +264,20 @@ export function ChannelSettings() {
                 />
               </div>
 
+              {ch.channel === "telegram" && (
+                <div>
+                  <Label>ID группы обсуждений (для комментариев)</Label>
+                  <Input
+                    placeholder="-1001234567890"
+                    value={ch.tg_discussion_chat_id || ""}
+                    onChange={(e) => updateChannel(ch.channel, "tg_discussion_chat_id", e.target.value)}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Привяжите к каналу группу обсуждений в Telegram, добавьте нашего бота в неё администратором и укажите числовой ID группы. Без этого «Первый комментарий» в Telegram отправлен не будет.
+                  </p>
+                </div>
+              )}
+
               {ch.channel === "vk" && <VkConnectBlock />}
 
               {ch.channel === "vk" && (
