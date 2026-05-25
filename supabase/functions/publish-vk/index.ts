@@ -266,6 +266,8 @@ serve(async (req) => {
         const rawMessage = imgErr instanceof Error ? imgErr.message : String(imgErr);
         const msg = /access_token has expired/i.test(rawMessage)
           ? "Срок действия VK-токена для загрузки фото истёк. Откройте настройки канала VK и нажмите «Переподключить VK»."
+          : /VK upload (вернул не-JSON|временно недоступен|недоступен)/i.test(rawMessage)
+          ? "Серверы загрузки фото ВК временно недоступны (504). Попробуйте опубликовать ещё раз через 1–2 минуты."
           : rawMessage;
         console.error("VK image upload failed:", msg);
         imageWarning = msg;
