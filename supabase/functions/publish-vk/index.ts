@@ -190,23 +190,52 @@ serve(async (req) => {
           const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
           const imgBuffer = await imgResp.arrayBuffer();
 
-          // Upload with retry — VK upload server occasionally returns HTML error page
+          // Upload with retry — VK upload server occasionally returns HTML error page (502/504)
           let uploadData: any = null;
           let lastErr = "";
-          for (let attempt = 1; attempt <= 3; attempt++) {
-            const formData = new FormData();
-            formData.append("photo", new Blob([imgBuffer], { type: contentType }), `photo.${ext}`);
-            const uploadResp = await fetch(uploadUrl, { method: "POST", body: formData });
-            const respText = await uploadResp.text();
+          const MAX_ATTEMPTS = 6;
+          for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            // Refresh upload server URL on retries — old URL может протухнуть
+            let currentUploadUrl = uploadUrl;
+            if (attempt > 1) {
+              try {
+                const refreshUrl = new URL("https://api.vk.com/method/photos.getWallUploadServer");
+                refreshUrl.search = new URLSearchParams({
+                  group_id: String(groupId),
+                  access_token: VK_USER_TOKEN,
+                  v: "5.199",
+                }).toString();
+                const r = await fetch(refreshUrl.toString());
+                const d = await r.json();
+                if (d.response?.upload_url) currentUploadUrl = d.response.upload_url;
+              } catch { /* keep old url */ }
+            }
+
             try {
-              uploadData = JSON.parse(respText);
-              if (uploadData.photo && uploadData.photo !== "[]" && uploadData.photo !== "") break;
-              lastErr = `VK не принял фото: ${respText.slice(0, 300)}`;
-            } catch {
-              lastErr = `VK upload вернул не-JSON (HTTP ${uploadResp.status}): ${respText.slice(0, 200)}`;
+              const formData = new FormData();
+              formData.append("photo", new Blob([imgBuffer], { type: contentType }), `photo.${ext}`);
+              const ctrl = new AbortController();
+              const timer = setTimeout(() => ctrl.abort(), 30000);
+              const uploadResp = await fetch(currentUploadUrl, { method: "POST", body: formData, signal: ctrl.signal });
+              clearTimeout(timer);
+              const respText = await uploadResp.text();
+              try {
+                uploadData = JSON.parse(respText);
+                if (uploadData.photo && uploadData.photo !== "[]" && uploadData.photo !== "") break;
+                lastErr = `VK не принял фото: ${respText.slice(0, 300)}`;
+              } catch {
+                lastErr = `VK upload временно недоступен (HTTP ${uploadResp.status})`;
+                uploadData = null;
+              }
+            } catch (e) {
+              lastErr = `VK upload недоступен: ${e instanceof Error ? e.message : String(e)}`;
               uploadData = null;
             }
-            if (attempt < 3) await new Promise((r) => setTimeout(r, 800 * attempt));
+            if (attempt < MAX_ATTEMPTS) {
+              const delay = Math.min(1500 * attempt, 6000);
+              console.log(`VK upload attempt ${attempt} failed (${lastErr}), retrying in ${delay}ms`);
+              await new Promise((r) => setTimeout(r, delay));
+            }
           }
           if (!uploadData?.photo || uploadData.photo === "[]" || uploadData.photo === "") {
             throw new Error(lastErr || "VK не принял фото после 3 попыток");
@@ -237,6 +266,8 @@ serve(async (req) => {
         const rawMessage = imgErr instanceof Error ? imgErr.message : String(imgErr);
         const msg = /access_token has expired/i.test(rawMessage)
           ? "Срок действия VK-токена для загрузки фото истёк. Откройте настройки канала VK и нажмите «Переподключить VK»."
+          : /VK upload (вернул не-JSON|временно недоступен|недоступен)/i.test(rawMessage)
+          ? "Серверы загрузки фото ВК временно недоступны (504). Попробуйте опубликовать ещё раз через 1–2 минуты."
           : rawMessage;
         console.error("VK image upload failed:", msg);
         imageWarning = msg;
