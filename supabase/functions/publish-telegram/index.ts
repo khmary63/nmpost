@@ -58,7 +58,7 @@ serve(async (req) => {
     // Get user's telegram channel setting
     const { data: channelSetting } = await supabase
       .from("channel_settings")
-      .select("channel_chat_id, manager_url, personal_url")
+      .select("channel_chat_id, manager_url, personal_url, tg_discussion_chat_id")
       .eq("user_id", userId)
       .eq("channel", "telegram")
       .eq("is_active", true)
