@@ -204,6 +204,9 @@ export function ChannelSettings() {
           payload.vk_channel_id = (ch.vk_channel_id || "").trim();
           payload.vk_duplicate_to_channel = !!ch.vk_duplicate_to_channel;
         }
+        if (ch.channel === "telegram") {
+          payload.tg_discussion_chat_id = (ch.tg_discussion_chat_id || "").trim();
+        }
         if (ch.id) {
           await supabase.from("channel_settings").update(payload).eq("id", ch.id);
         } else if (ch.channel_chat_id || ch.is_active || ch.manager_url || ch.personal_url) {
