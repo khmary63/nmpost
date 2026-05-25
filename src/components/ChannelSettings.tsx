@@ -27,6 +27,7 @@ interface ChannelConfig {
   is_active: boolean;
   vk_channel_id?: string;
   vk_duplicate_to_channel?: boolean;
+  tg_discussion_chat_id?: string;
   label: string;
   placeholder: string;
   hint: string;
