@@ -49,8 +49,8 @@ export function markdownToTelegramHtml(src: string): string {
   // 5c. Spoiler: ||text||
   text = text.replace(/\|\|([^|\n]+?)\|\|/g, "<tg-spoiler>$1</tg-spoiler>");
 
-  // 6. Links: [text](url)
-  text = text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, label, url) => {
+  // 6. Links: [text](url) — allow optional whitespace between ] and (
+  text = text.replace(/\[([^\]]+)\]\s*\(\s*([^)\s]+)\s*\)/g, (_m, label, url) => {
     return `<a href="${escapeAttr(url)}">${label}</a>`;
   });
 
@@ -92,8 +92,8 @@ export function stripMarkdown(src: string): string {
   // Strikethrough and spoiler markers
   text = text.replace(/~~([^~\n]+?)~~/g, "$1");
   text = text.replace(/\|\|([^|\n]+?)\|\|/g, "$1");
-  // Links: [text](url) → "text (url)" if different, else url
-  text = text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, label, url) => {
+  // Links: [text](url) → "text (url)" if different, else url — allow optional whitespace
+  text = text.replace(/\[([^\]]+)\]\s*\(\s*([^)\s]+)\s*\)/g, (_m, label, url) => {
     return label.trim() === url.trim() ? url : `${label} (${url})`;
   });
   // Bullet markers
