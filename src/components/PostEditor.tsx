@@ -64,6 +64,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const imageUrl = imageUrls[0] ?? null;
   const setImageUrl = (u: string | null) => setImageUrls(u ? [u] : []);
   const [includeFooter, setIncludeFooter] = useState(true);
+  const [firstComment, setFirstComment] = useState("");
   const [planPostsCount, setPlanPostsCount] = useState(7);
   const [planPeriod, setPlanPeriod] = useState<"week" | "month" | "custom">("week");
   const [planDays, setPlanDays] = useState(7);
