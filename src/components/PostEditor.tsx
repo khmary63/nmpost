@@ -155,6 +155,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
         : (editingPost.image_url ? [editingPost.image_url] : []);
       setImageUrls(initialImages);
       setIncludeFooter(editingPost.include_footer ?? true);
+      setFirstComment(((editingPost as any).first_comment ?? "") as string);
       if (editingPost.scheduled_at) {
         setIsScheduled(true);
         const d = new Date(editingPost.scheduled_at);
