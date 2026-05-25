@@ -65,6 +65,7 @@ export type Database = {
           is_active: boolean
           manager_url: string
           personal_url: string
+          tg_discussion_chat_id: string
           updated_at: string
           user_id: string
           vk_channel_id: string
@@ -78,6 +79,7 @@ export type Database = {
           is_active?: boolean
           manager_url?: string
           personal_url?: string
+          tg_discussion_chat_id?: string
           updated_at?: string
           user_id: string
           vk_channel_id?: string
@@ -91,6 +93,7 @@ export type Database = {
           is_active?: boolean
           manager_url?: string
           personal_url?: string
+          tg_discussion_chat_id?: string
           updated_at?: string
           user_id?: string
           vk_channel_id?: string
@@ -148,6 +151,7 @@ export type Database = {
           channels: string[]
           content: string
           created_at: string
+          first_comment: string
           id: string
           image_url: string | null
           image_urls: string[]
@@ -164,6 +168,7 @@ export type Database = {
           channels?: string[]
           content?: string
           created_at?: string
+          first_comment?: string
           id?: string
           image_url?: string | null
           image_urls?: string[]
@@ -180,6 +185,7 @@ export type Database = {
           channels?: string[]
           content?: string
           created_at?: string
+          first_comment?: string
           id?: string
           image_url?: string | null
           image_urls?: string[]
