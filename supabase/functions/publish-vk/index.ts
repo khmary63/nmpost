@@ -190,12 +190,26 @@ serve(async (req) => {
           const ext = contentType.includes("png") ? "png" : contentType.includes("webp") ? "webp" : "jpg";
           const imgBuffer = await imgResp.arrayBuffer();
 
-          const formData = new FormData();
-          formData.append("photo", new Blob([imgBuffer], { type: contentType }), `photo.${ext}`);
-          const uploadResp = await fetch(uploadUrl, { method: "POST", body: formData });
-          const uploadData = await uploadResp.json();
-          if (!uploadData.photo || uploadData.photo === "[]" || uploadData.photo === "") {
-            throw new Error(`VK не принял фото: ${JSON.stringify(uploadData)}`);
+          // Upload with retry — VK upload server occasionally returns HTML error page
+          let uploadData: any = null;
+          let lastErr = "";
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            const formData = new FormData();
+            formData.append("photo", new Blob([imgBuffer], { type: contentType }), `photo.${ext}`);
+            const uploadResp = await fetch(uploadUrl, { method: "POST", body: formData });
+            const respText = await uploadResp.text();
+            try {
+              uploadData = JSON.parse(respText);
+              if (uploadData.photo && uploadData.photo !== "[]" && uploadData.photo !== "") break;
+              lastErr = `VK не принял фото: ${respText.slice(0, 300)}`;
+            } catch {
+              lastErr = `VK upload вернул не-JSON (HTTP ${uploadResp.status}): ${respText.slice(0, 200)}`;
+              uploadData = null;
+            }
+            if (attempt < 3) await new Promise((r) => setTimeout(r, 800 * attempt));
+          }
+          if (!uploadData?.photo || uploadData.photo === "[]" || uploadData.photo === "") {
+            throw new Error(lastErr || "VK не принял фото после 3 попыток");
           }
 
           const saveBody = new URLSearchParams({
