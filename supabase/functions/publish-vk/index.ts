@@ -424,6 +424,7 @@ serve(async (req) => {
       image_warning: imageWarning,
       channel_warning: channelWarning,
       channel_message_id: channelMessageId,
+      comment_warning: commentWarning,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
