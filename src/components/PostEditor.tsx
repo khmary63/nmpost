@@ -923,6 +923,22 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               <Switch id="footer-toggle" checked={includeFooter} onCheckedChange={setIncludeFooter} />
             </div>
 
+            <div className="rounded-md border p-3 space-y-2">
+              <div className="space-y-0.5">
+                <Label htmlFor="first-comment" className="text-sm">Первый комментарий (необязательно)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Отправится комментарием к посту во все выбранные каналы (ВК, Telegram, MAX). Поддерживается markdown-ссылка: <code>[текст](https://...)</code>. Для Telegram нужна группа обсуждений в настройках канала — иначе комментарий пропускается.
+                </p>
+              </div>
+              <Textarea
+                id="first-comment"
+                value={firstComment}
+                onChange={(e) => setFirstComment(e.target.value)}
+                placeholder="Например: Подробности по [ссылке](https://example.com)"
+                rows={3}
+              />
+            </div>
+
             {/* Личная страница ВК — полуавтомат */}
             <div className="rounded-md border border-dashed p-3 space-y-2">
               <div className="flex items-center justify-between gap-2 flex-wrap">
