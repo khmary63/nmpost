@@ -174,6 +174,7 @@ export function ChannelSettings() {
                 is_active: saved.is_active,
                 vk_channel_id: saved.vk_channel_id || "",
                 vk_duplicate_to_channel: !!saved.vk_duplicate_to_channel,
+                tg_discussion_chat_id: (saved as any).tg_discussion_chat_id || "",
               };
             }
             return ch;
