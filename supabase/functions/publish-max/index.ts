@@ -189,7 +189,33 @@ serve(async (req) => {
 
     console.log("MAX message sent:", { postId, chatId, response: maxData });
 
-    return new Response(JSON.stringify({ ok: true, message: maxData?.message ?? maxData, image_warning: imageWarning }), {
+    // ===== Optional first comment =====
+    let commentWarning: string | null = null;
+    const firstComment = (post.first_comment || "").trim();
+    if (firstComment) {
+      try {
+        const sentMid = maxData?.message?.body?.mid || maxData?.message?.mid || null;
+        const cUrl = new URL("https://platform-api.max.ru/messages");
+        cUrl.searchParams.set("chat_id", chatId);
+        const cBody: Record<string, unknown> = { text: firstComment, format: "markdown" };
+        if (sentMid) cBody.link = { type: "reply", mid: sentMid };
+        const cResp = await fetch(cUrl.toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": MAX_BOT_TOKEN },
+          body: JSON.stringify(cBody),
+        });
+        const cTextResp = await cResp.text();
+        let cData: any = {}; try { cData = JSON.parse(cTextResp); } catch {}
+        if (!cResp.ok || cData?.code) {
+          commentWarning = `MAX комментарий: ${cData?.message || cData?.code || cTextResp.slice(0, 150)}`;
+          console.error("MAX comment error:", cTextResp);
+        }
+      } catch (e) {
+        commentWarning = `MAX комментарий: ${e instanceof Error ? e.message : String(e)}`;
+      }
+    }
+
+    return new Response(JSON.stringify({ ok: true, message: maxData?.message ?? maxData, image_warning: imageWarning, comment_warning: commentWarning }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

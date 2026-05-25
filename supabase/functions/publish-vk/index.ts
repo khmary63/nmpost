@@ -286,6 +286,36 @@ serve(async (req) => {
 
     console.log("VK post published:", { postId, vk_post_id: postIdFromVk, postUrl, ownerId });
 
+    // ===== Optional first comment =====
+    let commentWarning: string | null = null;
+    const firstComment = (post.first_comment || "").trim();
+    if (firstComment) {
+      try {
+        const commentText = stripMarkdown(firstComment);
+        const cParams = new URLSearchParams({
+          owner_id: String(ownerId),
+          post_id: String(postIdFromVk),
+          from_group: String(groupId),
+          message: commentText,
+          access_token: VK_TOKEN,
+          v: "5.199",
+        });
+        const cResp = await fetch("https://api.vk.com/method/wall.createComment", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: cParams.toString(),
+        });
+        const cData = await cResp.json();
+        if (cData.error) {
+          commentWarning = `VK комментарий: ${cData.error.error_msg || "unknown"}`;
+          console.error("VK createComment error:", cData.error);
+        }
+      } catch (e) {
+        commentWarning = `VK комментарий: ${e instanceof Error ? e.message : String(e)}`;
+        console.error("VK comment failed:", e);
+      }
+    }
+
     // ===== Duplicate to community channel (VK Messenger Channels) =====
     let channelWarning: string | null = null;
     let channelMessageId: number | null = null;
@@ -394,6 +424,7 @@ serve(async (req) => {
       image_warning: imageWarning,
       channel_warning: channelWarning,
       channel_message_id: channelMessageId,
+      comment_warning: commentWarning,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

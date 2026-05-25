@@ -64,6 +64,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const imageUrl = imageUrls[0] ?? null;
   const setImageUrl = (u: string | null) => setImageUrls(u ? [u] : []);
   const [includeFooter, setIncludeFooter] = useState(true);
+  const [firstComment, setFirstComment] = useState("");
   const [planPostsCount, setPlanPostsCount] = useState(7);
   const [planPeriod, setPlanPeriod] = useState<"week" | "month" | "custom">("week");
   const [planDays, setPlanDays] = useState(7);
@@ -154,6 +155,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
         : (editingPost.image_url ? [editingPost.image_url] : []);
       setImageUrls(initialImages);
       setIncludeFooter(editingPost.include_footer ?? true);
+      setFirstComment(((editingPost as any).first_comment ?? "") as string);
       if (editingPost.scheduled_at) {
         setIsScheduled(true);
         const d = new Date(editingPost.scheduled_at);
@@ -403,6 +405,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           image_url: imageUrl,
           image_urls: imageUrls,
           include_footer: includeFooter,
+          first_comment: firstComment,
         }).eq("id", postId).select().single();
         if (error) throw error;
         savedPost = data;
@@ -419,6 +422,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           image_url: imageUrl,
           image_urls: imageUrls,
           include_footer: includeFooter,
+          first_comment: firstComment,
         }).select().single();
         if (error) throw error;
         savedPost = data;
@@ -917,6 +921,22 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
                 </p>
               </div>
               <Switch id="footer-toggle" checked={includeFooter} onCheckedChange={setIncludeFooter} />
+            </div>
+
+            <div className="rounded-md border p-3 space-y-2">
+              <div className="space-y-0.5">
+                <Label htmlFor="first-comment" className="text-sm">Первый комментарий (необязательно)</Label>
+                <p className="text-xs text-muted-foreground">
+                  Отправится комментарием к посту во все выбранные каналы (ВК, Telegram, MAX). Поддерживается markdown-ссылка: <code>[текст](https://...)</code>. Для Telegram нужна группа обсуждений в настройках канала — иначе комментарий пропускается.
+                </p>
+              </div>
+              <Textarea
+                id="first-comment"
+                value={firstComment}
+                onChange={(e) => setFirstComment(e.target.value)}
+                placeholder="Например: Подробности по [ссылке](https://example.com)"
+                rows={3}
+              />
             </div>
 
             {/* Личная страница ВК — полуавтомат */}

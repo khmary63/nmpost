@@ -27,6 +27,7 @@ interface ChannelConfig {
   is_active: boolean;
   vk_channel_id?: string;
   vk_duplicate_to_channel?: boolean;
+  tg_discussion_chat_id?: string;
   label: string;
   placeholder: string;
   hint: string;
@@ -173,6 +174,7 @@ export function ChannelSettings() {
                 is_active: saved.is_active,
                 vk_channel_id: saved.vk_channel_id || "",
                 vk_duplicate_to_channel: !!saved.vk_duplicate_to_channel,
+                tg_discussion_chat_id: (saved as any).tg_discussion_chat_id || "",
               };
             }
             return ch;
@@ -201,6 +203,9 @@ export function ChannelSettings() {
         if (ch.channel === "vk") {
           payload.vk_channel_id = (ch.vk_channel_id || "").trim();
           payload.vk_duplicate_to_channel = !!ch.vk_duplicate_to_channel;
+        }
+        if (ch.channel === "telegram") {
+          payload.tg_discussion_chat_id = (ch.tg_discussion_chat_id || "").trim();
         }
         if (ch.id) {
           await supabase.from("channel_settings").update(payload).eq("id", ch.id);
@@ -258,6 +263,20 @@ export function ChannelSettings() {
                   onChange={(e) => updateChannel(ch.channel, "channel_chat_id", e.target.value)}
                 />
               </div>
+
+              {ch.channel === "telegram" && (
+                <div>
+                  <Label>ID группы обсуждений (для комментариев)</Label>
+                  <Input
+                    placeholder="-1001234567890"
+                    value={ch.tg_discussion_chat_id || ""}
+                    onChange={(e) => updateChannel(ch.channel, "tg_discussion_chat_id", e.target.value)}
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Привяжите к каналу группу обсуждений в Telegram, добавьте нашего бота в неё администратором и укажите числовой ID группы. Без этого «Первый комментарий» в Telegram отправлен не будет.
+                  </p>
+                </div>
+              )}
 
               {ch.channel === "vk" && <VkConnectBlock />}
 

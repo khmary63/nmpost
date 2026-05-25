@@ -58,7 +58,7 @@ serve(async (req) => {
     // Get user's telegram channel setting
     const { data: channelSetting } = await supabase
       .from("channel_settings")
-      .select("channel_chat_id, manager_url, personal_url")
+      .select("channel_chat_id, manager_url, personal_url, tg_discussion_chat_id")
       .eq("user_id", userId)
       .eq("channel", "telegram")
       .eq("is_active", true)
@@ -206,7 +206,38 @@ serve(async (req) => {
       published_at: new Date().toISOString(),
     }).eq("id", postId);
 
-    return new Response(JSON.stringify({ ok: true, message_id: tgData.result?.message_id }), {
+    // ===== Optional first comment to linked discussion group =====
+    let commentWarning: string | null = null;
+    const firstComment = (post.first_comment || "").trim();
+    const discussionId = (channelSetting.tg_discussion_chat_id || "").trim();
+    if (firstComment) {
+      if (!discussionId) {
+        commentWarning = "TG комментарий пропущен: не указана группа обсуждений в настройках канала.";
+      } else {
+        try {
+          const commentHtml = markdownToTelegramHtml(firstComment);
+          const cResp = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: discussionId,
+              text: commentHtml,
+              parse_mode: "HTML",
+              disable_web_page_preview: false,
+            }),
+          });
+          const cData = await cResp.json();
+          if (!cResp.ok) {
+            commentWarning = `TG комментарий: ${cData.description || "unknown"}`;
+            console.error("TG comment error:", cData);
+          }
+        } catch (e) {
+          commentWarning = `TG комментарий: ${e instanceof Error ? e.message : String(e)}`;
+        }
+      }
+    }
+
+    return new Response(JSON.stringify({ ok: true, message_id: tgData.result?.message_id, comment_warning: commentWarning }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
