@@ -103,10 +103,13 @@ serve(async (req) => {
     }
 
     let images = result.json?.choices?.[0]?.message?.images;
-    if (!images || images.length === 0) {
-      console.warn(`No image in attempt 1, retrying with ${fallbackModel}`);
-      result = await callModel(fallbackModel);
-      console.log("AI image attempt 2:", result.status, result.text.slice(0, 400));
+    let attempt = 1;
+    for (const fb of fallbackModels) {
+      if (images && images.length > 0) break;
+      attempt += 1;
+      console.warn(`No image in attempt ${attempt - 1}, retrying with ${fb}`);
+      result = await callModel(fb);
+      console.log(`AI image attempt ${attempt}:`, result.status, result.text.slice(0, 400));
       images = result.json?.choices?.[0]?.message?.images;
     }
 
