@@ -53,7 +53,10 @@ serve(async (req) => {
     const defaultModel = isPro ? "google/gemini-3-pro-image-preview" : "google/gemini-3.1-flash-image-preview";
     const { data: configuredModel } = await supabase.rpc("get_ai_model", { _key: settingKey, _default: defaultModel });
     const primaryModel = configuredModel || defaultModel;
-    const fallbackModel = "google/gemini-2.5-flash-image";
+    const fallbackModels = [
+      "google/gemini-3.1-flash-image-preview",
+      "google/gemini-2.5-flash-image",
+    ].filter((m) => m !== primaryModel);
     console.log(`Image gen: plan=${planData}, admin=${isAdminData}, model=${primaryModel}`);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
