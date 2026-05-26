@@ -7,6 +7,7 @@ import { SEO } from "@/components/SEO";
 export default function Privacy() {
   return (
     <div className="min-h-screen bg-background py-12">
+      <SEO title="Политика конфиденциальности — КроссПост" description="Условия обработки и защиты персональных данных пользователей сервиса КроссПост." path="/privacy" />
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <Link to="/">
           <Button variant="ghost" size="sm" className="mb-6">

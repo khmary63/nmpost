@@ -8,6 +8,7 @@ import { SEO } from "@/components/SEO";
 export default function Delivery() {
   return (
     <div className="min-h-screen bg-background py-12">
+      <SEO title="Способы получения услуг — КроссПост" description="КроссПост — онлайн-сервис. Все услуги предоставляются в электронном виде, моментальный доступ после оплаты." path="/delivery" />
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <Link to="/">
           <Button variant="ghost" size="sm" className="mb-6">
