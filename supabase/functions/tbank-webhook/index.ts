@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
 
     const { data: existingPayment, error: existingPaymentErr } = await supabaseAdmin
       .from("payments")
-      .select("user_id, plan, status")
+      .select("id, user_id, plan, status, points_used")
       .eq("order_id", orderId)
       .maybeSingle();
 
@@ -86,7 +86,6 @@ Deno.serve(async (req) => {
       console.log(`Ignoring late AUTHORIZED for already confirmed order ${orderId}`);
     }
 
-    // Обновляем запись платежа, но не даём позднему AUTHORIZED затирать CONFIRMED
     const paymentRow = ignoreOutOfOrderAuthorized
       ? existingPayment
       : (await supabaseAdmin
@@ -98,22 +97,32 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq("order_id", orderId)
-          .select("user_id, plan")
+          .select("id, user_id, plan, points_used")
           .maybeSingle()).data;
 
     if (!ignoreOutOfOrderAuthorized && !paymentRow) {
       console.error("Failed to update payment: row not found", { orderId, status });
     }
 
-    // Активируем подписку при успехе
     if (status === "CONFIRMED" && !wasAlreadyConfirmed && paymentRow?.user_id && paymentRow?.plan) {
-      // RebillId возвращается от Т-Банка только если платёж был с Recurrent: "Y"
       const rebillId = payload.RebillId ? String(payload.RebillId) : null;
       const dataField = (payload.DATA ?? {}) as Record<string, string>;
       const autoRenewFlag = dataField.AutoRenew === "1" || !!rebillId;
       const monthsParsed = parseInt(dataField.Months ?? "1", 10);
       const months = Number.isFinite(monthsParsed) && monthsParsed > 0 ? monthsParsed : 1;
       const customerKey = `user_${paymentRow.user_id}`;
+      const pointsToSpend = (paymentRow as any).points_used ?? 0;
+
+      if (pointsToSpend > 0) {
+        const { data: spendRes, error: spendErr } = await supabaseAdmin.rpc("spend_points", {
+          _user_id: paymentRow.user_id,
+          _points: pointsToSpend,
+          _payment_id: (paymentRow as any).id,
+        });
+        if (spendErr || !(spendRes as any)?.ok) {
+          console.error("Failed to spend reserved points:", spendErr ?? spendRes);
+        }
+      }
 
       const { error: actErr } = await supabaseAdmin.rpc("activate_subscription", {
         _user_id: paymentRow.user_id,
@@ -126,10 +135,13 @@ Deno.serve(async (req) => {
       if (actErr) {
         console.error("Failed to activate subscription:", actErr);
       } else {
-        console.log(
-          `Subscription activated for user ${paymentRow.user_id}, plan ${paymentRow.plan}, auto_renew=${autoRenewFlag}, rebill=${rebillId ?? "none"}`,
-        );
+        console.log(`Subscription activated for user ${paymentRow.user_id}, plan ${paymentRow.plan}`);
       }
+
+      const { error: refErr } = await supabaseAdmin.rpc("apply_referral_credit", {
+        _payment_id: (paymentRow as any).id,
+      });
+      if (refErr) console.error("apply_referral_credit error:", refErr);
     }
 
     // Т-Банк ожидает ровно "OK" в ответе
