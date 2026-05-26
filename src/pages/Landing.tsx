@@ -16,6 +16,7 @@ import {
   Newspaper,
   FileText,
   ExternalLink,
+  Gift,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -205,6 +206,7 @@ export default function Landing() {
             <a href="#features" className="hover:text-foreground transition-colors">Возможности</a>
             <a href="#channels" className="hover:text-foreground transition-colors">Каналы</a>
             <a href="#pricing" className="hover:text-foreground transition-colors">Тарифы</a>
+            <a href="#partner" className="hover:text-foreground transition-colors">Партнёрка</a>
             <a href="#reviews" className="hover:text-foreground transition-colors">Отзывы</a>
           </div>
           <div className="flex items-center gap-3">
@@ -395,6 +397,66 @@ export default function Landing() {
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{s.description}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Partner Program */}
+      <section id="partner" className="py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-sm text-muted-foreground">
+              <Gift className="h-3.5 w-3.5 text-primary" />
+              Партнёрская программа
+            </div>
+            <h2 className="font-display text-3xl font-bold text-foreground sm:text-4xl">
+              Зарабатывайте вместе с нами
+            </h2>
+            <p className="mt-4 text-lg text-muted-foreground">
+              Приглашайте друзей и коллег в КроссПост — получайте 20% от каждой их оплаты в баллах.
+              1 балл = 1 ₽. Оплачивайте тарифы баллами.
+            </p>
+          </div>
+          <div className="mt-14 grid gap-8 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-card p-6 text-center transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Users className="h-6 w-6" />
+              </div>
+              <h3 className="font-display text-lg font-semibold text-foreground">
+                Получите ссылку
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                После регистрации в личном кабинете появится ваша уникальная реферальная ссылка.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-6 text-center transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Send className="h-6 w-6" />
+              </div>
+              <h3 className="font-display text-lg font-semibold text-foreground">
+                Делитесь ссылкой
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                Отправляйте ссылку друзьям, в соцсети или на сайт. Каждый новый пользователь закрепляется за вами.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-6 text-center transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <h3 className="font-display text-lg font-semibold text-foreground">
+                Получайте 20%
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                За каждую оплату приглашённого вы получаете 20% в баллах. Баллы действуют 12 месяцев.
+              </p>
+            </div>
+          </div>
+          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+            <Button size="lg" className="h-12 px-8 text-base w-full sm:w-auto" onClick={() => navigate("/signup")}>
+              Начать и получить ссылку
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
           </div>
         </div>
       </section>
