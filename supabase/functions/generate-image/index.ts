@@ -53,12 +53,16 @@ serve(async (req) => {
     const defaultModel = isPro ? "google/gemini-3-pro-image-preview" : "google/gemini-3.1-flash-image-preview";
     const { data: configuredModel } = await supabase.rpc("get_ai_model", { _key: settingKey, _default: defaultModel });
     const primaryModel = configuredModel || defaultModel;
-    const fallbackModel = "google/gemini-2.5-flash-image";
+    const fallbackModels = [
+      "google/gemini-3.1-flash-image-preview",
+      "google/gemini-2.5-flash-image",
+    ].filter((m) => m !== primaryModel);
     console.log(`Image gen: plan=${planData}, admin=${isAdminData}, model=${primaryModel}`);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
+    const wrappedPrompt = `Generate a single high-quality illustrative image based on the following description. Do NOT reply with text, lists, or suggestions — output ONLY an image.\n\nDescription: ${prompt}`;
     const callModel = async (model: string) => {
       const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -68,7 +72,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model,
-          messages: [{ role: "user", content: prompt }],
+          messages: [{ role: "user", content: wrappedPrompt }],
           modalities: ["image", "text"],
         }),
       });
@@ -99,10 +103,13 @@ serve(async (req) => {
     }
 
     let images = result.json?.choices?.[0]?.message?.images;
-    if (!images || images.length === 0) {
-      console.warn(`No image in attempt 1, retrying with ${fallbackModel}`);
-      result = await callModel(fallbackModel);
-      console.log("AI image attempt 2:", result.status, result.text.slice(0, 400));
+    let attempt = 1;
+    for (const fb of fallbackModels) {
+      if (images && images.length > 0) break;
+      attempt += 1;
+      console.warn(`No image in attempt ${attempt - 1}, retrying with ${fb}`);
+      result = await callModel(fb);
+      console.log(`AI image attempt ${attempt}:`, result.status, result.text.slice(0, 400));
       images = result.json?.choices?.[0]?.message?.images;
     }
 
