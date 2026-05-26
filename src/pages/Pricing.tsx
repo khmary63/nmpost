@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { CheckCircle2, ArrowLeft, Loader2 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { CheckCircle2, ArrowLeft, Loader2, Coins } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription, PLAN_LABELS, type PlanTier } from "@/hooks/useSubscription";
 import { supabase } from "@/integrations/supabase/client";
@@ -68,6 +69,26 @@ export default function Pricing() {
   const [loadingPlan, setLoadingPlan] = useState<PlanTier | null>(null);
   const [autoRenew, setAutoRenew] = useState(true);
   const [yearly, setYearly] = useState(false);
+  const [pointsBalance, setPointsBalance] = useState(0);
+  const [pointsToUse, setPointsToUse] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("points_balance")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      setPointsBalance((data as any)?.points_balance ?? 0);
+    })();
+  }, [user]);
+
+  const planPriceRub = (planId: PlanTier): number => {
+    if (planId === "free") return 0;
+    const monthly = planId === "basic" ? 990 : 1990;
+    return yearly ? Math.round(monthly * 12 * 0.9) : monthly;
+  };
 
   const handleSelectPlan = async (planId: PlanTier) => {
     if (!user) {
@@ -80,14 +101,22 @@ export default function Pricing() {
     }
     setLoadingPlan(planId);
     try {
+      const price = planPriceRub(planId);
+      const points = Math.min(pointsToUse, pointsBalance, price);
       const { data, error } = await supabase.functions.invoke("tbank-create-payment", {
         body: {
           plan: planId,
           auto_renew: autoRenew,
           billing_period: yearly ? "yearly" : "monthly",
+          points_to_use: points,
         },
       });
       if (error) throw error;
+      if ((data as any)?.paid_with_points) {
+        toast({ title: "Оплачено баллами", description: "Подписка активирована" });
+        navigate("/payment/success");
+        return;
+      }
       if (data?.payment_url) {
         window.location.href = data.payment_url as string;
         return;
