@@ -281,6 +281,32 @@ export default function Pricing() {
           </div>
         </div>
 
+        {user && pointsBalance > 0 && (
+          <div className="mx-auto mt-4 max-w-md space-y-3 rounded-lg border border-border bg-card p-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Coins className="h-4 w-4 text-primary" />
+              Оплата баллами
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Доступно: <span className="font-semibold text-foreground">{pointsBalance.toLocaleString("ru-RU")}</span> баллов (1 балл = 1 ₽).
+              Применяются к стоимости выбранного тарифа.
+            </p>
+            <Slider
+              value={[pointsToUse]}
+              min={0}
+              max={pointsBalance}
+              step={1}
+              onValueChange={(v) => setPointsToUse(v[0] ?? 0)}
+            />
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Использовать: <span className="font-semibold text-foreground">{pointsToUse}</span> баллов</span>
+              <Button variant="ghost" size="sm" onClick={() => setPointsToUse(pointsBalance)}>
+                Максимум
+              </Button>
+            </div>
+          </div>
+        )}
+
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Оплата картой через Т-Банк. Чек по 54-ФЗ выставляется отдельно.
         </p>
