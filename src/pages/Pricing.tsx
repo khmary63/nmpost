@@ -11,6 +11,7 @@ import { useSubscription, PLAN_LABELS, type PlanTier } from "@/hooks/useSubscrip
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { DeveloperPromo } from "@/components/DeveloperPromo";
+import { SEO } from "@/components/SEO";
 
 const plans: Array<{
   id: PlanTier;

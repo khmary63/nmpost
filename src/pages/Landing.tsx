@@ -192,6 +192,23 @@ export default function Landing() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
+      <SEO
+        title="КроссПост — кросспостинг в Telegram, ВКонтакте и MAX с AI"
+        description="Сервис автопостинга в России: публикуйте посты в Telegram, ВКонтакте и MAX из одного окна. AI-генерация текста и изображений, отложенный постинг, контент-план."
+        path="/"
+        jsonLd={[
+          { "@context": "https://schema.org", "@type": "WebSite", name: "КроссПост", url: "https://crosspost.neyromarket.com/", inLanguage: "ru-RU" },
+          {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: [
+              { "@type": "Question", name: "В какие соцсети можно публиковать?", acceptedAnswer: { "@type": "Answer", text: "Telegram, ВКонтакте (сообщества) и MAX." } },
+              { "@type": "Question", name: "Есть ли AI-генерация контента?", acceptedAnswer: { "@type": "Answer", text: "Да, доступна генерация текстов и изображений на базе нейросетей." } },
+              { "@type": "Question", name: "Можно ли планировать публикации?", acceptedAnswer: { "@type": "Answer", text: "Да, поддерживается отложенный постинг и контент-план." } },
+            ],
+          },
+        ]}
+      />
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
