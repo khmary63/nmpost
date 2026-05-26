@@ -206,6 +206,7 @@ export default function Landing() {
             <a href="#features" className="hover:text-foreground transition-colors">Возможности</a>
             <a href="#channels" className="hover:text-foreground transition-colors">Каналы</a>
             <a href="#pricing" className="hover:text-foreground transition-colors">Тарифы</a>
+            <a href="#partner" className="hover:text-foreground transition-colors">Партнёрка</a>
             <a href="#reviews" className="hover:text-foreground transition-colors">Отзывы</a>
           </div>
           <div className="flex items-center gap-3">
