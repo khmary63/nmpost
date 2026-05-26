@@ -11,6 +11,7 @@ import { useSubscription, PLAN_LABELS, type PlanTier } from "@/hooks/useSubscrip
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { DeveloperPromo } from "@/components/DeveloperPromo";
+import { SEO } from "@/components/SEO";
 
 const plans: Array<{
   id: PlanTier;
@@ -134,6 +135,19 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen bg-background py-12">
+      <SEO
+        title="Тарифы КроссПост — Free, Basic, Pro для автопостинга в РФ"
+        description="Тарифы сервиса кросспостинга в Telegram, ВКонтакте и MAX. Free, Basic и Pro — оплата картой РФ, СБП, баллами. Партнёрская программа 20%."
+        path="/pricing"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "Product",
+          name: "КроссПост — тарифы",
+          description: "Подписки на сервис автопостинга в Telegram, ВКонтакте и MAX.",
+          brand: { "@type": "Brand", name: "КроссПост" },
+          offers: { "@type": "AggregateOffer", priceCurrency: "RUB", lowPrice: "0", highPrice: "1990", offerCount: 3 },
+        }}
+      />
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="mb-6">
           <ArrowLeft className="mr-1 h-4 w-4" /> Назад

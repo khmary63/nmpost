@@ -2,10 +2,12 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeveloperPromo } from "@/components/DeveloperPromo";
+import { SEO } from "@/components/SEO";
 
 export default function Offer() {
   return (
     <div className="min-h-screen bg-background py-12">
+      <SEO title="Публичная оферта — КроссПост" description="Договор-оферта на оказание услуг сервиса КроссПост." path="/offer" />
       <div className="mx-auto max-w-3xl px-4 sm:px-6">
         <Link to="/">
           <Button variant="ghost" size="sm" className="mb-6">
