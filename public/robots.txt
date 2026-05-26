@@ -1,7 +1,20 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /admin/
+Disallow: /payment/
+Disallow: /partner
+Disallow: /reset-password
+Disallow: /forgot-password
+
 User-agent: Googlebot
 Allow: /
 
 User-agent: Bingbot
+Allow: /
+
+User-agent: YandexBot
 Allow: /
 
 User-agent: Twitterbot
@@ -10,5 +23,5 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
-User-agent: *
-Allow: /
+Host: crosspost.neyromarket.com
+Sitemap: https://crosspost.neyromarket.com/sitemap.xml
