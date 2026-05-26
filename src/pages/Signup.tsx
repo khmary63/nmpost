@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,14 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const { user, loading: authLoading, signUp, signInWithGoogle } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get("ref");
+
+  useEffect(() => {
+    if (refCode) {
+      try { localStorage.setItem("pending_ref", refCode); } catch {}
+    }
+  }, [refCode]);
 
   useEffect(() => {
     if (!authLoading && user) navigate("/dashboard", { replace: true });

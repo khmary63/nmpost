@@ -22,6 +22,7 @@ import Pricing from "./pages/Pricing";
 import AdminUsers from "./pages/AdminUsers";
 import AdminAIModels from "./pages/AdminAIModels";
 import PaymentSuccess from "./pages/PaymentSuccess";
+import Partner from "./pages/Partner";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/payment/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
+            <Route path="/partner" element={<ProtectedRoute><Partner /></ProtectedRoute>} />
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/ai-models" element={<ProtectedRoute><AdminAIModels /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />

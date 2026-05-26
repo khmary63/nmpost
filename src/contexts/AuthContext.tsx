@@ -193,11 +193,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string) => {
+    let referralCode: string | null = null;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      referralCode = params.get("ref");
+      if (!referralCode) referralCode = localStorage.getItem("pending_ref");
+    } catch {}
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: window.location.origin },
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: referralCode ? { referral_code: referralCode } : undefined,
+      },
     });
+    if (!error) {
+      try { localStorage.removeItem("pending_ref"); } catch {}
+    }
     return { error: error ? new Error(error.message) : null };
   };
 

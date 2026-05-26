@@ -106,9 +106,11 @@ export type Database = {
           amount_kopecks: number
           created_at: string
           id: string
+          money_amount_kopecks: number | null
           order_id: string
           payment_url: string | null
           plan: Database["public"]["Enums"]["plan_tier"]
+          points_used: number
           raw_response: Json | null
           raw_webhook: Json | null
           status: string
@@ -120,9 +122,11 @@ export type Database = {
           amount_kopecks: number
           created_at?: string
           id?: string
+          money_amount_kopecks?: number | null
           order_id: string
           payment_url?: string | null
           plan: Database["public"]["Enums"]["plan_tier"]
+          points_used?: number
           raw_response?: Json | null
           raw_webhook?: Json | null
           status?: string
@@ -134,14 +138,46 @@ export type Database = {
           amount_kopecks?: number
           created_at?: string
           id?: string
+          money_amount_kopecks?: number | null
           order_id?: string
           payment_url?: string | null
           plan?: Database["public"]["Enums"]["plan_tier"]
+          points_used?: number
           raw_response?: Json | null
           raw_webhook?: Json | null
           status?: string
           tbank_payment_id?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      points_ledger: {
+        Row: {
+          created_at: string
+          delta: number
+          description: string | null
+          id: string
+          kind: string
+          ref_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delta: number
+          description?: string | null
+          id?: string
+          kind: string
+          ref_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          description?: string | null
+          id?: string
+          kind?: string
+          ref_id?: string | null
           user_id?: string
         }
         Relationships: []
@@ -206,6 +242,9 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          points_balance: number
+          referral_code: string | null
+          referrer_id: string | null
           tone_of_voice_sample: string | null
           updated_at: string
           user_id: string
@@ -215,6 +254,9 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          points_balance?: number
+          referral_code?: string | null
+          referrer_id?: string | null
           tone_of_voice_sample?: string | null
           updated_at?: string
           user_id: string
@@ -224,8 +266,47 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          points_balance?: number
+          referral_code?: string | null
+          referrer_id?: string | null
           tone_of_voice_sample?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referral_events: {
+        Row: {
+          amount_kopecks: number
+          created_at: string
+          expired: boolean
+          expires_at: string
+          id: string
+          payment_id: string
+          points_awarded: number
+          referred_user_id: string
+          user_id: string
+        }
+        Insert: {
+          amount_kopecks: number
+          created_at?: string
+          expired?: boolean
+          expires_at: string
+          id?: string
+          payment_id: string
+          points_awarded: number
+          referred_user_id: string
+          user_id: string
+        }
+        Update: {
+          amount_kopecks?: number
+          created_at?: string
+          expired?: boolean
+          expires_at?: string
+          id?: string
+          payment_id?: string
+          points_awarded?: number
+          referred_user_id?: string
           user_id?: string
         }
         Relationships: []
@@ -390,6 +471,7 @@ export type Database = {
             }
             Returns: undefined
           }
+      apply_referral_credit: { Args: { _payment_id: string }; Returns: Json }
       cancel_subscription_renewal: {
         Args: { _user_id: string }
         Returns: undefined
@@ -403,6 +485,8 @@ export type Database = {
         Returns: undefined
       }
       ensure_current_user_initialized: { Args: never; Returns: Json }
+      expire_old_points: { Args: never; Returns: Json }
+      generate_referral_code: { Args: never; Returns: string }
       get_ai_model: {
         Args: { _default: string; _key: string }
         Returns: string
@@ -420,6 +504,7 @@ export type Database = {
         Args: { _plan: Database["public"]["Enums"]["plan_tier"] }
         Returns: Json
       }
+      get_referral_stats: { Args: { _user_id: string }; Returns: Json }
       get_user_plan: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["plan_tier"]
@@ -430,6 +515,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      spend_points: {
+        Args: { _payment_id: string; _points: number; _user_id: string }
+        Returns: Json
       }
     }
     Enums: {
