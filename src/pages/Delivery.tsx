@@ -3,6 +3,7 @@ import { ArrowLeft, Zap, Mail, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { DeveloperPromo } from "@/components/DeveloperPromo";
+import { SEO } from "@/components/SEO";
 
 export default function Delivery() {
   return (

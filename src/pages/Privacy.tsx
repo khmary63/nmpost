@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DeveloperPromo } from "@/components/DeveloperPromo";
+import { SEO } from "@/components/SEO";
 
 export default function Privacy() {
   return (

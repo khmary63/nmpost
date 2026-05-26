@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/contexts/AuthContext";
 import { Send } from "lucide-react";
 import { toast } from "sonner";
+import { SEO } from "@/components/SEO";
 
 export default function Signup() {
   const [name, setName] = useState("");
