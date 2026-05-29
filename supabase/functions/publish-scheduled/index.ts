@@ -142,6 +142,21 @@ async function publishTelegram(post: any, ch: ChannelSetting): Promise<{ ok: boo
 }
 
 async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<{ ok: boolean; error?: string }> {
+  // Parse a fetch Response as JSON, but detect transient HTML/error pages that VK
+  // sometimes returns instead of JSON (e.g. pu.vk.com under load returns a "<!DOCTYPE" page).
+  const parseJsonOrThrow = async (resp: Response, label: string) => {
+    const text = await resp.text();
+    const trimmed = text.trimStart();
+    if (trimmed.startsWith("<") || trimmed.startsWith("<!DOCTYPE")) {
+      throw new Error(`${label}: VK вернул HTML вместо JSON (HTTP ${resp.status}), временный сбой VK`);
+    }
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(`${label}: некорректный ответ VK (HTTP ${resp.status})`);
+    }
+  };
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
   const VK_TOKEN = Deno.env.get("VK_COMMUNITY_TOKEN")?.replace(/^access_token=/, "").split("&")[0].trim();
   const { data: vkUserTokenRow } = await supabase
     .from("channel_settings")
