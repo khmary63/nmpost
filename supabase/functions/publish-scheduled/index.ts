@@ -281,9 +281,38 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
     owner_id: String(ownerId), from_group: "1", message, access_token: VK_TOKEN, v: "5.199",
   });
   if (attachments) params.set("attachments", attachments);
-  const vkResp = await (await fetch(`https://api.vk.com/method/wall.post?${params.toString()}`, { method: "POST" })).json();
+
+  // IMPORTANT: send parameters in the POST body, not as a giant query string.
+  // Long posts produced huge URLs that VK could reject / drop ("broken pipe").
+  // Retry on transient network/HTML errors as well.
+  let vkResp: any = null;
+  {
+    const MAX_ATTEMPTS = 3;
+    let lastErr: unknown = null;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const resp = await fetch("https://api.vk.com/method/wall.post", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: params.toString(),
+        });
+        vkResp = await parseJsonOrThrow(resp, "wall.post");
+        break;
+      } catch (e) {
+        lastErr = e;
+        const msg = e instanceof Error ? e.message : String(e);
+        console.warn(`vk wall.post attempt ${attempt}/${MAX_ATTEMPTS} failed:`, msg);
+        if (attempt < MAX_ATTEMPTS) await sleep(800 * attempt);
+      }
+    }
+    if (!vkResp) {
+      const msg = lastErr instanceof Error ? lastErr.message : String(lastErr);
+      return { ok: false, error: `vk: ${msg}` };
+    }
+  }
   if (vkResp.error) return { ok: false, error: `vk: ${vkResp.error.error_msg}` };
   if (!vkResp.response?.post_id) return { ok: false, error: "vk: no post_id" };
+
 
   if (ch.vk_duplicate_to_channel && ch.vk_channel_id) {
     try {
