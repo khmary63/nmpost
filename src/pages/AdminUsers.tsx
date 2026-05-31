@@ -129,7 +129,7 @@ export default function AdminUsers() {
             <h1 className="font-display text-2xl font-bold flex items-center gap-2">
               <Users className="h-6 w-6 text-primary" /> Пользователи
             </h1>
-            <p className="text-sm text-muted-foreground">Все зарегистрированные пользователи приложения</p>
+            <p className="text-sm text-muted-foreground">Все пользователи приложения</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={load} disabled={loading} className="gap-2">
