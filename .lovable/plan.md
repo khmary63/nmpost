@@ -1,76 +1,85 @@
-# Партнёрская программа
+# Вариант А: прокси перед фронтом и API (Россия)
 
-## Логика
-- У каждого пользователя свой `referral_code` (короткий слаг, генерируется при регистрации).
-- Реферальная ссылка: `https://crosspost.neyromarket.com/signup?ref=CODE`.
-- Привязка только в момент signup: если `?ref=CODE` есть в URL — записываем `referrer_id` в `profiles`. Без параметра связь не создаётся и задним числом не добавляется.
-- За каждую успешную оплату реферала пригласивший получает **20% в баллах** (1 балл = 1 ₽). Начисление со **всех** оплат бессрочно (включая продления и апгрейды).
-- Срок жизни баллов — **12 месяцев** с даты начисления. Сгоревшие баллы списываются по cron.
-- При оплате тарифа пользователь может покрыть стоимость баллами **полностью или частично**, остаток — деньгами через TBank.
-- Если оплата 100% баллами — деньги не списываются, подписка активируется сразу. Реферал-начислений с такой оплаты НЕ происходит (начисляем только с реальных денежных поступлений, чтобы исключить циклы).
+Цель: ускорить приложение для пользователей из РФ, не ломая текущий рабочий процесс Lovable (Publish + встроенный автодеплой). Весь трафик к бэкенду (`lyvpryyrztgjyrovdvqo.supabase.co`) пойдёт через российский прокси-домен.
 
-## Схема БД
+---
 
-Новые поля и таблицы (миграция):
+## Часть 1. Инфраструктура — ваша сторона (без неё код менять рано)
 
-- `profiles`: `referral_code TEXT UNIQUE`, `referrer_id UUID`, `points_balance INT DEFAULT 0` (денормализованный кеш для UI).
-- `referral_events` — журнал начислений:
-  - `id, user_id` (получатель баллов), `referred_user_id`, `payment_id`, `amount_kopecks` (оплата реферала), `points_awarded`, `expires_at`, `expired BOOLEAN`, `created_at`.
-- `points_ledger` — единый журнал движения баллов (приход/расход/сгорание):
-  - `id, user_id, delta INT` (+/-), `kind TEXT` (`referral`, `spend`, `expire`, `admin_adjust`), `ref_id UUID`, `description, created_at`.
-  - Баланс = сумма всех `delta` (или брать кеш из profiles).
-- `payments`: добавить `points_used INT DEFAULT 0`, `money_amount_kopecks INT` (что реально оплачено деньгами).
+### 1.1. Поднять прокси-домен для API
+Субдомен **`api.neyromarket.com`** → reverse-proxy на `https://lyvpryyrztgjyrovdvqo.supabase.co`.
 
-RPC:
-- `apply_referral_credit(_payment_id)` — security definer, вызывается из TBank webhook после `CONFIRMED`. Идемпотентно по `payment_id`. Начисляет 20% инвайтеру, создаёт `referral_events` + `points_ledger`, обновляет `points_balance`.
-- `spend_points(_user_id, _points, _payment_id)` — security definer. Проверяет баланс, списывает, пишет в ledger.
-- `expire_old_points()` — cron-функция, списывает баллы с `expires_at < now()`.
-- `get_referral_stats(_user_id)` — для кабинета: количество приглашённых, активных (с оплатой), всего заработано, баланс, ближайшее сгорание.
+Прокси ОБЯЗАН прозрачно пробрасывать все пути и заголовки:
+- `/rest/v1/*` — база данных
+- `/auth/v1/*` — вход/регистрация (email/пароль)
+- `/functions/v1/*` — edge-функции (публикация, AI, вебхуки)
+- `/storage/v1/*` — картинки (логотипы, картинки постов)
+- Заголовки: `apikey`, `Authorization`, `Content-Type`, `x-client-info`, и CORS-заголовки в ответах.
+- SSL на стороне прокси (Let's Encrypt / сертификат CDN).
+- Желательно `proxy_ssl_server_name on` и `Host` = `lyvpryyrztgjyrovdvqo.supabase.co`.
 
-## Изменения flow оплаты
+Пример Nginx (для VPS-варианта):
+```nginx
+server {
+    server_name api.neyromarket.com;
+    location / {
+        proxy_pass https://lyvpryyrztgjyrovdvqo.supabase.co;
+        proxy_set_header Host lyvpryyrztgjyrovdvqo.supabase.co;
+        proxy_ssl_server_name on;
+        proxy_set_header Authorization $http_authorization;
+        proxy_set_header apikey $http_apikey;
+        proxy_set_header X-Client-Info $http_x_client_info;
+        proxy_buffering off;          # важно для realtime/SSE
+    }
+}
+```
+(Если выбираете CDN — Gcore/Yandex/VK — настраиваете origin = supabase.co, передачу всех заголовков, и кэш только для `/storage/*`.)
 
-`tbank-create-payment` (edge function):
-- Принимает `points_to_use`. Валидирует баланс. Считает `money_amount = plan_price - points_to_use`.
-- Если `money_amount = 0` — сразу зовёт `activate_subscription` + `spend_points`, не идёт в TBank.
-- Иначе создаёт платёж в TBank на `money_amount`, сохраняет `points_used` в `payments` (резерв пока не списываем).
+### 1.2. Прокси/CDN для самого фронта
+Origin = `crosspost.neyromarket.com` (или `nmpost.lovable.app`), SSL на прокси, кэш статики (JS/CSS/img).
+В Lovable при подключении домена включить **Proxy mode** (Advanced → "Domain uses Cloudflare or a similar proxy") — это даёт CNAME-верификацию, совместимую с вашим прокси.
 
-`tbank-webhook`:
-- При `CONFIRMED` — списывает зарезервированные баллы (`spend_points`), активирует подписку, вызывает `apply_referral_credit`.
-- При `REJECTED/CANCELED` — резерв не трогаем (его и не было).
+### 1.3. DNS (ваша сторона)
+- `api.neyromarket.com` → на API-прокси.
+- `crosspost.neyromarket.com` → на фронт-прокси/CDN.
 
-## UI
+---
 
-Новая страница `/partner` (партнёрский кабинет, ссылка в `DashboardLayout`):
-- Карточка с реферальной ссылкой + кнопка «Скопировать».
-- Метрики: баланс баллов, всего заработано, приглашено пользователей, из них с оплатой.
-- Таблица приглашённых: имя/email (маскированный), дата регистрации, статус (оплатил/нет), сумма принесённых баллов.
-- История начислений и списаний (из `points_ledger`).
-- Подсказка про срок жизни 12 мес и ближайшие сгорания.
+## Часть 2. Правки в коде — моя сторона (делаю, когда `api.neyromarket.com` поднят и отвечает)
 
-`Signup.tsx`:
-- Читает `?ref=` из URL, сохраняет в state, передаёт в `signUp` через `options.data.referral_code`.
-- Триггер `handle_new_user` находит инвайтера по коду и проставляет `referrer_id`. Также генерирует свой `referral_code` (например, `nanoid(8)`).
+Файл `client.ts` редактировать нельзя, поэтому:
 
-`Pricing.tsx` / страница оплаты:
-- Поле «Использовать баллы»: слайдер 0..min(balance, plan_price). Показ итога «К оплате деньгами: X ₽».
-- Кнопка «Оплатить баллами полностью» когда балансa достаточно.
+1. **Новый модуль клиента** (например `src/integrations/supabase/client.ts` нельзя — создам `src/lib/api-client.ts`), который создаёт Supabase-клиент с базовым URL = прокси:
+   ```ts
+   const API_BASE = "https://api.neyromarket.com"; // публичный домен, не секрет
+   export const supabase = createClient<Database>(API_BASE, PUBLISHABLE_KEY, { auth: {...} });
+   ```
+   Базовый URL прокси автоматически распространится на `/rest`, `/auth`, `/functions/v1` и `/storage` — отдельной настройки не требуют.
 
-`DashboardLayout`:
-- Бейдж с балансом баллов рядом с тарифом + ссылка на `/partner`.
+2. **Переключить импорты** в коде приложения с `@/integrations/supabase/client` на новый модуль (через глобальную замену). Edge-функции и серверный код НЕ трогаю — они работают внутри Lovable Cloud и обращаются к базе напрямую.
 
-## Cron / обслуживание
-- Расширить существующий cron (или добавить новый) на ежедневный вызов `expire_old_points()`.
+3. **Картинки из storage**: проверить, как формируются URL логотипов/картинок постов. Если в БД хранятся абсолютные `…supabase.co/storage/...`, добавлю функцию-хелпер, переписывающую хост на прокси при отображении (миграцию данных не делаю).
 
-## Безопасность
-- RLS: `referral_events`, `points_ledger` — пользователь видит только свои строки; админ — все.
-- Все мутации баллов идут только через security definer RPC; прямого UPDATE с клиента нет.
-- `referral_code` уникален, генерация на сервере; самореферал запрещён (проверка `referrer_id != user_id`).
-- Идемпотентность начислений: уникальный индекс `(payment_id)` в `referral_events`.
+4. **OAuth (вход через Google)**: вход идёт через Lovable-модуль (`lovable.auth`) и работает на кастомных доменах. Проверю, что вход не сломался; при необходимости добавлю редирект-домены.
 
-## Шаги внедрения
-1. Миграция: новые колонки, таблицы, RPC, RLS, индексы, генерация `referral_code` для существующих пользователей.
-2. Обновить `handle_new_user` (referral_code + referrer_id из metadata).
-3. Edge: `tbank-create-payment` + `tbank-webhook` — поддержка баллов и начисления.
-4. UI: `/partner`, апдейт `Signup`, `Pricing`, `DashboardLayout`.
-5. Cron на сгорание баллов.
-6. Обновить memory (`features/subscription-plans`, новый `features/referrals`).
+---
+
+## Часть 3. Проверка (совместно)
+
+После правок и публикации проверяем из РФ:
+- Скорость загрузки (должно стать в разы быстрее 16–17 сек).
+- Консоль без ошибок (CORS, 401/403).
+- Вход через Google и email/пароль.
+- Загрузка постов и картинок.
+- Отложенная публикация (edge-функции через прокси).
+
+Если что-то рвётся — почти всегда это заголовки/CORS на прокси, чиню точечно.
+
+---
+
+## Что мне нужно от вас сейчас
+1. Выберите инфраструктуру для API-прокси: **CDN** (Gcore/Yandex/VK) или **VPS+Nginx**.
+2. Подтвердите имя субдомена **`api.neyromarket.com`** (или предложите своё).
+3. Сообщите, когда `api.neyromarket.com` поднят и отвечает (открывается `https://api.neyromarket.com/rest/v1/` без сетевой ошибки) — после этого я вношу правки в код.
+
+> Важно: пока прокси не поднят, код менять нельзя — иначе приложение начнёт стучаться на несуществующий домен. Поэтому сначала Часть 1 (вы), потом Часть 2 (я).
