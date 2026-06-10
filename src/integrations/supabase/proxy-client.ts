@@ -11,6 +11,9 @@ const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export const supabase = createClient<Database>(PROXY_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
+    // Совпадает с ключом по умолчанию у авто-генерируемого клиента,
+    // чтобы OAuth-сессия (устанавливается через lovable/index.ts) была общей.
+    storageKey: 'sb-lyvpryyrztgjyrovdvqo-auth-token',
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
