@@ -1,85 +1,34 @@
-# Вариант А: прокси перед фронтом и API (Россия)
+# Переключение приложения на прокси api.neyromarket.com
 
-Цель: ускорить приложение для пользователей из РФ, не ломая текущий рабочий процесс Lovable (Publish + встроенный автодеплой). Весь трафик к бэкенду (`lyvpryyrztgjyrovdvqo.supabase.co`) пойдёт через российский прокси-домен.
+Прокси на VPS уже работает: `https://api.neyromarket.com` корректно проксирует запросы на бэкенд (проверка вернула `sb-project-ref: lyvpryyrztgjyrovdvqo` и ожидаемый `401 — нет apikey`). Осталось перенаправить само приложение на этот адрес.
 
----
+## Почему нужен отдельный модуль
 
-## Часть 1. Инфраструктура — ваша сторона (без неё код менять рано)
+Файлы `src/integrations/supabase/client.ts` и `.env` — автогенерируемые, их править нельзя. Поэтому создаём собственный модуль клиента с адресом прокси и переключаем на него все импорты в коде. Это автоматически охватит всё: REST (база), Auth (вход/регистрация), Edge Functions (генерация, публикация, оплата) и Storage (картинки) — все они используют базовый URL клиента.
 
-### 1.1. Поднять прокси-домен для API
-Субдомен **`api.neyromarket.com`** → reverse-proxy на `https://lyvpryyrztgjyrovdvqo.supabase.co`.
+## Шаги
 
-Прокси ОБЯЗАН прозрачно пробрасывать все пути и заголовки:
-- `/rest/v1/*` — база данных
-- `/auth/v1/*` — вход/регистрация (email/пароль)
-- `/functions/v1/*` — edge-функции (публикация, AI, вебхуки)
-- `/storage/v1/*` — картинки (логотипы, картинки постов)
-- Заголовки: `apikey`, `Authorization`, `Content-Type`, `x-client-info`, и CORS-заголовки в ответах.
-- SSL на стороне прокси (Let's Encrypt / сертификат CDN).
-- Желательно `proxy_ssl_server_name on` и `Host` = `lyvpryyrztgjyrovdvqo.supabase.co`.
+1. **Новый модуль клиента** `src/integrations/supabase/proxy-client.ts`:
+   - `createClient` с URL `https://api.neyromarket.com` и тем же публичным anon-ключом (берётся из `VITE_SUPABASE_PUBLISHABLE_KEY`).
+   - Те же настройки auth (`localStorage`, `persistSession`, `autoRefreshToken`), что и сейчас.
+   - Экспортирует `supabase` — сигнатура идентична текущему модулю.
 
-Пример Nginx (для VPS-варианта):
-```nginx
-server {
-    server_name api.neyromarket.com;
-    location / {
-        proxy_pass https://lyvpryyrztgjyrovdvqo.supabase.co;
-        proxy_set_header Host lyvpryyrztgjyrovdvqo.supabase.co;
-        proxy_ssl_server_name on;
-        proxy_set_header Authorization $http_authorization;
-        proxy_set_header apikey $http_apikey;
-        proxy_set_header X-Client-Info $http_x_client_info;
-        proxy_buffering off;          # важно для realtime/SSE
-    }
-}
-```
-(Если выбираете CDN — Gcore/Yandex/VK — настраиваете origin = supabase.co, передачу всех заголовков, и кэш только для `/storage/*`.)
+2. **Переключение импортов** в 12 файлах, которые сейчас импортируют `@/integrations/supabase/client`:
+   `useSubscription.ts`, `AuthContext.tsx`, `PostEditor.tsx`, `ChannelSettings.tsx`, `Partner.tsx`, `Profile.tsx`, `Pricing.tsx`, `PaymentSuccess.tsx`, `AdminUsers.tsx`, `AdminAIModels.tsx`, `SupportWidget.tsx`, `PostsList.tsx` — заменить путь на новый модуль. (Сам `client.ts` не трогаем.)
 
-### 1.2. Прокси/CDN для самого фронта
-Origin = `crosspost.neyromarket.com` (или `nmpost.lovable.app`), SSL на прокси, кэш статики (JS/CSS/img).
-В Lovable при подключении домена включить **Proxy mode** (Advanced → "Domain uses Cloudflare or a similar proxy") — это даёт CNAME-верификацию, совместимую с вашим прокси.
+3. **Картинки в Storage** — `getPublicUrl` в `PostEditor.tsx` строит URL от базового адреса клиента, поэтому новые ссылки автоматически пойдут через прокси. Старые ссылки на `*.supabase.co`, уже сохранённые в базе, продолжат работать напрямую (это нормально).
 
-### 1.3. DNS (ваша сторона)
-- `api.neyromarket.com` → на API-прокси.
-- `crosspost.neyromarket.com` → на фронт-прокси/CDN.
+## Проверка после внедрения
 
----
+- Открыть превью: вход/регистрация работают, лента постов грузится.
+- В DevTools → Network убедиться, что запросы идут на `api.neyromarket.com`, а не на `*.supabase.co`.
+- Проверить генерацию текста/картинки и публикацию (Edge Functions) — проходят через прокси.
+- Загрузка новой картинки → публичная ссылка указывает на `api.neyromarket.com`.
 
-## Часть 2. Правки в коде — моя сторона (делаю, когда `api.neyromarket.com` поднят и отвечает)
+## Откат
 
-Файл `client.ts` редактировать нельзя, поэтому:
+Если что-то не так — вернуть импорты на `@/integrations/supabase/client` (одна замена пути), приложение мгновенно работает напрямую с бэкендом.
 
-1. **Новый модуль клиента** (например `src/integrations/supabase/client.ts` нельзя — создам `src/lib/api-client.ts`), который создаёт Supabase-клиент с базовым URL = прокси:
-   ```ts
-   const API_BASE = "https://api.neyromarket.com"; // публичный домен, не секрет
-   export const supabase = createClient<Database>(API_BASE, PUBLISHABLE_KEY, { auth: {...} });
-   ```
-   Базовый URL прокси автоматически распространится на `/rest`, `/auth`, `/functions/v1` и `/storage` — отдельной настройки не требуют.
+## Замечание
 
-2. **Переключить импорты** в коде приложения с `@/integrations/supabase/client` на новый модуль (через глобальную замену). Edge-функции и серверный код НЕ трогаю — они работают внутри Lovable Cloud и обращаются к базе напрямую.
-
-3. **Картинки из storage**: проверить, как формируются URL логотипов/картинок постов. Если в БД хранятся абсолютные `…supabase.co/storage/...`, добавлю функцию-хелпер, переписывающую хост на прокси при отображении (миграцию данных не делаю).
-
-4. **OAuth (вход через Google)**: вход идёт через Lovable-модуль (`lovable.auth`) и работает на кастомных доменах. Проверю, что вход не сломался; при необходимости добавлю редирект-домены.
-
----
-
-## Часть 3. Проверка (совместно)
-
-После правок и публикации проверяем из РФ:
-- Скорость загрузки (должно стать в разы быстрее 16–17 сек).
-- Консоль без ошибок (CORS, 401/403).
-- Вход через Google и email/пароль.
-- Загрузка постов и картинок.
-- Отложенная публикация (edge-функции через прокси).
-
-Если что-то рвётся — почти всегда это заголовки/CORS на прокси, чиню точечно.
-
----
-
-## Что мне нужно от вас сейчас
-1. Выберите инфраструктуру для API-прокси: **CDN** (Gcore/Yandex/VK) или **VPS+Nginx**.
-2. Подтвердите имя субдомена **`api.neyromarket.com`** (или предложите своё).
-3. Сообщите, когда `api.neyromarket.com` поднят и отвечает (открывается `https://api.neyromarket.com/rest/v1/` без сетевой ошибки) — после этого я вношу правки в код.
-
-> Важно: пока прокси не поднят, код менять нельзя — иначе приложение начнёт стучаться на несуществующий домен. Поэтому сначала Часть 1 (вы), потом Часть 2 (я).
+Для домена приложения (`crosspost.neyromarket.com`) фронт-прокси на том же VPS — отдельная задача; этот план меняет только адрес API. Если нужно — добавим следующим шагом.

@@ -8,7 +8,7 @@ import { Slider } from "@/components/ui/slider";
 import { CheckCircle2, ArrowLeft, Loader2, Coins } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription, PLAN_LABELS, type PlanTier } from "@/hooks/useSubscription";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/proxy-client";
 import { toast } from "@/hooks/use-toast";
 import { DeveloperPromo } from "@/components/DeveloperPromo";
 import { SEO } from "@/components/SEO";

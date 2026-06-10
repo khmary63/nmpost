@@ -13,7 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { User, Lock, Mail, Shield, CreditCard, RotateCw, XCircle, Mic } from "lucide-react";
 import { useSubscription, PLAN_LABELS } from "@/hooks/useSubscription";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/proxy-client";
 import { Link } from "react-router-dom";
 
 export default function Profile() {
