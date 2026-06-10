@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/proxy-client";
 import { useAuth } from "@/contexts/AuthContext";
 
 const ADMIN_LIMITS: PlanLimits = {
