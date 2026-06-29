@@ -310,11 +310,6 @@ serve(async (req) => {
 
     const postUrl = `https://vk.com/wall${ownerId}_${postIdFromVk}`;
 
-    await supabase.from("posts").update({
-      status: "published",
-      published_at: new Date().toISOString(),
-    }).eq("id", postId);
-
     console.log("VK post published:", { postId, vk_post_id: postIdFromVk, postUrl, ownerId });
 
     // ===== Optional first comment =====

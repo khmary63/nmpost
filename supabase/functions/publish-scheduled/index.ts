@@ -79,6 +79,19 @@ async function publishTelegram(post: any, ch: ChannelSetting): Promise<{ ok: boo
       body: JSON.stringify(body),
     });
 
+  const sendTextOnly = async (warning?: string) => {
+    const textResp = await send("sendMessage", {
+      chat_id: ch.channel_chat_id,
+      text: fullText,
+      parse_mode: "HTML",
+    });
+    if (!textResp.ok) {
+      const d = await textResp.json().catch(() => ({}));
+      return { ok: false, error: `tg: ${d.description || textResp.status}` };
+    }
+    return warning ? { ok: true, error: warning } : { ok: true };
+  };
+
   const images: string[] = Array.isArray(post.image_urls) && post.image_urls.length > 0
     ? post.image_urls
     : (post.image_url ? [post.image_url] : []);
@@ -102,7 +115,7 @@ async function publishTelegram(post: any, ch: ChannelSetting): Promise<{ ok: boo
       const photoResp = await send("sendPhoto", { chat_id: ch.channel_chat_id, photo: images[0] });
       if (!photoResp.ok) {
         const d = await photoResp.json().catch(() => ({}));
-        return { ok: false, error: `tg photo: ${d.description || photoResp.status}` };
+        return await sendTextOnly(`tg image: ${d.description || photoResp.status}`);
       }
       resp = await send("sendMessage", {
         chat_id: ch.channel_chat_id,
@@ -121,7 +134,7 @@ async function publishTelegram(post: any, ch: ChannelSetting): Promise<{ ok: boo
     const mgResp = await send("sendMediaGroup", { chat_id: ch.channel_chat_id, media });
     if (!mgResp.ok) {
       const d = await mgResp.json().catch(() => ({}));
-      return { ok: false, error: `tg media group: ${d.description || mgResp.status}` };
+      return await sendTextOnly(`tg image: ${d.description || mgResp.status}`);
     }
     if (useCaptionInGroup) {
       resp = mgResp;
@@ -136,6 +149,9 @@ async function publishTelegram(post: any, ch: ChannelSetting): Promise<{ ok: boo
 
   if (!resp.ok) {
     const d = await resp.json().catch(() => ({}));
+    if (images.length > 0) {
+      return await sendTextOnly(`tg image: ${d.description || resp.status}`);
+    }
     return { ok: false, error: `tg: ${d.description || resp.status}` };
   }
   return { ok: true };
@@ -199,6 +215,7 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
     : (post.image_url ? [post.image_url] : []);
 
   let attachments = "";
+  let imageWarning: string | undefined;
   if (vkImages.length > 0 && VK_USER_TOKEN) {
     // Pre-download all images once (so retries don't re-fetch storage repeatedly)
     const downloaded: { blob: Blob; ext: string }[] = [];
@@ -272,7 +289,8 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
         ? "vk image: срок действия VK-токена для загрузки фото истёк, нужно переподключить VK"
         : `vk image: ${rawMessage}`;
       console.error("vk image upload failed:", errorMessage);
-      return { ok: false, error: errorMessage };
+      imageWarning = errorMessage;
+      attachments = "";
     }
   }
 
@@ -390,11 +408,11 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error("vk scheduled channel duplicate failed:", msg);
-      return { ok: true, error: `vk channel: ${msg}` };
+      return { ok: true, error: [imageWarning, `vk channel: ${msg}`].filter(Boolean).join("; ") };
     }
   }
 
-  return { ok: true };
+  return { ok: true, error: imageWarning };
 }
 
 async function publishMax(post: any, ch: ChannelSetting): Promise<{ ok: boolean; error?: string }> {
@@ -406,7 +424,7 @@ async function publishMax(post: any, ch: ChannelSetting): Promise<{ ok: boolean;
   let text = "";
   if (post.title) text += `${post.title}\n\n`;
   text += post.content;
-  let useMd = false;
+  let useMd = /\*\*[^*\n]+?\*\*|__[^_\n]+?__|\[[^\]]+\]\s*\([^)]*\)|`[^`\n]+`|~~[^~\n]+?~~/.test(text);
   if (post.include_footer !== false) {
     const lines: string[] = [];
     if (ch.manager_url?.trim()) { lines.push(`👉 [Связаться с менеджером](${ch.manager_url.trim()})`); useMd = true; }
@@ -552,12 +570,22 @@ serve(async (req) => {
       }
     }
 
-    if (anySuccess) {
+    const requestedChannels = post.channels ?? [];
+    const allSuccess = requestedChannels.length > 0 && requestedChannels.every((channel: string) => channelResults[channel]?.ok);
+
+    if (allSuccess) {
       await supabase.from("posts").update({
         status: "published",
         published_at: new Date().toISOString(),
       }).eq("id", post.id);
+    } else if (anySuccess) {
+      await supabase.from("posts").update({
+        status: "draft",
+        scheduled_at: null,
+        published_at: null,
+      }).eq("id", post.id);
     }
+    console.log("publish-scheduled post result:", JSON.stringify({ id: post.id, allSuccess, anySuccess, channels: channelResults }));
     results.push({ id: post.id, channels: channelResults });
   }
 
