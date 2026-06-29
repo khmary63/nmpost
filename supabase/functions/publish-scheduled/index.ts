@@ -556,7 +556,15 @@ serve(async (req) => {
     }
     const channelResults: Record<string, { ok: boolean; error?: string }> = {};
     let anySuccess = false;
+    // Каналы, в которые пост уже успешно ушёл ранее — не отправляем повторно (чтобы не дублировать)
+    const alreadyPublished: string[] = Array.isArray(post.published_channels) ? post.published_channels : [];
+    const doneChannels = new Set<string>(alreadyPublished);
     for (const channel of post.channels ?? []) {
+      if (doneChannels.has(channel)) {
+        channelResults[channel] = { ok: true };
+        anySuccess = true;
+        continue;
+      }
       const ch = await getChannel(supabase, post.user_id, channel);
       if (!ch) {
         channelResults[channel] = { ok: false, error: "channel not configured" };
@@ -569,29 +577,38 @@ serve(async (req) => {
         else if (channel === "max") r = await publishMax(post, ch);
         else r = { ok: false, error: `unknown channel ${channel}` };
         channelResults[channel] = r;
-        if (r.ok) anySuccess = true;
+        if (r.ok) {
+          anySuccess = true;
+          doneChannels.add(channel);
+        }
       } catch (e) {
         channelResults[channel] = { ok: false, error: String(e) };
       }
     }
 
     const requestedChannels = post.channels ?? [];
-    const allSuccess = requestedChannels.length > 0 && requestedChannels.every((channel: string) => channelResults[channel]?.ok);
+    const allSuccess = requestedChannels.length > 0 && requestedChannels.every((channel: string) => doneChannels.has(channel));
+    const publishedList = requestedChannels.filter((c: string) => doneChannels.has(c));
 
     if (allSuccess) {
       await supabase.from("posts").update({
         status: "published",
         published_at: new Date().toISOString(),
+        published_channels: publishedList,
       }).eq("id", post.id);
     } else if (anySuccess) {
+      // Частичный успех: помечаем «опубликован частично» и запоминаем прошедшие каналы.
+      // При повторе отправляем только в непрошедшие, чтобы не дублировать.
       await supabase.from("posts").update({
-        status: "draft",
+        status: "partial",
         scheduled_at: null,
         published_at: null,
+        published_channels: publishedList,
       }).eq("id", post.id);
     }
     console.log("publish-scheduled post result:", JSON.stringify({ id: post.id, allSuccess, anySuccess, channels: channelResults }));
     results.push({ id: post.id, channels: channelResults });
+
   }
 
   console.log("publish-scheduled processed:", results.length);

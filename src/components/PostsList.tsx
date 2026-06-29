@@ -19,12 +19,14 @@ interface Post {
   scheduled_at: string | null;
   image_url: string | null;
   image_urls?: string[] | null;
+  published_channels?: string[] | null;
   created_at: string;
 }
 
 const statusMap: Record<string, { label: string; class: string }> = {
   draft: { label: "Черновик", class: "bg-muted text-muted-foreground" },
   scheduled: { label: "Запланирован", class: "bg-yellow-100 text-yellow-700" },
+  partial: { label: "Опубликован частично", class: "bg-orange-100 text-orange-700" },
   published: { label: "Опубликован", class: "bg-green-100 text-green-700" },
 };
 
@@ -86,11 +88,18 @@ export function PostsList({ onEdit }: PostsListProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <Badge className={cn("text-xs", st.class)}>{st.label}</Badge>
-                    {post.channels.map((ch) => (
-                      <Badge key={ch} variant="outline" className="text-xs">
-                        {channelLabels[ch] || ch}
-                      </Badge>
-                    ))}
+                    {post.channels.map((ch) => {
+                      const done = (post.published_channels ?? []).includes(ch);
+                      return (
+                        <Badge
+                          key={ch}
+                          variant="outline"
+                          className={cn("text-xs", done && "border-green-300 bg-green-50 text-green-700")}
+                        >
+                          {(channelLabels[ch] || ch) + (done ? " ✓" : "")}
+                        </Badge>
+                      );
+                    })}
                   </div>
                   {post.title && <p className="font-medium text-sm">{post.title}</p>}
                   <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
@@ -127,6 +136,7 @@ export function PostsList({ onEdit }: PostsListProps) {
                         image_url: post.image_url,
                         image_urls: (post as any).image_urls ?? null,
                         include_footer: (post as any).include_footer ?? true,
+                        published_channels: post.published_channels ?? null,
                       })}
                       className="text-primary/60 hover:text-primary"
                     >

@@ -193,6 +193,7 @@ export type Database = {
           image_urls: string[]
           include_footer: boolean
           published_at: string | null
+          published_channels: string[]
           scheduled_at: string | null
           status: Database["public"]["Enums"]["post_status"]
           style: Database["public"]["Enums"]["post_style"]
@@ -210,6 +211,7 @@ export type Database = {
           image_urls?: string[]
           include_footer?: boolean
           published_at?: string | null
+          published_channels?: string[]
           scheduled_at?: string | null
           status?: Database["public"]["Enums"]["post_status"]
           style?: Database["public"]["Enums"]["post_style"]
@@ -227,6 +229,7 @@ export type Database = {
           image_urls?: string[]
           include_footer?: boolean
           published_at?: string | null
+          published_channels?: string[]
           scheduled_at?: string | null
           status?: Database["public"]["Enums"]["post_status"]
           style?: Database["public"]["Enums"]["post_style"]
@@ -524,7 +527,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "manager" | "agent"
       plan_tier: "free" | "basic" | "pro"
-      post_status: "draft" | "scheduled" | "published"
+      post_status: "draft" | "partial" | "scheduled" | "published"
       post_style: "minimal" | "bold" | "elegant" | "creative"
       support_ticket_status: "new" | "in_progress" | "resolved" | "closed"
     }
@@ -656,7 +659,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "manager", "agent"],
       plan_tier: ["free", "basic", "pro"],
-      post_status: ["draft", "scheduled", "published"],
+      post_status: ["draft", "scheduled", "published", "partial"],
       post_style: ["minimal", "bold", "elegant", "creative"],
       support_ticket_status: ["new", "in_progress", "resolved", "closed"],
     },

@@ -50,6 +50,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [content, setContent] = useState("");
   const [style, setStyle] = useState<string>("minimal");
   const [channels, setChannels] = useState<string[]>([]);
+  const [publishedChannels, setPublishedChannels] = useState<string[]>([]);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -150,6 +151,11 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       setContent(editingPost.content);
       setStyle(editingPost.style);
       setChannels(editingPost.channels);
+      setPublishedChannels(
+        Array.isArray((editingPost as any).published_channels)
+          ? ((editingPost as any).published_channels as string[])
+          : [],
+      );
       const initialImages = (editingPost as any).image_urls && Array.isArray((editingPost as any).image_urls) && (editingPost as any).image_urls.length > 0
         ? (editingPost as any).image_urls as string[]
         : (editingPost.image_url ? [editingPost.image_url] : []);
@@ -438,8 +444,20 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
       if (isImmediatePublish && savedPost) {
         const publishErrors: string[] = [];
         const publishSuccesses: string[] = [];
+        // Каналы, в которые уже успешно опубликовано ранее (частичная публикация)
+        const alreadyDone = new Set(
+          (publishedChannels ?? []).filter((c) => channels.includes(c)),
+        );
+        const doneNow = new Set<string>(alreadyDone);
 
-        if (channels.includes("telegram")) {
+        if (alreadyDone.size > 0) {
+          for (const c of alreadyDone) {
+            const label = CHANNELS.find((ch) => ch.id === c)?.label ?? c;
+            publishSuccesses.push(`${label} ✓ (уже опубликован)`);
+          }
+        }
+
+        if (channels.includes("telegram") && !alreadyDone.has("telegram")) {
           const { data: tgResult, error: tgError } = await supabase.functions.invoke("publish-telegram", {
             body: { postId: savedPost.id },
           });
@@ -447,12 +465,13 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           if (tgError || tgResult?.error) {
             publishErrors.push(`Telegram: ${tgResult?.error || tgError?.message || "Неизвестная ошибка"}`);
           } else {
+            doneNow.add("telegram");
             publishSuccesses.push("Telegram ✓");
             toast.success("Пост опубликован в Telegram!");
           }
         }
 
-        if (channels.includes("vk")) {
+        if (channels.includes("vk") && !alreadyDone.has("vk")) {
           const { data: vkResult, error: vkError } = await supabase.functions.invoke("publish-vk", {
             body: { postId: savedPost.id },
           });
@@ -460,6 +479,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           if (vkError || vkResult?.error) {
             publishErrors.push(`ВК группа: ${vkResult?.error || vkError?.message || "Неизвестная ошибка"}`);
           } else {
+            doneNow.add("vk");
             publishSuccesses.push(vkResult?.post_url ? `ВК группа ✓ ${vkResult.post_url}` : "ВК группа ✓");
             if (vkResult?.image_warning) {
               publishErrors.push(`ВК картинка: ${vkResult.image_warning}`);
@@ -471,7 +491,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           }
         }
 
-        if (channels.includes("max")) {
+        if (channels.includes("max") && !alreadyDone.has("max")) {
           const { data: maxResult, error: maxError } = await supabase.functions.invoke("publish-max", {
             body: { postId: savedPost.id },
           });
@@ -479,6 +499,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           if (maxError || maxResult?.error) {
             publishErrors.push(`MAX: ${maxResult?.error || maxError?.message || "Неизвестная ошибка"}`);
           } else {
+            doneNow.add("max");
             publishSuccesses.push("MAX ✓");
             toast.success("Пост опубликован в MAX!");
           }
@@ -486,31 +507,41 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
 
         setPublishResult({ errors: publishErrors, successes: publishSuccesses });
 
-        if (publishSuccesses.length === 0) {
+        const doneChannels = channels.filter((c) => doneNow.has(c));
+        const allDone = channels.length > 0 && channels.every((c) => doneNow.has(c));
+
+        if (doneChannels.length === 0) {
+          // Ничего не опубликовано — остаётся черновиком
+          await supabase.from("posts").update({
+            status: "draft" as const,
+            published_channels: [],
+          }).eq("id", savedPost.id);
+          setPublishedChannels([]);
           toast.error(publishErrors[0] || "Пост сохранён как черновик, но не опубликован");
           return;
         }
 
-        if (publishSuccesses.length === channels.length) {
-          await supabase.from("posts").update({
-            status: "published" as const,
-            published_at: new Date().toISOString(),
-          }).eq("id", savedPost.id);
-        }
+        await supabase.from("posts").update({
+          status: (allDone ? "published" : "partial") as any,
+          published_at: allDone ? new Date().toISOString() : null,
+          published_channels: doneChannels,
+        }).eq("id", savedPost.id);
+        setPublishedChannels(doneChannels);
 
-        if (publishErrors.length > 0) {
-          toast.warning(`Опубликовано не во всех каналах`);
+        if (allDone) {
+          toast.success("Пост опубликован!");
+        } else {
+          toast.warning("Опубликовано частично — не во всех каналах. Повторите, чтобы доотправить в остальные.");
         }
-
-        toast.success("Пост опубликован!");
       } else {
         setPublishResult(null);
         const msg = status === "scheduled" ? "Пост запланирован!" : "Черновик сохранён";
         toast.success(msg);
       }
 
+
       setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
-      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrls([]); setImagePrompt(""); setIncludeFooter(true);
+      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrls([]); setImagePrompt(""); setIncludeFooter(true); setPublishedChannels([]);
       onDone?.();
     } catch (e: any) {
       toast.error(e.message || "Ошибка сохранения");
@@ -533,7 +564,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               {postId && (
                 <Button variant="ghost" size="sm" onClick={() => {
                   setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
-                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrls([]); setImagePrompt(""); setIncludeFooter(true);
+                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrls([]); setImagePrompt(""); setIncludeFooter(true); setPublishedChannels([]);
                   onDone?.();
                 }}>
                   Отменить
