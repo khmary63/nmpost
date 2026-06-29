@@ -328,7 +328,7 @@ serve(async (req) => {
           post_id: String(postIdFromVk),
           from_group: String(groupId),
           message: commentText,
-          access_token: VK_TOKEN,
+          access_token: VK_POST_TOKEN,
           v: "5.199",
         });
         const cResp = await fetch("https://api.vk.com/method/wall.createComment", {
