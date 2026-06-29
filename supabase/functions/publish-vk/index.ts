@@ -285,7 +285,7 @@ serve(async (req) => {
       owner_id: String(ownerId),
       from_group: "1",
       message,
-      access_token: VK_TOKEN,
+      access_token: VK_POST_TOKEN,
       v: "5.199",
     });
     if (attachments) params.set("attachments", attachments);
