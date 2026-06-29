@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { markdownToTelegramHtml } from "../_shared/markdown.ts";
+import { sendTelegramMediaGroupUpload, sendTelegramPhotoUpload } from "../_shared/telegram-media.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -140,24 +141,16 @@ serve(async (req) => {
       });
     } else if (images.length === 1) {
       if (fullText.length <= 1024) {
-        tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: channelSetting.channel_chat_id,
-            photo: images[0],
-            caption: fullText,
-            parse_mode: "HTML",
-          }),
+        tgResponse = await sendTelegramPhotoUpload(TELEGRAM_BOT_TOKEN, {
+          chat_id: channelSetting.channel_chat_id,
+          photoUrl: images[0],
+          caption: fullText,
+          parse_mode: "HTML",
         });
       } else {
-        const photoResp = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chat_id: channelSetting.channel_chat_id,
-            photo: images[0],
-          }),
+        const photoResp = await sendTelegramPhotoUpload(TELEGRAM_BOT_TOKEN, {
+          chat_id: channelSetting.channel_chat_id,
+          photoUrl: images[0],
         });
         const photoData = await photoResp.json();
         if (!photoResp.ok) {
@@ -178,15 +171,10 @@ serve(async (req) => {
       // Media group: max 10 images
       const groupImages = images.slice(0, 10);
       const useCaptionInGroup = fullText.length <= 1024;
-      const media = groupImages.map((url, idx) => ({
-        type: "photo",
-        media: url,
-        ...(idx === 0 && useCaptionInGroup ? { caption: fullText, parse_mode: "HTML" } : {}),
-      }));
-      const mgResp = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMediaGroup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: channelSetting.channel_chat_id, media }),
+      const mgResp = await sendTelegramMediaGroupUpload(TELEGRAM_BOT_TOKEN, {
+        chat_id: channelSetting.channel_chat_id,
+        imageUrls: groupImages,
+        ...(useCaptionInGroup ? { caption: fullText, parse_mode: "HTML" } : {}),
       });
       if (!mgResp.ok) {
         const d = await mgResp.json().catch(() => ({}));

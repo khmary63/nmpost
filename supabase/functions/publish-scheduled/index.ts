@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { markdownToTelegramHtml, stripMarkdown } from "../_shared/markdown.ts";
+import { sendTelegramMediaGroupUpload, sendTelegramPhotoUpload } from "../_shared/telegram-media.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -105,14 +106,17 @@ async function publishTelegram(post: any, ch: ChannelSetting): Promise<{ ok: boo
     });
   } else if (images.length === 1) {
     if (fullText.length <= 1024) {
-      resp = await send("sendPhoto", {
+      resp = await sendTelegramPhotoUpload(TELEGRAM_BOT_TOKEN, {
         chat_id: ch.channel_chat_id,
-        photo: images[0],
+        photoUrl: images[0],
         caption: fullText,
         parse_mode: "HTML",
       });
     } else {
-      const photoResp = await send("sendPhoto", { chat_id: ch.channel_chat_id, photo: images[0] });
+      const photoResp = await sendTelegramPhotoUpload(TELEGRAM_BOT_TOKEN, {
+        chat_id: ch.channel_chat_id,
+        photoUrl: images[0],
+      });
       if (!photoResp.ok) {
         const d = await photoResp.json().catch(() => ({}));
         return await sendTextOnly(`tg image: ${d.description || photoResp.status}`);
@@ -126,12 +130,11 @@ async function publishTelegram(post: any, ch: ChannelSetting): Promise<{ ok: boo
   } else {
     const groupImages = images.slice(0, 10);
     const useCaptionInGroup = fullText.length <= 1024;
-    const media = groupImages.map((url, idx) => ({
-      type: "photo",
-      media: url,
-      ...(idx === 0 && useCaptionInGroup ? { caption: fullText, parse_mode: "HTML" } : {}),
-    }));
-    const mgResp = await send("sendMediaGroup", { chat_id: ch.channel_chat_id, media });
+    const mgResp = await sendTelegramMediaGroupUpload(TELEGRAM_BOT_TOKEN, {
+      chat_id: ch.channel_chat_id,
+      imageUrls: groupImages,
+      ...(useCaptionInGroup ? { caption: fullText, parse_mode: "HTML" } : {}),
+    });
     if (!mgResp.ok) {
       const d = await mgResp.json().catch(() => ({}));
       return await sendTextOnly(`tg image: ${d.description || mgResp.status}`);
