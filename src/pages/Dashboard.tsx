@@ -17,6 +17,7 @@ export interface EditingPost {
   image_url: string | null;
   image_urls?: string[] | null;
   include_footer: boolean;
+  published_channels?: string[] | null;
 }
 
 export default function Dashboard() {
