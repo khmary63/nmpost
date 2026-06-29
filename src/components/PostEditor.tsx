@@ -50,6 +50,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
   const [content, setContent] = useState("");
   const [style, setStyle] = useState<string>("minimal");
   const [channels, setChannels] = useState<string[]>([]);
+  const [publishedChannels, setPublishedChannels] = useState<string[]>([]);
   const [aiPrompt, setAiPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
