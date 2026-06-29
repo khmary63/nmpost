@@ -1,0 +1,1 @@
+ALTER TABLE public.posts ADD COLUMN IF NOT EXISTS published_channels text[] NOT NULL DEFAULT '{}';
