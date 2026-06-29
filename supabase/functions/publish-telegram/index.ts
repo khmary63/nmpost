@@ -108,6 +108,26 @@ serve(async (req) => {
     //  - 1 image, caption too long: sendPhoto + sendMessage
     //  - >1 images: sendMediaGroup (max 10), then optionally sendMessage with text if caption too long
     let tgResponse: Response;
+    const sendTextOnly = async (warning?: string) => {
+      const textResp = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: channelSetting.channel_chat_id,
+          text: fullText,
+          parse_mode: "HTML",
+        }),
+      });
+      const textData = await textResp.json().catch(() => ({}));
+      if (!textResp.ok) {
+        return new Response(JSON.stringify({ error: `Ошибка Telegram: ${textData.description || textResp.status}` }), {
+          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ ok: true, message_id: textData.result?.message_id, image_warning: warning }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    };
     if (images.length === 0) {
       tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
         method: "POST",
@@ -142,9 +162,7 @@ serve(async (req) => {
         const photoData = await photoResp.json();
         if (!photoResp.ok) {
           console.error("Telegram sendPhoto error:", photoData);
-          return new Response(JSON.stringify({ error: `Ошибка Telegram (фото): ${photoData.description || "Unknown"}` }), {
-            status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          return await sendTextOnly(`Telegram фото: ${photoData.description || "Unknown"}`);
         }
         tgResponse = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
           method: "POST",
@@ -173,9 +191,7 @@ serve(async (req) => {
       if (!mgResp.ok) {
         const d = await mgResp.json().catch(() => ({}));
         console.error("Telegram sendMediaGroup error:", d);
-        return new Response(JSON.stringify({ error: `Ошибка Telegram (галерея): ${d.description || "Unknown"}` }), {
-          status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return await sendTextOnly(`Telegram галерея: ${d.description || "Unknown"}`);
       }
       if (useCaptionInGroup) {
         tgResponse = mgResp;
@@ -195,16 +211,13 @@ serve(async (req) => {
     const tgData = await tgResponse.json();
     if (!tgResponse.ok) {
       console.error("Telegram API error:", tgData);
+      if (images.length > 0) {
+        return await sendTextOnly(`Telegram фото: ${tgData.description || "Unknown"}`);
+      }
       return new Response(JSON.stringify({ error: `Ошибка Telegram: ${tgData.description || "Unknown"}` }), {
         status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    // Update post status
-    await supabase.from("posts").update({
-      status: "published",
-      published_at: new Date().toISOString(),
-    }).eq("id", postId);
 
     // ===== Optional first comment to linked discussion group =====
     let commentWarning: string | null = null;

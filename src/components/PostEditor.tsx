@@ -491,6 +491,13 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
           return;
         }
 
+        if (publishSuccesses.length === channels.length) {
+          await supabase.from("posts").update({
+            status: "published" as const,
+            published_at: new Date().toISOString(),
+          }).eq("id", savedPost.id);
+        }
+
         if (publishErrors.length > 0) {
           toast.warning(`Опубликовано не во всех каналах`);
         }

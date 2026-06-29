@@ -80,7 +80,7 @@ serve(async (req) => {
     if (post.title) text += `${post.title}\n\n`;
     text += post.content;
 
-    let useMarkdown = false;
+    let useMarkdown = /\*\*[^*\n]+?\*\*|__[^_\n]+?__|\[[^\]]+\]\s*\([^)]*\)|`[^`\n]+`|~~[^~\n]+?~~/.test(text);
     if (post.include_footer !== false) {
       const footerLines: string[] = [];
       if (channelSetting.manager_url?.trim()) {
@@ -181,11 +181,6 @@ serve(async (req) => {
         status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    await supabase.from("posts").update({
-      status: "published",
-      published_at: new Date().toISOString(),
-    }).eq("id", postId);
 
     console.log("MAX message sent:", { postId, chatId, response: maxData });
 
