@@ -136,6 +136,7 @@ export function PostsList({ onEdit }: PostsListProps) {
                         image_url: post.image_url,
                         image_urls: (post as any).image_urls ?? null,
                         include_footer: (post as any).include_footer ?? true,
+                        published_channels: post.published_channels ?? null,
                       })}
                       className="text-primary/60 hover:text-primary"
                     >
