@@ -106,8 +106,13 @@ serve(async (req) => {
     const VK_USER_TOKEN = normalizeToken(vkUserTokenRow?.channel_chat_id) ||
       normalizeToken(Deno.env.get("VK_USER_TOKEN"));
 
-    if (!VK_TOKEN) {
-      return new Response(JSON.stringify({ error: "VK токен сообщества не настроен" }), {
+    // Token used for wall.post / comments. Prefer the user token (admin of the
+    // community) because the global community token is often invalid (VK error 38).
+    // from_group=1 makes the post appear on behalf of the community.
+    const VK_POST_TOKEN = VK_USER_TOKEN || VK_TOKEN;
+
+    if (!VK_POST_TOKEN) {
+      return new Response(JSON.stringify({ error: "VK не настроен. Подключите ваш VK-аккаунт в настройках канала." }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -280,7 +285,7 @@ serve(async (req) => {
       owner_id: String(ownerId),
       from_group: "1",
       message,
-      access_token: VK_TOKEN,
+      access_token: VK_POST_TOKEN,
       v: "5.199",
     });
     if (attachments) params.set("attachments", attachments);
@@ -323,7 +328,7 @@ serve(async (req) => {
           post_id: String(postIdFromVk),
           from_group: String(groupId),
           message: commentText,
-          access_token: VK_TOKEN,
+          access_token: VK_POST_TOKEN,
           v: "5.199",
         });
         const cResp = await fetch("https://api.vk.com/method/wall.createComment", {
