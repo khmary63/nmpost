@@ -88,11 +88,18 @@ export function PostsList({ onEdit }: PostsListProps) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <Badge className={cn("text-xs", st.class)}>{st.label}</Badge>
-                    {post.channels.map((ch) => (
-                      <Badge key={ch} variant="outline" className="text-xs">
-                        {channelLabels[ch] || ch}
-                      </Badge>
-                    ))}
+                    {post.channels.map((ch) => {
+                      const done = (post.published_channels ?? []).includes(ch);
+                      return (
+                        <Badge
+                          key={ch}
+                          variant="outline"
+                          className={cn("text-xs", done && "border-green-300 bg-green-50 text-green-700")}
+                        >
+                          {(channelLabels[ch] || ch) + (done ? " ✓" : "")}
+                        </Badge>
+                      );
+                    })}
                   </div>
                   {post.title && <p className="font-medium text-sm">{post.title}</p>}
                   <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
