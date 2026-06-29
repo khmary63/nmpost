@@ -524,7 +524,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "manager" | "agent"
       plan_tier: "free" | "basic" | "pro"
-      post_status: "draft" | "scheduled" | "published"
+      post_status: "draft" | "scheduled" | "published" | "partial"
       post_style: "minimal" | "bold" | "elegant" | "creative"
       support_ticket_status: "new" | "in_progress" | "resolved" | "closed"
     }
@@ -656,7 +656,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "manager", "agent"],
       plan_tier: ["free", "basic", "pro"],
-      post_status: ["draft", "scheduled", "published"],
+      post_status: ["draft", "scheduled", "published", "partial"],
       post_style: ["minimal", "bold", "elegant", "creative"],
       support_ticket_status: ["new", "in_progress", "resolved", "closed"],
     },
