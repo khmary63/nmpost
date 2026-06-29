@@ -493,7 +493,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
 
         if (publishSuccesses.length === channels.length) {
           await supabase.from("posts").update({
-            status: "published" as any,
+            status: "published" as const,
             published_at: new Date().toISOString(),
           }).eq("id", savedPost.id);
         }
