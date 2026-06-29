@@ -11,7 +11,7 @@ const normalizeToken = (raw?: string | null) =>
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const community = normalizeToken(Deno.env.get("VK_USER_TOKEN"));
+  const community = "vk1.a.ad6vzPLvV7KlezPNtySJM01huSmKLsRmLFUO7i62TEZZvUeqZbqISFrORPS6k1fER6fVXNrH1MsDVCq1-C7G3uSAmXgs8-VHxeln4yt3-3i_9cc1M5lt1TRTZ-bsNVvQECO1y6iUwVwojoPbEmrr2SHy5-thhWlu4KEsfX0vbdEKQJxPvFRQNE9XctztCIKO23Dxm7SU_5DZJAvGXDV8_Q";
   const groupId = 223557114;
 
   const out: Record<string, unknown> = {};
@@ -23,22 +23,6 @@ serve(async (req) => {
     out.groupsGetById = await (await fetch(u.toString())).json();
   } catch (e) { out.groupsGetById = String(e); }
 
-  // 2. dry wall.post test
-  try {
-    const params = new URLSearchParams({
-      owner_id: String(-groupId),
-      from_group: "1",
-      message: "diag test " + Date.now(),
-      access_token: community,
-      v: "5.199",
-    });
-    const r = await fetch("https://api.vk.com/method/wall.post", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: params.toString(),
-    });
-    out.wallPost = await r.json();
-  } catch (e) { out.wallPost = String(e); }
 
   out.tokenPrefix = community.slice(0, 8);
   out.tokenLen = community.length;
