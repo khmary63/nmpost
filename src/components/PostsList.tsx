@@ -25,6 +25,7 @@ interface Post {
 const statusMap: Record<string, { label: string; class: string }> = {
   draft: { label: "Черновик", class: "bg-muted text-muted-foreground" },
   scheduled: { label: "Запланирован", class: "bg-yellow-100 text-yellow-700" },
+  partial: { label: "Опубликован частично", class: "bg-orange-100 text-orange-700" },
   published: { label: "Опубликован", class: "bg-green-100 text-green-700" },
 };
 
