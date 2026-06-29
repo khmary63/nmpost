@@ -11,7 +11,7 @@ const normalizeToken = (raw?: string | null) =>
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const community = normalizeToken(Deno.env.get("VK_COMMUNITY_TOKEN"));
+  const community = normalizeToken(Deno.env.get("VK_USER_TOKEN"));
   const groupId = 223557114;
 
   const out: Record<string, unknown> = {};
