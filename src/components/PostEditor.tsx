@@ -541,7 +541,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
 
 
       setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
-      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrls([]); setImagePrompt(""); setIncludeFooter(true);
+      setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrls([]); setImagePrompt(""); setIncludeFooter(true); setPublishedChannels([]);
       onDone?.();
     } catch (e: any) {
       toast.error(e.message || "Ошибка сохранения");
@@ -564,7 +564,7 @@ export function PostEditor({ editingPost, onDone }: PostEditorProps) {
               {postId && (
                 <Button variant="ghost" size="sm" onClick={() => {
                   setPostId(null); setTitle(""); setContent(""); setAiPrompt(""); setChannels([]);
-                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrls([]); setImagePrompt(""); setIncludeFooter(true);
+                  setIsScheduled(false); setScheduledDate(undefined); setScheduledTime("12:00"); setImageUrls([]); setImagePrompt(""); setIncludeFooter(true); setPublishedChannels([]);
                   onDone?.();
                 }}>
                   Отменить
