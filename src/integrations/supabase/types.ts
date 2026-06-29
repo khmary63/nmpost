@@ -527,7 +527,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "manager" | "agent"
       plan_tier: "free" | "basic" | "pro"
-      post_status: "draft" | "scheduled" | "published" | "partial"
+      post_status: "draft" | "partial" | "scheduled" | "published" | "partial"
       post_style: "minimal" | "bold" | "elegant" | "creative"
       support_ticket_status: "new" | "in_progress" | "resolved" | "closed"
     }
