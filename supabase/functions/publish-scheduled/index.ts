@@ -185,7 +185,9 @@ async function publishVk(supabase: any, post: any, ch: ChannelSetting): Promise<
     .replace(/^access_token=/, "")
     .split("&")[0]
     .trim();
-  if (!VK_TOKEN) return { ok: false, error: "VK_COMMUNITY_TOKEN missing" };
+  // Prefer the user token (community token is often invalid → VK error 38).
+  const VK_POST_TOKEN = VK_USER_TOKEN || VK_TOKEN;
+  if (!VK_POST_TOKEN) return { ok: false, error: "VK не настроен: подключите VK-аккаунт" };
 
   let message = "";
   if (post.title) message += `${stripMarkdown(post.title)}\n\n`;
